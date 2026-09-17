@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_APP_ENV: local
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3100
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_fixture_only
+      NEXT_PUBLIC_META_PIXEL_ID: "1234567890"
+      NEXT_PUBLIC_GTM_CONTAINER_ID: GTM-TEST123
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      DATABASE_MIGRATION_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_SECRET_KEY: sb_secret_ci_fixture_only
+      SUPABASE_PUBLIC_ASSET_BUCKET: public-assets
+      SUPABASE_PRIVATE_MEDIA_BUCKET: admin-media
+      META_CAPI_DATASET_ID: "1234567890"
+      META_CAPI_ACCESS_TOKEN: ci_meta_access_token_fixture
+      EVENT_RATE_LIMIT_WINDOW_SECONDS: "60"
+      EVENT_RATE_LIMIT_PER_IP: "30"
+      EVENT_RATE_LIMIT_GLOBAL: "300"
+      CRON_SECRET: ci_cron_secret_fixture_only
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@v2.1.0
+        with:
+          runtime: node@24
+          require-lockfile: true
+          cache: true
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - uses: supabase/setup-cli@v3.0.0
+        with:
+          version: 2.58.5
+      - name: Start Supabase Local
+        id: supabase_start
+        run: supabase start
+      - run: pnpm db:migrate:local
+      - run: pnpm test:integration
+      - name: Stop Supabase Local
+        if: always() && steps.supabase_start.outcome == 'success'
+        run: supabase stop --no-backup

@@ -1,0 +1,3 @@
+# Supabase CLI local state. Keep config, migrations, and seed tracked.
+.temp/
+.branches/

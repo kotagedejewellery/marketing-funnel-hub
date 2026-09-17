@@ -4,7 +4,7 @@
 **Status:** Final / Normalized by ADR-001 through ADR-005  
 **Phase:** MVP / P0  
 **Owner:** Engineering  
-**Last Reviewed:** 2026-09-15  
+**Last Reviewed:** 2026-09-16  
 **Architecture Pattern:** Modular Monolith  
 **Purpose:** Menjadi source of truth untuk komponen teknis, runtime flow, data flow, integration, infrastructure, security boundary, reliability, dan deployment.  
 **Does NOT define:** Layout halaman, visual hierarchy, UX copy, atau detail interaksi UI.
@@ -797,6 +797,13 @@ Production tracking configuration
 ```
 
 Production database is not the default development database.
+
+The executable environment contract is maintained in `.env.example` and validated
+through `src/lib/env`. Only allowlisted `NEXT_PUBLIC_*` identifiers may cross the
+browser boundary. Database credentials, the Supabase secret key, Meta CAPI access,
+rate-limit configuration, and the retention-job secret remain server-only. Staging
+and production URLs require HTTPS, and a build fails with variable names only when
+required configuration is absent or malformed.
 
 ---
 

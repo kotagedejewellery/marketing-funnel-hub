@@ -1,48 +1,68 @@
+@import "tailwindcss";
+
 :root {
   color-scheme: light;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  background: #f6f4ef;
-  color: #211f1b;
+  --background: hsl(40 33% 96%);
+  --foreground: hsl(40 9% 13%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(40 9% 13%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(40 9% 13%);
+  --primary: hsl(40 9% 13%);
+  --primary-foreground: hsl(40 33% 96%);
+  --secondary: hsl(40 18% 90%);
+  --secondary-foreground: hsl(40 9% 18%);
+  --muted: hsl(40 18% 90%);
+  --muted-foreground: hsl(35 10% 38%);
+  --accent: hsl(40 18% 90%);
+  --accent-foreground: hsl(40 9% 18%);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(35 16% 82%);
+  --input: hsl(35 16% 82%);
+  --ring: hsl(40 9% 28%);
+  --radius: 0.5rem;
 }
 
-* {
-  box-sizing: border-box;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-body {
-  min-height: 100vh;
-  margin: 0;
-}
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 
-main {
-  display: grid;
-  min-height: 100vh;
-  place-content: center;
-  padding: 2rem;
-}
-
-.eyebrow {
-  margin: 0 0 0.75rem;
-  color: #756c5e;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-h1 {
-  margin: 0;
-  font-size: clamp(2.25rem, 7vw, 4.5rem);
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-}
-
-.summary {
-  max-width: 40rem;
-  margin: 1.5rem 0 0;
-  color: #554f46;
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  line-height: 1.6;
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
 }

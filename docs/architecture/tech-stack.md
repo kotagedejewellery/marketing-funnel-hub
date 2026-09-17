@@ -4,7 +4,7 @@
 **Status:** FINAL / LOCKED / Normalized by ADR-001, ADR-002, and ADR-005  
 **Phase:** MVP / P0  
 **Owner:** Engineering  
-**Last Reviewed:** 2026-09-15  
+**Last Reviewed:** 2026-09-17  
 **Approved Decisions:** 1A, 2A, 3A, 4A, 5A  
 **Design Principle:** Keep it simple. Build the signal first.
 
@@ -218,7 +218,8 @@ environment-only dan tidak dapat dibaca atau diedit melalui CMS.
 
 ## 13. Version Pinning
 
-Versi berikut dipilih dan dipin pada 2026-09-15:
+Versi baseline dipilih pada 2026-09-15; dependency tambahan T0-04 hingga T0-06 dipilih
+dan dipin pada 2026-09-16, lalu dependency T0-08 pada 2026-09-17:
 
 | Tool / package | Pinned version | Policy |
 |---|---:|---|
@@ -226,8 +227,22 @@ Versi berikut dipilih dan dipin pada 2026-09-15:
 | pnpm | `11.15.1` | Exact melalui `packageManager` dan engine policy |
 | Next.js | `16.3.5` | Exact stable patch |
 | React / React DOM | `19.3.0` | Exact stable patch |
-| Tailwind CSS / PostCSS plugin | `4.3.3` | Exact; konfigurasi styling ditunda ke T0-04 |
-| shadcn CLI | `4.21.0` | Exact; inisialisasi komponen ditunda ke T0-04 |
+| Tailwind CSS / PostCSS plugin | `4.3.3` | Exact; pipeline styling aktif sejak T0-04 |
+| PostCSS | `8.5.28` | Exact; adapter build Tailwind untuk Next.js |
+| shadcn CLI | `4.21.0` | Exact; konfigurasi aktif tanpa komponen generated |
+| clsx | `2.1.1` | Exact; komposisi class untuk utilitas shadcn |
+| tailwind-merge | `3.7.0` | Exact; resolusi konflik utility class |
+| Zod | `4.6.5` | Exact; validasi environment public dan server-only |
+| Drizzle ORM / Kit | `0.45.2` / `0.31.10` | Exact stable releases; schema/query layer and reviewed migration CLI |
+| Postgres.js | `3.4.9` | Exact; Node server connection with one connection and no prepared statements |
+| @next/env | `16.3.5` | Exact; Drizzle CLI loads local environment using Next.js conventions |
+| Supabase JS / SSR | `2.116.0` / `0.12.7` | Exact; browser Auth and server Auth/Storage boundaries |
+| server-only | `0.0.1` | Exact; guard import untuk credential server pada Next.js |
+| Vite | `7.3.6` | Exact; supported Vite line untuk transform pipeline Vitest, bukan build tool aplikasi Next.js |
+| Vitest | `4.1.11` | Exact; unit Node dan component jsdom menggunakan project terpisah |
+| Testing Library React / DOM / jest-dom | `16.3.3` / `10.4.1` / `7.0.1` | Exact; semantic component assertions dan cleanup antar test |
+| React plugin / jsdom | `@vitejs/plugin-react 5.0.4` / `jsdom 29.1.1` | Exact; React component tests pada Vite 7 dan Node 24 |
+| Playwright Test | `1.62.0` | Exact; focused Chromium browser smoke; runtime browser diinstal terpisah |
 | TypeScript | `6.0.3` | Exact latest patch dalam rentang yang didukung lint stack |
 | ESLint | `9.39.5` | Exact latest patch dalam rentang peer dependency Next lint stack |
 

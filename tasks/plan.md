@@ -2,8 +2,9 @@
 
 ## Status
 
-In progress — T0-02 and T0-03 completed by explicit authorization on 2026-09-15;
-T0-01 remains user-managed and T0-04 onward is not yet authorized.
+In progress — T0-01 through T0-09 are complete. T0-10 is configured and awaiting
+GitHub-hosted verification. Git operations for T0-01 remained user-managed;
+Docker and host firewall remain user-managed. T0-11 onward remains planned.
 
 ## Objective
 
@@ -63,24 +64,24 @@ T0-12 Sprint 0 completion checkpoint
 
 ### Phase A — Reproducible application shell
 
-- [ ] T0-01: Initialize repository and documentation baseline
+- [x] T0-01: Initialize repository and documentation baseline
 - [x] T0-02: Select and pin the supported toolchain
 - [x] T0-03: Create the minimal Next.js App Router shell
-- [ ] T0-04: Establish Tailwind and shadcn/ui foundations
+- [x] T0-04: Establish Tailwind and shadcn/ui foundations
 
 ### Checkpoint A
 
-- [ ] Repository history starts from the normalized documentation baseline.
-- [ ] A clean checkout installs reproducibly and starts the empty application.
-- [ ] No product, CMS, database-domain, or tracking feature has been introduced.
+- [x] Repository history starts from the normalized documentation baseline.
+- [x] A clean checkout installs reproducibly and starts the empty application.
+- [x] No product, CMS, database-domain, or tracking feature has been introduced.
 
 ### Phase B — Local platform and verification
 
-- [ ] T0-05: Define and validate the environment contract
-- [ ] T0-06: Establish unit, component, and browser test harnesses
-- [ ] T0-07: Initialize Supabase Local
-- [ ] T0-08: Establish Drizzle connectivity and migration harness
-- [ ] T0-09: Establish Supabase Auth and Storage client boundaries
+- [x] T0-05: Define and validate the environment contract
+- [x] T0-06: Establish unit, component, and browser test harnesses
+- [x] T0-07: Initialize Supabase Local (owner-managed host firewall; no external probe)
+- [x] T0-08: Establish Drizzle connectivity and migration harness
+- [x] T0-09: Establish Supabase Auth and Storage client boundaries
 
 ### Checkpoint B
 
@@ -90,7 +91,7 @@ T0-12 Sprint 0 completion checkpoint
 
 ### Phase C — Automated delivery foundation
 
-- [ ] T0-10: Add CI quality gates
+- [ ] T0-10: Add CI quality gates (workflow configured; GitHub gate verification pending)
 - [ ] T0-11: Validate Vercel preview with staging-only services
 - [ ] T0-12: Complete Sprint 0 documentation and readiness review
 

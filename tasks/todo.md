@@ -2,8 +2,9 @@
 
 ## Status
 
-In progress — T0-02 and T0-03 completed by explicit authorization on 2026-09-15;
-T0-01 remains user-managed and T0-04 onward remains planned.
+In progress — T0-01 through T0-09 are complete. T0-10 is configured and awaiting
+GitHub-hosted verification. Git operations for T0-01 remained user-managed;
+Docker and host firewall remain user-managed. T0-11 onward remains planned.
 
 ## T0-01: Initialize repository and documentation baseline
 
@@ -11,17 +12,16 @@ T0-01 remains user-managed and T0-04 onward remains planned.
 reviewable project baseline before generated application files are introduced.
 
 **Acceptance criteria:**
-- [ ] Git is initialized with an agreed default branch and safe `.gitignore`.
-- [ ] Current source documents, accepted ADRs, and task plans are committed together.
-- [ ] No application scaffold or secret is included in the baseline commit.
+- [x] Git is initialized with an agreed default branch and safe `.gitignore`.
+- [x] Current source documents, accepted ADRs, and task plans are committed together.
+- [x] No application scaffold or secret is included in the baseline commit.
 
 **Verification:**
-- [ ] `git status --short` is clean after the baseline commit.
-- [ ] `git log -1 --stat` contains documentation/planning files only.
+- [x] `git status --short` is clean after the baseline commit.
+- [x] `git log -1 --stat` contains documentation/planning files only.
 
-**Current handoff:** Documentation relocation, root `README.md`, and reference
-normalization are complete. Git initialization, `.gitignore`, `.editorconfig`, and
-the baseline commit remain user-managed.
+**Completion note:** The user confirmed T0-01 complete on 2026-09-16. Git checks
+and repository operations remained user-managed; Codex did not run Git commands.
 
 **Dependencies:** None
 
@@ -43,8 +43,8 @@ then make installation reproducible with pnpm.
 - [x] `pnpm install --frozen-lockfile` succeeds from a clean dependency directory.
 - [x] `node --version` and `pnpm --version` match repository policy.
 
-**Dependencies:** T0-01 remains user-managed; the user explicitly authorized an
-execution-order exception for T0-02 and T0-03 on 2026-09-15.
+**Dependencies:** The user explicitly authorized an execution-order exception for
+T0-02 and T0-03 on 2026-09-15, then confirmed T0-01 complete on 2026-09-16.
 
 **Files likely touched:** `package.json`, `pnpm-lock.yaml`, `.nvmrc`, `.npmrc`
 
@@ -78,13 +78,13 @@ prove the selected runtime and build pipeline.
 admin feature components.
 
 **Acceptance criteria:**
-- [ ] Tailwind processes the App Router source tree and exposes explicit base tokens.
-- [ ] shadcn/ui configuration targets admin use and does not dictate public branding.
-- [ ] No decorative design system or unused component collection is generated.
+- [x] Tailwind processes the App Router source tree and exposes explicit base tokens.
+- [x] shadcn/ui configuration targets admin use and does not dictate public branding.
+- [x] No decorative design system or unused component collection is generated.
 
 **Verification:**
-- [ ] `pnpm build` passes with the styling pipeline enabled.
-- [ ] One minimal style smoke assertion verifies generated styles load.
+- [x] `pnpm build` passes with the styling pipeline enabled.
+- [x] One minimal style smoke assertion verifies generated styles load.
 
 **Dependencies:** T0-03
 
@@ -99,14 +99,14 @@ admin feature components.
 required values are absent or malformed.
 
 **Acceptance criteria:**
-- [ ] Zod schemas distinguish local, staging, and production requirements.
-- [ ] Public IDs are separated from database, Auth administration, Storage, CAPI,
+- [x] Zod schemas distinguish local, staging, and production requirements.
+- [x] Public IDs are separated from database, Auth administration, Storage, CAPI,
   rate-limit, and scheduled-job secrets.
-- [ ] `.env.example` documents every variable name and owner without values.
+- [x] `.env.example` documents every variable name and owner without values.
 
 **Verification:**
-- [ ] Unit tests cover valid configuration, missing required values, and public/server separation.
-- [ ] A production build fails with a sanitized configuration error when required values are absent.
+- [x] Unit tests cover valid configuration, missing required values, and public/server separation.
+- [x] A production build fails with a sanitized configuration error when required values are absent.
 
 **Dependencies:** T0-03
 
@@ -121,13 +121,13 @@ required values are absent or malformed.
 smoke test per layer before feature code exists.
 
 **Acceptance criteria:**
-- [ ] Unit/component tests run in isolation with deterministic setup.
-- [ ] Playwright starts the application and verifies the root shell in a real browser.
-- [ ] Package scripts expose focused and full test commands used later by CI.
+- [x] Unit/component tests run in isolation with deterministic setup.
+- [x] Playwright starts the application and verifies the root shell in a real browser.
+- [x] Package scripts expose focused and full test commands used later by CI.
 
 **Verification:**
-- [ ] `pnpm test` passes.
-- [ ] `pnpm test:e2e` passes.
+- [x] `pnpm test` passes.
+- [x] `pnpm test:e2e` passes.
 
 **Dependencies:** T0-03
 
@@ -142,14 +142,27 @@ smoke test per layer before feature code exists.
 without defining P0 domain tables or production users.
 
 **Acceptance criteria:**
-- [ ] Supabase Local starts reproducibly through the documented Docker workflow.
-- [ ] Local Auth and Storage are enabled with no production credentials or data.
-- [ ] Seed content contains configuration references only, never credentials.
+- [x] Supabase Local starts reproducibly through the documented Docker workflow.
+- [x] Local Auth and Storage are enabled with no production credentials or data.
+- [x] Seed content contains configuration references only, never credentials.
+- [x] The developer accepted responsibility for the local host firewall control:
+  inbound TCP 54321/54322 is blocked by an enabled, enforced Windows Firewall rule
+  across profiles; an external-device probe was not performed.
 
 **Verification:**
-- [ ] `supabase start` succeeds and reports healthy local services.
-- [ ] `supabase db reset` succeeds from a clean local state.
-- [ ] Manual checks confirm production endpoints are absent from local configuration.
+- [x] `supabase start` succeeds and reports healthy local services.
+- [x] `supabase db reset --local --network-id kgj-marketing-funnel-local` succeeds.
+- [x] Manual checks confirm production endpoints are absent from local configuration.
+
+**Progress note (2026-09-17):** Local config, empty seed, CLI-state ignore rules,
+dedicated Docker network, and runbook are in place. A normal start and local reset
+succeeded; PostgreSQL, Auth, Storage, and Kong were healthy, with zero application
+tables, Auth users, and buckets. The reset must repeat `--network-id` to avoid a
+split Docker network. On this Windows host, Docker still published ports 54321
+and 54322 on all interfaces while Wi-Fi had a Public profile. The developer
+verified the inbound block rule in `ActiveStore` with `EnforcementStatus` including
+`Enforced`, and localhost TCP checks succeeded. No second-device probe was run;
+the developer owns ongoing firewall safety and manually starts/stops Docker.
 
 **Dependencies:** T0-02
 
@@ -164,14 +177,23 @@ without defining P0 domain tables or production users.
 prove the migration workflow without implementing the Sprint 1 domain schema.
 
 **Acceptance criteria:**
-- [ ] Drizzle configuration uses validated server-only environment values.
-- [ ] A reversible baseline migration and connectivity check run against Supabase Local.
-- [ ] The application database role is documented as least-privilege and separate from browser access.
+- [x] Drizzle configuration uses validated server-only environment values.
+- [x] A reversible baseline migration and connectivity check run against Supabase Local.
+- [x] The application database role is documented as least-privilege and separate from browser access.
 
 **Verification:**
-- [ ] A clean local database applies the baseline migration successfully.
-- [ ] Database integration test proves connectivity and fails safely with invalid configuration.
-- [ ] `pnpm typecheck` and `pnpm test:integration` pass.
+- [x] A clean local database applies the baseline migration successfully.
+- [x] Database integration test proves connectivity and fails safely with invalid configuration.
+- [x] `pnpm typecheck` and `pnpm test:integration` pass.
+
+**Progress note (2026-09-17):** Pinned stable Drizzle ORM/Kit and Postgres.js;
+added a server-only pooled connection, local-only migration guard, and a no-op
+baseline with Drizzle journal metadata. `pnpm db:migrate:local` succeeded on the
+empty local application schema; a fake non-local URL was rejected before connection.
+Unit/component tests, integration tests, typecheck, lint, and a production build
+with non-production fixture variables passed. Dedicated least-privilege application
+role provisioning remains a prerequisite before staging; local smoke testing used
+the local Supabase administrator connection only.
 
 **Dependencies:** T0-05, T0-07
 
@@ -186,14 +208,22 @@ prove the migration workflow without implementing the Sprint 1 domain schema.
 building login screens, admin routes, or media workflows.
 
 **Acceptance criteria:**
-- [ ] Browser adapter exposes Auth session operations only.
-- [ ] Server adapter owns privileged Auth/Storage operations and never leaks secrets.
-- [ ] Boundary tests prove domain-table access is not exposed through browser modules.
+- [x] Browser adapter exposes Auth session operations only.
+- [x] Server adapter owns privileged Auth/Storage operations and never leaks secrets.
+- [x] Boundary tests prove domain-table access is not exposed through browser modules.
 
 **Verification:**
-- [ ] Unit tests pass for server/client import and configuration boundaries.
-- [ ] Local Auth session and Storage health smoke checks pass.
-- [ ] Client bundle inspection contains no server-only credential names or values.
+- [x] Unit tests pass for server/client import and configuration boundaries.
+- [x] Local Auth session and Storage health smoke checks pass.
+- [x] Client bundle inspection contains no server-only credential names or values.
+
+**Progress note (2026-09-17):** Pinned official Supabase JS and SSR packages.
+The browser adaptor exposes four Auth-session methods only; the server adaptor
+uses cookie-backed `getUser()` for identity and a secret-key client limited to
+Auth administration and Storage. Local Auth and Storage status endpoints returned
+HTTP 200, and the no-session browser check returned null. No users, buckets,
+domain tables, login UI, or media workflows were created. Admin profile checks
+and the request proxy for token refresh remain with the later admin-auth feature.
 
 **Dependencies:** T0-05, T0-07
 
@@ -208,13 +238,22 @@ building login screens, admin routes, or media workflows.
 browser smoke, and build checks on every pull request.
 
 **Acceptance criteria:**
-- [ ] CI uses the pinned Node and pnpm versions with frozen-lockfile installation.
-- [ ] Supabase-dependent checks start isolated local services and clean them up.
+- [x] CI uses the pinned Node and pnpm versions with frozen-lockfile installation.
+- [x] Supabase-dependent checks start isolated local services and clean them up.
 - [ ] Any failed gate prevents merge to the protected production branch.
 
 **Verification:**
 - [ ] CI passes on the baseline branch.
 - [ ] A controlled failing test proves the workflow reports and blocks the failing job.
+
+**Progress note (2026-09-17):** A single `CI / quality` workflow and focused
+formatting check are configured. Local formatting, lint, typecheck,
+unit/component, integration, and build checks passed. The Chromium smoke
+assertion passed, but the local Windows Playwright process did not exit after
+teardown and was stopped manually. GitHub-hosted execution and protection of
+`main` require the repository owner to publish the workflow and configure the
+required status check. Do not mark T0-10 complete until a green run and a
+controlled red-run merge block are observed.
 
 **Dependencies:** T0-04, T0-06, T0-08, T0-09
 

@@ -15,6 +15,7 @@ and defines repository-wide implementation guardrails.
 | Architecture | Stack, system, database, and tracking implementation design | [`architecture/`](architecture/) |
 | Planning | Cross-sprint delivery roadmap | [`planning/`](planning/) |
 | Decisions | Accepted and historical architecture decisions | [`decisions/`](decisions/) |
+| Runbooks | Reproducible local and deployment procedures | [`runbooks/`](runbooks/) |
 | Execution | Current task plans and checklists | [`../tasks/`](../tasks/) |
 
 ## Source-of-truth order
@@ -50,9 +51,10 @@ and defines repository-wide implementation guardrails.
 
 ## Current implementation status
 
-The architecture-decision gate passed on 2026-09-15. T0-02 toolchain pinning and
-T0-03 minimal App Router shell are complete. T0-01 remains user-managed, and T0-04
-onward remains planned until explicitly authorized.
+The architecture-decision gate passed on 2026-09-15. T0-01 through T0-09 are
+complete; the T0-10 CI workflow is configured but requires an actual GitHub run
+and owner-managed branch protection before completion. Git, Docker, and host
+firewall operations remain user-managed.
 
 Environment and provider owners must be assigned before local platform, staging,
 production, migration, or provider-account operations begin.
@@ -61,6 +63,7 @@ production, migration, or provider-account operations begin.
 
 - [Sprint 0 implementation plan](../tasks/plan.md)
 - [Sprint 0 task checklist](../tasks/todo.md)
+- [CI quality-gate runbook](runbooks/ci.md)
 
 The delivery roadmap describes the full P0 sequence. Files under `tasks/` are the
 active execution control for the current sprint and take precedence for task status.

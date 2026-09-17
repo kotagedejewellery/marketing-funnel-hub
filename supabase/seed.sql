@@ -1,0 +1,3 @@
+-- Sprint 0 intentionally seeds no data. P0 domain content belongs to Sprint 1.
+-- Seed configuration reference: supabase/config.toml [db.seed].
+-- Never seed Auth users, credentials, production data, or provider secrets.
