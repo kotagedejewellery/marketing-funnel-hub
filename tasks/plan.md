@@ -123,3 +123,22 @@ The following are execution records, not reopened architecture choices:
 - environment-variable inventory without secret values;
 - initial deployment-edge rate-limit thresholds for later `/api/events` work;
 - alert destinations and escalation owner.
+
+## P0 implementation closeout (21 September 2026)
+
+The public Link Bio, CMS, product–branch WhatsApp flow, canonical tracking,
+admin-profile management, and bounded event-retention endpoint are implemented.
+The owner designated the local funnel check as the final agent-owned P0 step.
+It passed on 21 September 2026: the active product → branch → WhatsApp CTA
+and consented `PageView`/`ViewContent`/`Contact` were checked in one browser
+flow. P0 application implementation is therefore closed locally.
+
+Live release remains a separate owner-managed activity: resolve the Vercel
+Hobby/private-repository deploy block, approve domain/content/consent and
+provider setup, configure live Auth/Storage/environment/WAF/retention, then
+deploy and verify the live funnel. None of those live actions or checks are
+claimed complete by the local P0 implementation closeout.
+
+Git operations, Vercel account/plan decisions, provider accounts, and live
+activation remain owner-managed. No P1/P2 feature or staging environment is
+needed for this implementation closeout.

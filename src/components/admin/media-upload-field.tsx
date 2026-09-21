@@ -1,12 +1,23 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
 import { uploadMedia } from "@/modules/admin/media/actions";
 import { maxImageBytes } from "@/modules/admin/media/validation";
+
+type MediaType = "site" | "campaign" | "product";
+type SelectedImage = {
+  name: string;
+  size: number;
+  url: string;
+  width?: number;
+  height?: number;
+};
+
+const acceptedTypes = ["image/jpeg", "image/png", "image/webp"];
 
 export function MediaUploadField({
   entityType,
@@ -14,35 +25,32 @@ export function MediaUploadField({
   label,
   previewUrl,
 }: {
-  entityType: "site" | "campaign" | "product";
+  entityType: MediaType;
   entityId: string;
   label: string;
   previewUrl: string | null;
 }) {
-  const [state, action, pending] = useActionState(uploadMedia, {
-    ok: false,
-    message: "",
-  });
-  const [fileError, setFileError] = useState("");
+  const isLogo = entityType === "site";
+  const recommendedSize = isLogo ? "800 × 800 px (1:1)" : "1200 × 900 px (4:3)";
 
   return (
     <section className="rounded-2xl bg-card p-6 sm:p-8" aria-label={label}>
       <h2 className="font-serif text-2xl">{label}</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Unggah atau perbarui gambar untuk konten publik.
+        Disarankan {recommendedSize}. JPEG, PNG, atau WebP; maksimal 5 MB.
       </p>
       {previewUrl ? (
         <Image
           src={previewUrl}
           alt={`${label} saat ini`}
-          width={640}
-          height={360}
+          width={isLogo ? 800 : 1200}
+          height={isLogo ? 800 : 900}
           sizes="(max-width: 768px) 100vw, 640px"
-          className="mt-5 max-h-64 w-full border border-border bg-background object-contain p-4"
+          className={`mt-5 w-full max-w-80 rounded-xl border border-border bg-secondary ${isLogo ? "aspect-square object-contain p-4" : "aspect-[4/3] object-cover"}`}
           unoptimized={process.env.NEXT_PUBLIC_APP_ENV === "local"}
         />
       ) : (
-        <p className="mt-5 border border-dashed border-border bg-background px-5 py-8 text-sm text-muted-foreground">
+        <p className="mt-5 rounded-xl border border-dashed border-border bg-background px-5 py-8 text-sm text-muted-foreground">
           Belum ada gambar.
         </p>
       )}
@@ -55,59 +63,239 @@ export function MediaUploadField({
               : `Unggah ${label.toLowerCase()}`
           }
         >
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="entityType" value={entityType} />
-            <input type="hidden" name="entityId" value={entityId} />
-            <div>
-              <label htmlFor={`media-${entityType}`} className="font-medium">
-                Pilih gambar baru
-              </label>
-              <input
-                id={`media-${entityType}`}
-                name="file"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                required
-                className="mt-2 block w-full text-sm file:mr-4 file:min-h-11 file:cursor-pointer file:border file:border-border file:bg-background file:px-4 file:font-medium hover:file:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
-                onChange={(event) => {
-                  const file = event.currentTarget.files?.[0];
-                  if (
-                    file &&
-                    (file.size > maxImageBytes ||
-                      !["image/jpeg", "image/png", "image/webp"].includes(
-                        file.type,
-                      ))
-                  ) {
-                    setFileError("Gunakan JPEG, PNG, atau WebP maksimal 5 MB.");
-                    event.currentTarget.value = "";
-                  } else {
-                    setFileError("");
-                  }
-                }}
-              />
-              <p className="mt-2 text-sm text-muted-foreground">
-                JPEG, PNG, atau WebP; maksimal 5 MB.
-              </p>
-            </div>
-            {fileError && (
-              <p role="alert" className="text-sm text-destructive">
-                {fileError}
-              </p>
-            )}
-            <FormFeedback state={state} pending={pending} />
-            {pending && (
-              <progress aria-label="Mengunggah gambar" className="w-full" />
-            )}
-            <button
-              type="submit"
-              disabled={pending}
-              className="min-h-11 cursor-pointer border border-border px-4 font-medium hover:border-[var(--kgj-accent)] hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50"
-            >
-              {pending ? "Mengunggah..." : "Unggah gambar"}
-            </button>
-          </form>
+          <MediaUploadForm
+            entityType={entityType}
+            entityId={entityId}
+            label={label}
+            recommendedSize={recommendedSize}
+          />
         </FormDialog>
       </div>
     </section>
+  );
+}
+
+function MediaUploadForm({
+  entityType,
+  entityId,
+  label,
+  recommendedSize,
+}: {
+  entityType: MediaType;
+  entityId: string;
+  label: string;
+  recommendedSize: string;
+}) {
+  const [state, action, pending] = useActionState(uploadMedia, {
+    ok: false,
+    message: "",
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [selected, setSelected] = useState<SelectedImage | null>(null);
+  const [fileError, setFileError] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const previewUrl = selected?.url;
+  const isLogo = entityType === "site";
+  const recommendedWidth = isLogo ? 800 : 1200;
+  const recommendedHeight = isLogo ? 800 : 900;
+
+  useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
+  function clearSelection() {
+    if (inputRef.current) inputRef.current.value = "";
+    setSelected(null);
+    setFileError("");
+  }
+
+  function selectFile(file: File) {
+    if (
+      !acceptedTypes.includes(file.type) ||
+      file.size === 0 ||
+      file.size > maxImageBytes
+    ) {
+      clearSelection();
+      setFileError("Gunakan JPEG, PNG, atau WebP maksimal 5 MB.");
+      return;
+    }
+    setFileError("");
+    setSelected({
+      name: file.name,
+      size: file.size,
+      url: URL.createObjectURL(file),
+    });
+  }
+
+  const actualWidth = selected?.width ?? 0;
+  const actualHeight = selected?.height ?? 0;
+  const hasDimensions = actualWidth > 0 && actualHeight > 0;
+  const ratioDiffers =
+    hasDimensions &&
+    Math.abs(
+      actualWidth / actualHeight - recommendedWidth / recommendedHeight,
+    ) > 0.03;
+  const isSmall =
+    hasDimensions &&
+    (actualWidth < recommendedWidth || actualHeight < recommendedHeight);
+
+  return (
+    <form action={action} className="space-y-5" aria-busy={pending}>
+      <input type="hidden" name="entityType" value={entityType} />
+      <input type="hidden" name="entityId" value={entityId} />
+      <div>
+        <p className="font-medium">Pilih gambar baru</p>
+        <p
+          id={`media-guide-${entityType}`}
+          className="mt-1 text-sm text-muted-foreground"
+        >
+          Disarankan {recommendedSize}. JPEG, PNG, atau WebP; maksimal 5 MB.
+        </p>
+        <input
+          ref={inputRef}
+          id={`media-${entityType}`}
+          name="file"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          aria-label={`Pilih ${label.toLowerCase()}`}
+          aria-describedby={`media-guide-${entityType}`}
+          required
+          disabled={pending}
+          className="peer sr-only"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file) selectFile(file);
+          }}
+        />
+        <label
+          htmlFor={`media-${entityType}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!pending) setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            if (pending) return;
+            const file = event.dataTransfer.files[0];
+            if (!file) return;
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            if (inputRef.current) inputRef.current.files = transfer.files;
+            selectFile(file);
+          }}
+          className={`mt-3 flex min-h-36 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-5 py-6 text-center transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 motion-reduce:transition-none ${dragging ? "border-[var(--kgj-accent)] bg-[var(--kgj-accent-soft)]" : "border-border bg-secondary hover:border-[var(--kgj-accent)]"} ${pending ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-7"
+          >
+            <path d="M12 16V4m0 0L8 8m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+          </svg>
+          <span className="font-medium">
+            {selected
+              ? "Ganti pilihan gambar"
+              : "Seret gambar ke sini atau pilih file"}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            Klik untuk membuka file dari perangkat
+          </span>
+        </label>
+      </div>
+      {fileError && (
+        <p role="alert" className="text-sm text-destructive">
+          {fileError}
+        </p>
+      )}
+      {selected && (
+        <div className="rounded-xl border border-border bg-background p-4">
+          <Image
+            src={selected.url}
+            alt="Pratinjau gambar yang dipilih"
+            width={recommendedWidth}
+            height={recommendedHeight}
+            unoptimized
+            className={`mx-auto w-full max-w-80 rounded-lg bg-secondary ${isLogo ? "aspect-square object-contain p-3" : "aspect-[4/3] object-cover"}`}
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              setSelected((current) =>
+                current?.url === selected.url &&
+                (current.width !== naturalWidth ||
+                  current.height !== naturalHeight)
+                  ? { ...current, width: naturalWidth, height: naturalHeight }
+                  : current,
+              );
+            }}
+            onError={() => {
+              clearSelection();
+              setFileError("Gambar tidak dapat dibuka. Pilih file lain.");
+            }}
+          />
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate font-medium" title={selected.name}>
+                {selected.name}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {selected.size < 1024 * 1024
+                  ? `${Math.ceil(selected.size / 1024)} KB`
+                  : `${(selected.size / (1024 * 1024)).toFixed(2)} MB`}
+                {hasDimensions
+                  ? ` · ${selected.width} × ${selected.height} px`
+                  : " · Membaca dimensi..."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={pending}
+              className="min-h-11 rounded-full border border-border px-4 text-sm font-medium hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
+            >
+              Hapus pilihan
+            </button>
+          </div>
+          {ratioDiffers && (
+            <p role="status" className="mt-3 text-sm text-[var(--kgj-accent)]">
+              Rasio berbeda dari {isLogo ? "1:1" : "4:3"}. Gambar{" "}
+              {isLogo
+                ? "akan menyesuaikan ruang logo"
+                : "dapat terpotong pada Link Bio"}
+              .
+            </p>
+          )}
+          {isSmall && (
+            <p role="status" className="mt-2 text-sm text-[var(--kgj-accent)]">
+              Resolusi di bawah ukuran yang disarankan; gambar mungkin tampak
+              kurang tajam.
+            </p>
+          )}
+        </div>
+      )}
+      <FormFeedback state={state} pending={pending} />
+      {pending && (
+        <p
+          role="status"
+          className="rounded-xl bg-secondary px-4 py-3 text-sm font-medium"
+          aria-live="polite"
+        >
+          Mengunggah gambar… Mohon tunggu hingga selesai.
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={pending || !hasDimensions}
+        className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {pending ? "Mengunggah..." : "Unggah gambar"}
+      </button>
+    </form>
   );
 }

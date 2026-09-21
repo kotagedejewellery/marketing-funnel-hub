@@ -8,8 +8,31 @@ reported by the repository owner. T0-11 was retired by the local/live decision i
 Git and host firewall operations remain user-managed. The owner separately
 authorized local Docker/database work for Sprint 1.
 
-Frontend P0 is planned below in five parts. Planning does not authorize
-implementation or testing; Sprint 0 checkpoint T0-12 remains open.
+The five-part frontend plan below is a historical implementation checklist;
+its unchecked entries do not by themselves prove missing code. P0 application
+implementation is complete locally. Sprint 0 checkpoint T0-12 and live release
+operations remain owner-managed.
+
+## P0 implementation closeout (21 September 2026)
+
+- [x] Public Link Bio, CMS, product–branch WhatsApp, consent/canonical-event
+      tracking, admin-profile management, and retention endpoint are present in
+      code (inspection, not a claim of live verification).
+- [x] P0 schema applied locally; the owner reported successful live migration.
+- [x] Verify one local active product → branch → WhatsApp journey with consented
+      `PageView`, `ViewContent`, and `Contact`, including the correct destination.
+      One focused browser flow passed on 21 September 2026.
+- [x] Close the agent-owned P0 application implementation after the local flow
+      check, as directed by the owner. This does not claim a verified live release.
+
+## Live release (owner-managed; outside this P0 implementation closeout)
+
+- [ ] Resolve the Vercel Hobby/private-repository deployment block.
+- [ ] Approve live domain, product/branch content, consent/privacy copy, and
+      Meta/GTM/GA4 configuration.
+- [ ] Confirm live Auth/Storage, environment variables, WAF rate limit, and
+      retention schedule before production activation.
+- [ ] Deploy and perform one focused live funnel smoke check.
 
 ## T0-01: Initialize repository and documentation baseline
 
