@@ -19,11 +19,6 @@ export function PublicImage({
   if (failedSrc === src) return fallback;
 
   return (
-    <Image
-      {...props}
-      src={src}
-      alt={alt}
-      onError={() => setFailedSrc(src)}
-    />
+    <Image {...props} src={src} alt={alt} onError={() => setFailedSrc(src)} />
   );
 }

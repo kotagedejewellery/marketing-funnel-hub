@@ -38,7 +38,11 @@ export function SignOutButton() {
       >
         {pending ? "Keluar..." : "Keluar"}
       </button>
-      {error && <span role="alert" className="text-xs">Gagal keluar. Coba lagi.</span>}
+      {error && (
+        <span role="alert" className="text-xs">
+          Gagal keluar. Coba lagi.
+        </span>
+      )}
     </span>
   );
 }

@@ -13,7 +13,13 @@ export const sessionCookieName = "kgj_sid";
 export const attributionCookieName = "kgj_attr";
 export const trackingContextHeaderName = "x-kgj-tracking-context";
 const maxAge = 30 * 60;
-const keys = ["utmSource", "utmMedium", "utmCampaign", "utmContent", "utmTerm"] as const;
+const keys = [
+  "utmSource",
+  "utmMedium",
+  "utmCampaign",
+  "utmContent",
+  "utmTerm",
+] as const;
 type Utms = Record<(typeof keys)[number], string | null>;
 
 const utmsSchema = z.strictObject({
@@ -39,7 +45,9 @@ function readUtms(value: string | undefined, sessionId: string): Utms | null {
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected))
     return null;
   try {
-    return utmsSchema.parse(JSON.parse(Buffer.from(payload, "base64url").toString("utf8")));
+    return utmsSchema.parse(
+      JSON.parse(Buffer.from(payload, "base64url").toString("utf8")),
+    );
   } catch {
     return null;
   }
@@ -53,7 +61,10 @@ function encodeUtms(utms: Utms, sessionId: string) {
 function explicitUtms(search: URLSearchParams): Utms | null {
   const utms = Object.fromEntries(
     keys.map((key) => {
-      const queryKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+      const queryKey = key.replace(
+        /[A-Z]/g,
+        (letter) => `_${letter.toLowerCase()}`,
+      );
       const value = search.get(queryKey)?.trim() || null;
       return [key, value && value.length <= 200 ? value : null];
     }),
@@ -101,11 +112,17 @@ export function parseTrackingContextHeader(value: string | null) {
 
 export function updatePublicJourney(request: NextRequest) {
   const incoming = request.cookies.get(sessionCookieName)?.value;
-  let sessionId = z.uuid().safeParse(incoming).success ? incoming! : randomUUID();
+  let sessionId = z.uuid().safeParse(incoming).success
+    ? incoming!
+    : randomUUID();
   const signed = request.cookies.get(attributionCookieName)?.value;
   const previous = readUtms(signed, sessionId);
   const explicit = explicitUtms(request.nextUrl.searchParams);
-  if (explicit && previous && keys.some((key) => explicit[key] !== previous[key])) {
+  if (
+    explicit &&
+    previous &&
+    keys.some((key) => explicit[key] !== previous[key])
+  ) {
     sessionId = randomUUID();
   }
   const utms = explicit ?? previous;
@@ -117,7 +134,8 @@ export function updatePublicJourney(request: NextRequest) {
     maxAge,
   };
   request.cookies.set(sessionCookieName, sessionId);
-  if (utms) request.cookies.set(attributionCookieName, encodeUtms(utms, sessionId));
+  if (utms)
+    request.cookies.set(attributionCookieName, encodeUtms(utms, sessionId));
   else request.cookies.delete(attributionCookieName);
 
   const context = getTrackingContext(
@@ -136,7 +154,12 @@ export function updatePublicJourney(request: NextRequest) {
   );
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.cookies.set(sessionCookieName, sessionId, options);
-  if (utms) response.cookies.set(attributionCookieName, encodeUtms(utms, sessionId), options);
+  if (utms)
+    response.cookies.set(
+      attributionCookieName,
+      encodeUtms(utms, sessionId),
+      options,
+    );
   else if (signed) response.cookies.delete(attributionCookieName);
   return response;
 }

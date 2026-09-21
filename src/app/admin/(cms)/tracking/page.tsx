@@ -54,9 +54,7 @@ export default async function TrackingValidationPage({
 
         {rows.length === 0 ? (
           <div className="mt-5 border border-border bg-card px-6 py-10">
-            <h3 className="font-serif text-2xl">
-              Belum ada event internal
-            </h3>
+            <h3 className="font-serif text-2xl">Belum ada event internal</h3>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
               Event akan muncul di sini setelah berhasil disimpan oleh sistem.
             </p>

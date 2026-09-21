@@ -1,9 +1,26 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
-import { auditLogs, branches, campaigns, products, siteSettings } from "@/lib/db/schema";
+import {
+  auditLogs,
+  branches,
+  campaigns,
+  products,
+  siteSettings,
+} from "@/lib/db/schema";
 
 import { requireAdmin } from "./access";
 
@@ -12,7 +29,10 @@ export async function getAdminDashboard(now = new Date()) {
   const db = getDatabase();
   const [site, campaign, productCount, branchCount, recentChanges] =
     await Promise.all([
-      db.select({ siteName: siteSettings.siteName }).from(siteSettings).limit(1),
+      db
+        .select({ siteName: siteSettings.siteName })
+        .from(siteSettings)
+        .limit(1),
       db
         .select({ title: campaigns.title, name: campaigns.name })
         .from(campaigns)
@@ -30,8 +50,14 @@ export async function getAdminDashboard(now = new Date()) {
           asc(campaigns.id),
         )
         .limit(1),
-      db.select({ value: count() }).from(products).where(eq(products.isActive, true)),
-      db.select({ value: count() }).from(branches).where(eq(branches.isActive, true)),
+      db
+        .select({ value: count() })
+        .from(products)
+        .where(eq(products.isActive, true)),
+      db
+        .select({ value: count() })
+        .from(branches)
+        .where(eq(branches.isActive, true)),
       db
         .select({
           id: auditLogs.id,

@@ -69,9 +69,7 @@ export function AdminNavigation({
   const visibleItems = role === "technical_admin" ? items : items.slice(0, 8);
 
   return (
-    <div
-      className="kgj-admin-rail relative flex items-center gap-1 rounded-full bg-[var(--kgj-dark)] p-2 text-[var(--kgj-on-dark-muted)] shadow-[0_20px_45px_-32px_rgba(40,33,28,0.7)] lg:h-full lg:flex-col lg:rounded-none lg:py-10"
-    >
+    <div className="kgj-admin-rail relative flex items-center gap-1 rounded-full bg-[var(--kgj-dark)] p-2 text-[var(--kgj-on-dark-muted)] shadow-[0_20px_45px_-32px_rgba(40,33,28,0.7)] lg:h-full lg:flex-col lg:rounded-none lg:py-10">
       <span
         aria-hidden="true"
         className="absolute top-0 left-1/2 z-20 hidden size-11 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background lg:block"
@@ -136,7 +134,10 @@ export function AdminNavigation({
           );
         })}
       </nav>
-      <span aria-hidden="true" className="hidden h-px w-8 bg-white/20 lg:block" />
+      <span
+        aria-hidden="true"
+        className="hidden h-px w-8 bg-white/20 lg:block"
+      />
       <div className="hidden lg:block">
         <AccountMenu displayName={displayName} role={role} variant="rail" />
       </div>

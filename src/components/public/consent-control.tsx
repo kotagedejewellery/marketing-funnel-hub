@@ -63,7 +63,9 @@ export function ConsentControl({
           className="space-y-4"
         >
           <div>
-            <h2 className="font-serif text-lg font-bold">Preferensi pelacakan</h2>
+            <h2 className="font-serif text-lg font-bold">
+              Preferensi pelacakan
+            </h2>
             <p className="mt-1 max-w-xl leading-6 text-muted-foreground">
               Pilih apakah KGJ boleh mengukur kunjungan dan efektivitas iklan.
               Anda tetap dapat membuka WhatsApp tanpa memberi izin.

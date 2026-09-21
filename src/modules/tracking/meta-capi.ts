@@ -22,7 +22,8 @@ export function metaPayload(
     ?.trim();
   const userAgent = request.headers.get("user-agent");
   const userData = {
-    ...(forwardedIp && isIP(forwardedIp) > 0 && { client_ip_address: forwardedIp }),
+    ...(forwardedIp &&
+      isIP(forwardedIp) > 0 && { client_ip_address: forwardedIp }),
     ...(userAgent &&
       userAgent.length <= 512 && { client_user_agent: userAgent }),
     ...(cookieValues.fbp &&
@@ -39,7 +40,9 @@ export function metaPayload(
         event_id: event.eventId,
         event_time: Math.floor(Date.parse(event.eventTime) / 1000),
         action_source: "website",
-        event_source_url: event.pageUrl ?? new URL("/", serverEnv.NEXT_PUBLIC_SITE_URL).toString(),
+        event_source_url:
+          event.pageUrl ??
+          new URL("/", serverEnv.NEXT_PUBLIC_SITE_URL).toString(),
         user_data: userData,
         custom_data: {
           ...(resolved.product && { content_category: resolved.product.slug }),

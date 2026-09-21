@@ -21,7 +21,8 @@ export default async function AdminLayout({
       </a>
       <header className="relative z-30 mx-4 mt-4 flex items-center justify-between gap-3 sm:mx-6 lg:hidden">
         <p className="min-w-0 truncate text-sm font-semibold">
-          Kotagede Jewellery <span className="text-muted-foreground">/ CMS</span>
+          Kotagede Jewellery{" "}
+          <span className="text-muted-foreground">/ CMS</span>
         </p>
         <AccountMenu
           displayName={profile.displayName || "Admin"}

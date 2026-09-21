@@ -35,7 +35,11 @@ export async function existingEventStatus(event: CanonicalEvent) {
     .from(events)
     .where(eq(events.eventId, event.eventId))
     .limit(1);
-  return existing ? (equivalent(existing, event) ? "duplicate" : "conflict") : null;
+  return existing
+    ? equivalent(existing, event)
+      ? "duplicate"
+      : "conflict"
+    : null;
 }
 
 export async function resolveEventContext(event: CanonicalEvent) {

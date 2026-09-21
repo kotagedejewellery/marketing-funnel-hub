@@ -82,7 +82,10 @@ export default async function AdminDashboardPage() {
       </section>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(16rem,0.8fr)]">
-        <section aria-labelledby="recent-changes" className="min-w-0 rounded-2xl bg-card p-6 sm:p-8">
+        <section
+          aria-labelledby="recent-changes"
+          className="min-w-0 rounded-2xl bg-card p-6 sm:p-8"
+        >
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 id="recent-changes" className="font-serif text-3xl font-bold">
@@ -106,7 +109,8 @@ export default async function AdminDashboardPage() {
                   className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-4 text-sm"
                 >
                   <span className="font-medium">
-                    {actionLabels[change.action] ?? "Perubahan"} · {entityLabels[change.entityType] ?? "Data lain"}
+                    {actionLabels[change.action] ?? "Perubahan"} ·{" "}
+                    {entityLabels[change.entityType] ?? "Data lain"}
                   </span>
                   <time
                     dateTime={change.createdAt.toISOString()}
@@ -168,14 +172,20 @@ function Summary({
       className={`group flex min-h-44 min-w-0 flex-col justify-between rounded-2xl p-6 transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none sm:p-7 ${className}`}
     >
       <div>
-        <p className={`text-sm font-semibold ${dark ? "text-[var(--kgj-on-dark-muted)]" : "text-muted-foreground"}`}>{label}</p>
+        <p
+          className={`text-sm font-semibold ${dark ? "text-[var(--kgj-on-dark-muted)]" : "text-muted-foreground"}`}
+        >
+          {label}
+        </p>
         <p
           className={`mt-4 break-words font-serif font-bold leading-tight ${numeric ? "text-5xl tabular-nums" : "text-2xl sm:text-3xl"}`}
         >
           {value}
         </p>
       </div>
-      <p className={`mt-6 text-sm font-bold group-hover:underline ${dark ? "text-[var(--kgj-accent-soft)]" : "text-[var(--kgj-accent)]"}`}>
+      <p
+        className={`mt-6 text-sm font-bold group-hover:underline ${dark ? "text-[var(--kgj-accent-soft)]" : "text-[var(--kgj-accent)]"}`}
+      >
         {action}
       </p>
     </Link>

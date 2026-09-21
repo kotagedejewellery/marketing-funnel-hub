@@ -21,9 +21,7 @@ const serverEnvironmentSchema = z
       .min(16)
       .refine((value) => !value.startsWith("sb_publishable_")),
     SUPABASE_PUBLIC_ASSET_BUCKET: nonEmptyString,
-    META_CAPI_DATASET_ID: optionalEnvironmentString(
-      z.string().regex(/^\d+$/),
-    ),
+    META_CAPI_DATASET_ID: optionalEnvironmentString(z.string().regex(/^\d+$/)),
     META_CAPI_ACCESS_TOKEN: optionalEnvironmentString(z.string().min(16)),
     TRACKING_ENABLED: z.enum(["true", "false"]).default("false"),
     CRON_SECRET: z.string().min(16),

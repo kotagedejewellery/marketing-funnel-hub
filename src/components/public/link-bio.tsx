@@ -101,7 +101,9 @@ export function LinkBio({
                   key={sectionKey}
                   className={`grid overflow-hidden rounded-2xl bg-[var(--kgj-dark)] text-[var(--primary-foreground)] ${content.site.logoUrl ? "md:grid-cols-[minmax(0,1.25fr)_minmax(15rem,0.75fr)]" : ""}`}
                 >
-                  <div className={`flex flex-col justify-center px-6 sm:px-10 lg:px-14 ${hasBrandContent ? "py-10 sm:py-16" : "py-7 sm:py-10"}`}>
+                  <div
+                    className={`flex flex-col justify-center px-6 sm:px-10 lg:px-14 ${hasBrandContent ? "py-10 sm:py-16" : "py-7 sm:py-10"}`}
+                  >
                     <h2 className="max-w-2xl font-serif text-[clamp(2.4rem,6vw,5rem)] leading-[1.05] font-bold tracking-[-0.035em] text-balance break-words">
                       {content.site.headline || content.site.siteName}
                     </h2>
@@ -128,8 +130,17 @@ export function LinkBio({
                         height={400}
                         sizes="(min-width: 768px) 330px, 220px"
                         className="max-h-72 w-full max-w-72 object-contain"
-                        unoptimized={bypassImageOptimization(content.site.logoUrl)}
-                        fallback={<span aria-hidden="true" className="font-serif text-8xl font-bold">KJ</span>}
+                        unoptimized={bypassImageOptimization(
+                          content.site.logoUrl,
+                        )}
+                        fallback={
+                          <span
+                            aria-hidden="true"
+                            className="font-serif text-8xl font-bold"
+                          >
+                            KJ
+                          </span>
+                        }
                       />
                     </div>
                   )}
@@ -142,7 +153,13 @@ export function LinkBio({
                   key={sectionKey}
                   className="mt-4 overflow-hidden rounded-2xl bg-card sm:mt-5"
                 >
-                  <div className={content.campaign.bannerUrl ? "grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]" : ""}>
+                  <div
+                    className={
+                      content.campaign.bannerUrl
+                        ? "grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
+                        : ""
+                    }
+                  >
                     {content.campaign.bannerUrl && (
                       <PublicImage
                         src={content.campaign.bannerUrl}
@@ -292,10 +309,7 @@ export function LinkBio({
                 sectionKey === "social_links" ? socialLinks : secondaryLinks;
               if (sectionLinks.length === 0) return null;
               return (
-                <section
-                  key={sectionKey}
-                  className="pb-10 sm:pb-12"
-                >
+                <section key={sectionKey} className="pb-10 sm:pb-12">
                   <h2 className="mb-5 font-serif text-3xl font-bold">
                     {sectionKey === "social_links"
                       ? "Temukan kami"

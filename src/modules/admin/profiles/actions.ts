@@ -58,7 +58,8 @@ export async function saveAdminProfile(
     await createPrivilegedSupabase().adminAuth.getUserById(input.id);
   if (error || !data.user?.email) {
     return {
-      message: "ID tidak ditemukan sebagai pengguna Supabase Auth aktif dengan email.",
+      message:
+        "ID tidak ditemukan sebagai pengguna Supabase Auth aktif dengan email.",
       errors: { id: "Periksa kembali ID pengguna di Supabase Auth." },
     };
   }
