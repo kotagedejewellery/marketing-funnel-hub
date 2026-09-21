@@ -2,6 +2,7 @@
 
 import { useActionState, type ReactNode } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { changeContentSection } from "@/modules/admin/content/actions";
 
 type Section = { id: string; label: string; isActive: boolean };
@@ -10,6 +11,7 @@ export function SectionList({ sections }: { sections: Section[] }) {
   const [state, action, pending] = useActionState(changeContentSection, {
     message: "",
     errors: {},
+    ok: false,
   });
 
   return (
@@ -25,9 +27,7 @@ export function SectionList({ sections }: { sections: Section[] }) {
           Urutan lebih atas akan tampil lebih dahulu pada Link Bio.
         </p>
       </div>
-      <p role="status" aria-live="polite" className="px-5 text-sm sm:px-6">
-        {state.message}
-      </p>
+      <FormFeedback state={state} pending={pending} />
       {sections.length === 0 ? (
         <p className="px-5 py-6 text-sm text-muted-foreground sm:px-6">
           Belum ada bagian yang dapat diatur.

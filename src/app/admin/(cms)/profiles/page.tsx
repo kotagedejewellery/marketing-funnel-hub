@@ -6,13 +6,8 @@ import { getDatabase } from "@/lib/db/client";
 import { adminProfiles } from "@/lib/db/schema";
 import { requireTechnicalAdmin } from "@/modules/admin/access";
 
-export default async function ProfilesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ saved?: string }>;
-}) {
+export default async function ProfilesPage() {
   await requireTechnicalAdmin();
-  const { saved } = await searchParams;
   const profiles = await getDatabase()
     .select({
       id: adminProfiles.id,
@@ -31,14 +26,6 @@ export default async function ProfilesPage({
         pengguna di sini. Menonaktifkan profil menghentikan akses CMS tanpa
         menghapus akun Auth.
       </p>
-      {saved === "1" && (
-        <p
-          role="status"
-          className="mt-5 border border-border bg-secondary p-4 text-sm"
-        >
-          Profil admin tersimpan.
-        </p>
-      )}
 
       <div className="mt-8">
         <FormDialog

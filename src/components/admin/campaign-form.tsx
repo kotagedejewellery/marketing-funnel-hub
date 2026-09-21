@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveCampaign } from "@/modules/admin/campaigns/actions";
 import { toWibInput } from "@/modules/admin/campaigns/validation";
 
@@ -148,9 +149,7 @@ export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
         />
         Aktif
       </label>
-      <p role="status" aria-live="polite" className="text-sm">
-        {state.message}
-      </p>
+      <FormFeedback state={state} pending={pending} />
       <button
         type="submit"
         disabled={pending}

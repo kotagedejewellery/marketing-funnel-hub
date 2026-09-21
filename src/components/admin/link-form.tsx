@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveLink } from "@/modules/admin/links/actions";
 
 type LinkRecord = {
@@ -131,9 +132,7 @@ export function LinkForm({ link }: { link: LinkRecord | null }) {
         />
         Aktif
       </label>
-      <p role="status" aria-live="polite" className="text-sm">
-        {state.message}
-      </p>
+      <FormFeedback state={state} pending={pending} />
       <button
         type="submit"
         disabled={pending}

@@ -7,9 +7,9 @@ import { getLinkList } from "@/modules/admin/links/data";
 export default async function LinksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; create?: string; saved?: string }>;
+  searchParams: Promise<{ page?: string; create?: string }>;
 }) {
-  const { page: pageParam, create, saved } = await searchParams;
+  const { page: pageParam, create } = await searchParams;
   const requestedPage = Number(pageParam ?? 1);
   const { rows, page, pageCount } = await getLinkList(requestedPage);
 
@@ -35,14 +35,6 @@ export default async function LinksPage({
           <LinkForm link={null} />
         </FormDialog>
       </div>
-      {saved === "1" && (
-        <p
-          role="status"
-          className="mt-6 rounded-xl bg-secondary px-5 py-4 text-sm"
-        >
-          Tautan tersimpan.
-        </p>
-      )}
       {rows.length === 0 ? (
         <p className="mt-8 border border-border bg-card px-6 py-10 text-muted-foreground">
           Belum ada tautan. Tambahkan tautan tambahan atau kanal sosial untuk

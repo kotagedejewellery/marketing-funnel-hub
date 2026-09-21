@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveSiteSettings } from "@/modules/admin/content/actions";
 
 type Settings = {
@@ -20,6 +21,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
   const [state, action, pending] = useActionState(saveSiteSettings, {
     message: "",
     errors: {},
+    ok: false,
   });
 
   return (
@@ -128,9 +130,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
           <FieldError message={state.errors.defaultCtaLabel} />
         </div>
       </div>
-      <p role="status" className="mt-6 text-sm" aria-live="polite">
-        {state.message}
-      </p>
+      <FormFeedback state={state} pending={pending} />
       <button
         type="submit"
         disabled={pending}

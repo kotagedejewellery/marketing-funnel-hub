@@ -15,7 +15,11 @@ import { requireAdmin } from "@/modules/admin/access";
 
 import { assignmentSchema } from "./validation";
 
-type ActionState = { message: string; errors: Record<string, string> };
+type ActionState = {
+  message: string;
+  errors: Record<string, string>;
+  ok?: boolean;
+};
 
 export async function saveProductAssignments(
   _previous: ActionState,
@@ -121,5 +125,5 @@ export async function saveProductAssignments(
 
   revalidatePath("/");
   revalidatePath(`/admin/products/${productId}`);
-  return { message: "Penugasan cabang tersimpan.", errors: {} };
+  return { message: "Penugasan cabang tersimpan.", errors: {}, ok: true };
 }

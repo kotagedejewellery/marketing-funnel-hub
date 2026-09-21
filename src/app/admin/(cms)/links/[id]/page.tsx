@@ -6,13 +6,10 @@ import { getLink } from "@/modules/admin/links/data";
 
 export default async function EditLinkPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
 }) {
   const link = await getLink((await params).id);
-  const saved = (await searchParams).saved === "1";
 
   return (
     <div>
@@ -29,14 +26,6 @@ export default async function EditLinkPage({
       <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
         Perbarui tujuan dan status tautan yang sudah ada.
       </p>
-      {saved && (
-        <p
-          role="status"
-          className="mt-5 border-l-2 border-[var(--kgj-accent)] bg-secondary px-4 py-3 text-sm"
-        >
-          Tautan tersimpan.
-        </p>
-      )}
       <div className="mt-8">
         <FormDialog
           title={`Edit ${link.label}`}

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveBranch } from "@/modules/admin/branches/actions";
 
 type Branch = {
@@ -114,9 +115,7 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
         />
         Aktif
       </label>
-      <p role="status" aria-live="polite" className="text-sm">
-        {state.message}
-      </p>
+      <FormFeedback state={state} pending={pending} />
       <button
         type="submit"
         disabled={pending}

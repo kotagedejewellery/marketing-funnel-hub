@@ -1,6 +1,21 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
+const FormDialogContext = createContext<() => void>(() => {});
+
+export function useCloseFormDialog() {
+  return useContext(FormDialogContext);
+}
 
 export function FormDialog({
   title,
@@ -19,6 +34,10 @@ export function FormDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const closeDialog = useCallback(() => {
+    dialogRef.current?.close();
+    setOpen(false);
+  }, []);
 
   useEffect(() => {
     if (open && !dialogRef.current?.open) {
@@ -26,6 +45,11 @@ export function FormDialog({
       closeRef.current?.focus();
     }
   }, [open]);
+
+  useEffect(() => {
+    window.addEventListener("kgj:admin-saved", closeDialog);
+    return () => window.removeEventListener("kgj:admin-saved", closeDialog);
+  }, [closeDialog]);
 
   return (
     <>
@@ -49,7 +73,7 @@ export function FormDialog({
           <button
             ref={closeRef}
             type="button"
-            onClick={() => dialogRef.current?.close()}
+            onClick={closeDialog}
             className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground hover:bg-[var(--kgj-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2"
             aria-label="Tutup dialog"
           >
@@ -66,7 +90,13 @@ export function FormDialog({
             </svg>
           </button>
         </div>
-        <div className="px-6 py-6 sm:px-8">{open ? children : null}</div>
+        <div className="px-6 py-6 sm:px-8">
+          {open ? (
+            <FormDialogContext.Provider value={closeDialog}>
+              {children}
+            </FormDialogContext.Provider>
+          ) : null}
+        </div>
       </dialog>
     </>
   );

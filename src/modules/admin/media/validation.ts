@@ -1,9 +1,15 @@
 import * as z from "zod";
 
-export const mediaTargetSchema = z.object({
-  entityType: z.enum(["site", "campaign", "product"]),
-  entityId: z.uuid(),
-});
+export const mediaTargetSchema = z.union([
+  z.object({
+    entityType: z.literal("site"),
+    entityId: z.literal("00000000-0000-0000-0000-000000000001"),
+  }),
+  z.object({
+    entityType: z.enum(["campaign", "product"]),
+    entityId: z.uuid(),
+  }),
+]);
 
 export const maxImageBytes = 5 * 1024 * 1024;
 

@@ -15,8 +15,6 @@ import { imageExtension, maxImageBytes, mediaTargetSchema } from "./validation";
 
 type ActionState = { message: string; ok: boolean };
 
-const siteId = "00000000-0000-0000-0000-000000000001";
-
 export async function uploadMedia(
   _previous: ActionState,
   formData: FormData,
@@ -27,10 +25,7 @@ export async function uploadMedia(
     entityId: formData.get("entityId"),
   });
   const file = formData.get("file");
-  if (
-    !target.success ||
-    (target.data.entityType === "site" && target.data.entityId !== siteId)
-  ) {
+  if (!target.success) {
     return { ok: false, message: "Tujuan gambar tidak valid." };
   }
   if (!(file instanceof File) || file.size === 0 || file.size > maxImageBytes) {

@@ -9,7 +9,11 @@ import { requireAdmin } from "@/modules/admin/access";
 
 import { sectionActionSchema, settingsSchema } from "./validation";
 
-type ActionState = { message: string; errors: Record<string, string> };
+type ActionState = {
+  message: string;
+  errors: Record<string, string>;
+  ok?: boolean;
+};
 
 export async function saveSiteSettings(
   _previous: ActionState,
@@ -67,6 +71,7 @@ export async function saveSiteSettings(
   return {
     message: changed ? "Pengaturan tersimpan." : "Tidak ada perubahan.",
     errors: {},
+    ok: true,
   };
 }
 
@@ -146,5 +151,6 @@ export async function changeContentSection(
   return {
     message: changed ? "Section diperbarui." : "Tidak ada perubahan.",
     errors: {},
+    ok: true,
   };
 }

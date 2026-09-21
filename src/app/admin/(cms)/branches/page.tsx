@@ -7,9 +7,9 @@ import { getBranchList } from "@/modules/admin/branches/data";
 export default async function BranchesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; create?: string; saved?: string }>;
+  searchParams: Promise<{ page?: string; create?: string }>;
 }) {
-  const { page: pageParam, create, saved } = await searchParams;
+  const { page: pageParam, create } = await searchParams;
   const requestedPage = Number(pageParam ?? 1);
   const { rows, page, pageCount } = await getBranchList(requestedPage);
 
@@ -32,14 +32,6 @@ export default async function BranchesPage({
           <BranchForm branch={null} />
         </FormDialog>
       </div>
-      {saved === "1" && (
-        <p
-          role="status"
-          className="mt-6 rounded-xl bg-secondary px-5 py-4 text-sm"
-        >
-          Cabang tersimpan.
-        </p>
-      )}
       {rows.length === 0 ? (
         <p className="mt-8 border-t border-border py-7 text-muted-foreground">
           Belum ada cabang.

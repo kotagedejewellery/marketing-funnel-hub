@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import {
   saveAdminProfile,
   type ProfileActionState,
@@ -108,11 +109,7 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
         />
         Aktif
       </label>
-      {state.message && (
-        <p role="alert" className="text-sm text-destructive md:col-span-2">
-          {state.message}
-        </p>
-      )}
+      <FormFeedback state={state} pending={pending} />
       <button
         type="submit"
         disabled={pending}

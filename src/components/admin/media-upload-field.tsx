@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useActionState, useState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
 import { uploadMedia } from "@/modules/admin/media/actions";
 import { maxImageBytes } from "@/modules/admin/media/validation";
@@ -93,9 +94,7 @@ export function MediaUploadField({
                 {fileError}
               </p>
             )}
-            <p role="status" aria-live="polite" className="text-sm">
-              {state.message}
-            </p>
+            <FormFeedback state={state} pending={pending} />
             {pending && (
               <progress aria-label="Mengunggah gambar" className="w-full" />
             )}

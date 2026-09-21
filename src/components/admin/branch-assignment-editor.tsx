@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
 import { saveProductAssignments } from "@/modules/admin/assignments/actions";
 
@@ -33,6 +34,7 @@ export function BranchAssignmentEditor({
   const [state, action, pending] = useActionState(saveProductAssignments, {
     message: "",
     errors: {},
+    ok: false,
   });
   const hasActiveBranch = assignments.some(
     (row) => row.isBranchActive && row.isActive,
@@ -167,9 +169,7 @@ export function BranchAssignmentEditor({
                   </div>
                 </fieldset>
               ))}
-              <p role="status" aria-live="polite" className="text-sm">
-                {state.message}
-              </p>
+              <FormFeedback state={state} pending={pending} />
               <button
                 type="submit"
                 disabled={pending}

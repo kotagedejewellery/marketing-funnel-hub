@@ -46,6 +46,7 @@ test("persists a consented UTM PageView without duplicating its event ID", async
   );
   expect(eventRequests).toHaveLength(0);
 
+  await page.getByRole("button", { name: "Atur preferensi" }).click();
   const firstEvent = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&

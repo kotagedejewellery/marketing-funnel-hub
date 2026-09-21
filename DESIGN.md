@@ -147,7 +147,7 @@ The public header stays compact and exposes a product jump link only when produc
 
 ### Admin forms
 
-Create and edit forms open in a native modal dialog from their list or summary. The dialog has a visible title, close control, keyboard Escape behavior, and scrollable content; validation remains on the form and server.
+Create and edit forms open in a native modal dialog from their list or summary. The dialog has a visible title, close control, keyboard Escape behavior, and scrollable content; validation remains on the form and server. A successful save closes the dialog and shows a brief toast; a failed save shows a dismissible toast while keeping the dialog and its inputs open.
 
 ## Do's and Don'ts
 

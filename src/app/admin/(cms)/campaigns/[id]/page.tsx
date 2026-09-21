@@ -9,13 +9,10 @@ import { publicAssetUrl } from "@/modules/public-content/links";
 
 export default async function EditCampaignPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
 }) {
   const campaign = await getCampaign((await params).id);
-  const saved = (await searchParams).saved === "1";
 
   return (
     <div>
@@ -32,14 +29,6 @@ export default async function EditCampaignPage({
       <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
         Perbarui konten dan jadwal kampanye yang sudah ada.
       </p>
-      {saved && (
-        <p
-          role="status"
-          className="mt-5 border-l-2 border-[var(--kgj-accent)] bg-secondary px-4 py-3 text-sm"
-        >
-          Kampanye tersimpan.
-        </p>
-      )}
       <div className="mt-8">
         <FormDialog
           title={`Edit ${campaign.name}`}

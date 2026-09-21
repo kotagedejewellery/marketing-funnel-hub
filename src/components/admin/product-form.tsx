@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveProduct } from "@/modules/admin/products/actions";
 
 type Product = {
@@ -94,9 +95,7 @@ export function ProductForm({ product }: { product: Product | null }) {
         />
         Aktif
       </label>
-      <p role="status" aria-live="polite" className="text-sm">
-        {state.message}
-      </p>
+      <FormFeedback state={state} pending={pending} />
       <button
         type="submit"
         disabled={pending}

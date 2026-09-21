@@ -1,6 +1,23 @@
 import { describe, expect, it } from "vitest";
 
-import { imageExtension } from "./validation";
+import { imageExtension, mediaTargetSchema } from "./validation";
+
+describe("media target validation", () => {
+  it("accepts only the fixed site settings ID for logo uploads", () => {
+    expect(
+      mediaTargetSchema.safeParse({
+        entityType: "site",
+        entityId: "00000000-0000-0000-0000-000000000001",
+      }).success,
+    ).toBe(true);
+    expect(
+      mediaTargetSchema.safeParse({
+        entityType: "site",
+        entityId: "11111111-1111-4111-8111-111111111111",
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("media signature validation", () => {
   it("accepts supported signatures only when the MIME type matches", () => {
