@@ -1,10 +1,18 @@
 import * as z from "zod";
 
-const environmentName = z.enum(["local", "staging", "production"]);
+const environmentName = z.enum(["local", "production"]);
 const webUrl = z.url().refine((value) => {
   const protocol = new URL(value).protocol;
   return protocol === "http:" || protocol === "https:";
 });
+
+export function optionalEnvironmentString(schema: z.ZodString) {
+  return z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    schema.optional(),
+  );
+}
+
 export const publicEnvironmentShape = {
   NEXT_PUBLIC_APP_ENV: environmentName,
   NEXT_PUBLIC_SITE_URL: webUrl,
@@ -14,8 +22,12 @@ export const publicEnvironmentShape = {
     .trim()
     .min(16)
     .refine((value) => !value.startsWith("sb_secret_")),
-  NEXT_PUBLIC_META_PIXEL_ID: z.string().regex(/^\d+$/),
-  NEXT_PUBLIC_GTM_CONTAINER_ID: z.string().regex(/^GTM-[A-Z0-9]+$/),
+  NEXT_PUBLIC_META_PIXEL_ID: optionalEnvironmentString(
+    z.string().regex(/^\d+$/),
+  ),
+  NEXT_PUBLIC_GTM_CONTAINER_ID: optionalEnvironmentString(
+    z.string().regex(/^GTM-[A-Z0-9]+$/),
+  ),
 };
 
 export function requireHttpsOutsideLocal(

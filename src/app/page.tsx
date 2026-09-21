@@ -1,20 +1,47 @@
+import { connection } from "next/server";
+import { cookies, headers } from "next/headers";
+
+import { LinkBio } from "@/components/public/link-bio";
+import { loadPublicContent } from "@/modules/public-content/data";
+import { serverEnv } from "@/lib/env/server";
+import {
+  attributionCookieName,
+  getTrackingContext,
+  parseTrackingContextHeader,
+  sessionCookieName,
+  trackingContextHeaderName,
+} from "@/modules/tracking/journey";
+import {
+  consentCookieName,
+  parseConsentCookie,
+} from "@/modules/tracking/consent";
+
 export const runtime = "nodejs";
 
-export default function HomePage() {
+export default async function HomePage() {
+  await connection();
+  const content = await loadPublicContent();
+  const cookieStore = await cookies();
+  const initialConsent = parseConsentCookie(
+    cookieStore.get(consentCookieName)?.value,
+  );
+  const trackingContext =
+    serverEnv.NEXT_PUBLIC_APP_ENV === "local" ||
+    serverEnv.TRACKING_ENABLED === "true"
+      ? (getTrackingContext(
+          cookieStore.get(sessionCookieName)?.value,
+          cookieStore.get(attributionCookieName)?.value,
+        ) ??
+        parseTrackingContextHeader(
+          (await headers()).get(trackingContextHeaderName),
+        ))
+      : null;
+
   return (
-    <main className="grid min-h-screen place-content-center bg-background px-6 py-16 text-foreground sm:px-10">
-      <div className="max-w-3xl">
-        <p className="mb-3 text-xs font-bold tracking-[0.12em] text-muted-foreground uppercase">
-          KGJ · Sprint 0
-        </p>
-        <h1 className="text-4xl leading-[0.95] font-bold tracking-[-0.04em] sm:text-6xl lg:text-7xl">
-          Marketing Funnel Hub
-        </h1>
-        <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-xl sm:leading-8">
-          Fondasi aplikasi siap. Fitur produk, CMS, dan tracking akan dibangun
-          pada tahap implementasi berikutnya.
-        </p>
-      </div>
-    </main>
+    <LinkBio
+      content={content}
+      initialConsent={initialConsent}
+      trackingContext={trackingContext}
+    />
   );
 }

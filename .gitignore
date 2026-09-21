@@ -32,6 +32,11 @@ next-env.d.ts
 # Deployment tooling
 .vercel/
 
+# Local agent and design-tool output
+/graphify-out/
+/.impeccable/review/
+/.impeccable/config.local.json
+
 # Package-manager and application logs
 npm-debug.log*
 yarn-debug.log*

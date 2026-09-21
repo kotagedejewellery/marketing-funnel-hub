@@ -1,9 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
+import { loadEnvConfig } from "@next/env";
+
+loadEnvConfig(process.cwd());
 
 const baseURL = "http://127.0.0.1:3100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  timeout: 120_000,
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
@@ -28,17 +32,12 @@ export default defineConfig({
       NEXT_PUBLIC_SITE_URL: baseURL,
       NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local_test_key",
-      NEXT_PUBLIC_META_PIXEL_ID: "1234567890",
-      NEXT_PUBLIC_GTM_CONTAINER_ID: "GTM-TEST123",
-      DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+      DATABASE_URL:
+        process.env.DATABASE_URL ??
+        "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
       SUPABASE_SECRET_KEY: "sb_secret_local_test_key",
       SUPABASE_PUBLIC_ASSET_BUCKET: "public-assets",
-      SUPABASE_PRIVATE_MEDIA_BUCKET: "admin-media",
-      META_CAPI_DATASET_ID: "1234567890",
-      META_CAPI_ACCESS_TOKEN: "test_meta_access_token",
-      EVENT_RATE_LIMIT_WINDOW_SECONDS: "60",
-      EVENT_RATE_LIMIT_PER_IP: "30",
-      EVENT_RATE_LIMIT_GLOBAL: "300",
+      TRACKING_ENABLED: "false",
       CRON_SECRET: "test-cron-secret-123456",
     },
     reuseExistingServer: false,

@@ -1,0 +1,259 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+import { clientEnv } from "@/lib/env/client";
+import {
+  consentChangedEventName,
+  consentCookieName,
+  parseConsentCookie,
+  type ConsentChoice,
+} from "@/modules/tracking/consent";
+import type { CanonicalEvent } from "@/modules/tracking/event";
+
+export type TrackingContext = Pick<
+  CanonicalEvent,
+  "anonymousSessionId" | "attribution"
+>;
+
+type TrackingProduct = {
+  id: string;
+  slug: string;
+  branches: { id: string; name: string }[];
+};
+
+type Pixel = ((...args: unknown[]) => void) & {
+  callMethod?: (...args: unknown[]) => void;
+  queue: unknown[][];
+  loaded: boolean;
+  version: string;
+};
+
+type ProviderWindow = Window & {
+  fbq?: Pixel;
+  _fbq?: Pixel;
+  dataLayer?: Record<string, unknown>[];
+};
+
+function loadProviderScript(id: string, src: string) {
+  if (document.getElementById(id)) return;
+  const script = document.createElement("script");
+  script.id = id;
+  script.async = true;
+  script.src = src;
+  document.head.append(script);
+}
+
+function activateProviders(consent: ConsentChoice) {
+  if (clientEnv.NEXT_PUBLIC_APP_ENV !== "production") return;
+  const browser = window as ProviderWindow;
+  const metaPixelId = clientEnv.NEXT_PUBLIC_META_PIXEL_ID;
+  const gtmContainerId = clientEnv.NEXT_PUBLIC_GTM_CONTAINER_ID;
+
+  if (consent.marketing && metaPixelId) {
+    if (!browser.fbq) {
+      const pixel = ((...args: unknown[]) => {
+        if (pixel.callMethod) pixel.callMethod(...args);
+        else pixel.queue.push(args);
+      }) as Pixel;
+      pixel.queue = [];
+      pixel.loaded = true;
+      pixel.version = "2.0";
+      browser.fbq = pixel;
+      browser._fbq = pixel;
+      pixel("init", metaPixelId);
+      loadProviderScript(
+        "kgj-meta-pixel",
+        "https://connect.facebook.net/en_US/fbevents.js",
+      );
+    }
+    browser.fbq("consent", "grant");
+  } else {
+    browser.fbq?.("consent", "revoke");
+  }
+
+  if (consent.analytics && gtmContainerId) {
+    browser.dataLayer ??= [];
+    if (!document.getElementById("kgj-gtm")) {
+      browser.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
+    }
+    loadProviderScript(
+      "kgj-gtm",
+      `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmContainerId)}`,
+    );
+  }
+}
+
+function currentConsent(): ConsentChoice | null {
+  const entry = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${consentCookieName}=`));
+  return parseConsentCookie(entry?.slice(consentCookieName.length + 1));
+}
+
+function sendEvent(event: CanonicalEvent, consent: ConsentChoice) {
+  if (!consent.analytics && !consent.marketing) return;
+
+  const browser = window as ProviderWindow;
+
+  if (consent.marketing && typeof browser.fbq === "function") {
+    try {
+      browser.fbq(
+        "track",
+        event.eventName,
+        {
+          product_category: event.product?.category ?? null,
+          branch: event.branch?.name ?? null,
+          cta: event.cta,
+          source: event.attribution.source,
+          campaign: event.attribution.campaign,
+        },
+        { eventID: event.eventId },
+      );
+    } catch {
+      // Provider failure must not change a WhatsApp click.
+    }
+  }
+
+  if (consent.analytics && Array.isArray(browser.dataLayer)) {
+    try {
+      browser.dataLayer.push({
+        event: {
+          PageView: "kgj_page_view",
+          ViewContent: "kgj_view_content",
+          Contact: "kgj_contact",
+        }[event.eventName],
+        event_id: event.eventId,
+        anonymous_session_id: event.anonymousSessionId,
+        product_category: event.product?.category ?? null,
+        branch: event.branch?.name ?? null,
+        cta: event.cta,
+        utm_source: event.attribution.utmSource,
+        utm_medium: event.attribution.utmMedium,
+        utm_campaign: event.attribution.utmCampaign,
+        utm_content: event.attribution.utmContent,
+        utm_term: event.attribution.utmTerm,
+      });
+    } catch {
+      // Provider failure must not change a WhatsApp click.
+    }
+  }
+
+  try {
+    void fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(event),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // Internal event failure must not change a WhatsApp click.
+  }
+}
+
+export function TrackingBehavior({
+  context,
+  products,
+}: {
+  context: TrackingContext;
+  products: TrackingProduct[];
+}) {
+  const pageViewSent = useRef(false);
+
+  useEffect(() => {
+    const root = document.getElementById("main-content");
+    if (!root) return;
+
+    const byId = new Map(products.map((product) => [product.id, product]));
+
+    function baseEvent() {
+      return {
+        eventId: crypto.randomUUID(),
+        eventTime: new Date().toISOString(),
+        anonymousSessionId: context.anonymousSessionId,
+        pageUrl: `${window.location.origin}${window.location.pathname}`,
+        attribution: context.attribution,
+        metadata: {},
+      };
+    }
+
+    function pageView() {
+      const consent = currentConsent();
+      if (consent) activateProviders(consent);
+      if (!consent || (!consent.analytics && !consent.marketing)) return;
+      if (pageViewSent.current) return;
+      pageViewSent.current = true;
+      sendEvent(
+        {
+          ...baseEvent(),
+          eventName: "PageView",
+          product: null,
+          branch: null,
+          cta: null,
+        },
+        consent,
+      );
+    }
+
+    function onToggle(event: Event) {
+      const details = event.target;
+      if (!(details instanceof HTMLDetailsElement) || !details.open) return;
+      if (!root?.contains(details)) return;
+      const product = byId.get(details.dataset.trackProductId ?? "");
+      const consent = currentConsent();
+      if (!product || !consent) return;
+      sendEvent(
+        {
+          ...baseEvent(),
+          eventName: "ViewContent",
+          product: { id: product.id, category: product.slug },
+          branch: null,
+          cta: null,
+        },
+        consent,
+      );
+    }
+
+    function onClick(event: MouseEvent) {
+      if (!(event.target instanceof Element)) return;
+      const anchor = event.target.closest<HTMLAnchorElement>(
+        "a[data-track-branch-id]",
+      );
+      if (!anchor || !root?.contains(anchor)) return;
+      const details = anchor.closest<HTMLDetailsElement>(
+        "details[data-track-product-id]",
+      );
+      const product = byId.get(details?.dataset.trackProductId ?? "");
+      const branch = product?.branches.find(
+        (item) => item.id === anchor.dataset.trackBranchId,
+      );
+      const consent = currentConsent();
+      if (!product || !branch || !consent) return;
+      sendEvent(
+        {
+          ...baseEvent(),
+          eventName: "Contact",
+          product: { id: product.id, category: product.slug },
+          branch: { id: branch.id, name: branch.name },
+          cta: "whatsapp",
+        },
+        consent,
+      );
+    }
+
+    pageView();
+    window.addEventListener(consentChangedEventName, pageView);
+    root.addEventListener("toggle", onToggle, true);
+    root.addEventListener("click", onClick);
+
+    return () => {
+      window.removeEventListener(consentChangedEventName, pageView);
+      root.removeEventListener("toggle", onToggle, true);
+      root.removeEventListener("click", onClick);
+    };
+  }, [context, products]);
+
+  return null;
+}

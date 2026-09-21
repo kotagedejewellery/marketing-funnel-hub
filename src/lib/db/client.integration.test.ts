@@ -27,4 +27,43 @@ describe("Drizzle database client", () => {
       await connection.close();
     }
   });
+
+  it("has the ten approved P0 tables in the local public schema", async () => {
+    const connection = createDatabaseClient(process.env.DATABASE_URL);
+
+    try {
+      const rows = await connection.db.execute(sql`
+        select count(*)::int as table_count
+        from pg_tables
+        where schemaname = 'public'
+          and tablename in (
+            'admin_profiles', 'site_settings', 'content_sections', 'campaigns',
+            'products', 'branches', 'product_branches', 'links', 'events', 'audit_logs'
+          )
+      `);
+      expect(rows[0]?.table_count).toBe(10);
+    } finally {
+      await connection.close();
+    }
+  });
+
+  it("enables RLS and denies direct browser-role reads", async () => {
+    const connection = createDatabaseClient(process.env.DATABASE_URL);
+
+    try {
+      const rows = await connection.db.execute(sql`
+        select count(*)::int as protected_tables
+        from pg_class as table_info
+        join pg_namespace as schema_info on schema_info.oid = table_info.relnamespace
+        where schema_info.nspname = 'public'
+          and table_info.relkind = 'r'
+          and table_info.relrowsecurity
+          and not has_table_privilege('anon', table_info.oid, 'SELECT')
+          and not has_table_privilege('authenticated', table_info.oid, 'SELECT')
+      `);
+      expect(rows[0]?.protected_tables).toBe(10);
+    } finally {
+      await connection.close();
+    }
+  });
 });

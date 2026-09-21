@@ -1,3 +1,4 @@
--- Sprint 0 intentionally seeds no data. P0 domain content belongs to Sprint 1.
+-- Intentionally empty: Supabase seeds before separate Drizzle migrations run.
+-- The Drizzle P0 migration inserts minimal settings and section defaults.
 -- Seed configuration reference: supabase/config.toml [db.seed].
 -- Never seed Auth users, credentials, production data, or provider secrets.

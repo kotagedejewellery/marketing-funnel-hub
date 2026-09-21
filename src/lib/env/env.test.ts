@@ -9,27 +9,19 @@ const validServerEnvironment = {
   NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local_test_key",
-  NEXT_PUBLIC_META_PIXEL_ID: "1234567890",
-  NEXT_PUBLIC_GTM_CONTAINER_ID: "GTM-ABC123",
   DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
   SUPABASE_SECRET_KEY: "sb_secret_local_test_key",
   SUPABASE_PUBLIC_ASSET_BUCKET: "public-assets",
-  SUPABASE_PRIVATE_MEDIA_BUCKET: "admin-media",
-  META_CAPI_DATASET_ID: "1234567890",
-  META_CAPI_ACCESS_TOKEN: "test_meta_access_token",
-  EVENT_RATE_LIMIT_WINDOW_SECONDS: "60",
-  EVENT_RATE_LIMIT_PER_IP: "30",
-  EVENT_RATE_LIMIT_GLOBAL: "300",
+  TRACKING_ENABLED: "false",
   CRON_SECRET: "test-cron-secret-123456",
 };
 
 describe("environment contract", () => {
-  it("parses a valid local server environment and coerces numeric limits", () => {
+  it("parses a minimal local server environment with tracking disabled", () => {
     const environment = parseServerEnv(validServerEnvironment);
 
     expect(environment.NEXT_PUBLIC_APP_ENV).toBe("local");
-    expect(environment.EVENT_RATE_LIMIT_PER_IP).toBe(30);
-    expect(environment.EVENT_RATE_LIMIT_GLOBAL).toBe(300);
+    expect(environment.TRACKING_ENABLED).toBe("false");
   });
 
   it("reports only invalid variable names without exposing supplied secrets", () => {
@@ -39,7 +31,7 @@ describe("environment contract", () => {
       parseServerEnv({
         ...validServerEnvironment,
         DATABASE_URL: undefined,
-        META_CAPI_ACCESS_TOKEN: secret,
+        SUPABASE_SECRET_KEY: secret,
         CRON_SECRET: "short",
       }),
     ).toThrow(EnvironmentValidationError);
@@ -48,7 +40,7 @@ describe("environment contract", () => {
       parseServerEnv({
         ...validServerEnvironment,
         DATABASE_URL: undefined,
-        META_CAPI_ACCESS_TOKEN: secret,
+        SUPABASE_SECRET_KEY: secret,
         CRON_SECRET: "short",
       });
     } catch (error) {
@@ -66,8 +58,6 @@ describe("environment contract", () => {
 
     expect(Object.keys(environment).sort()).toEqual([
       "NEXT_PUBLIC_APP_ENV",
-      "NEXT_PUBLIC_GTM_CONTAINER_ID",
-      "NEXT_PUBLIC_META_PIXEL_ID",
       "NEXT_PUBLIC_SITE_URL",
       "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
       "NEXT_PUBLIC_SUPABASE_URL",
@@ -83,6 +73,17 @@ describe("environment contract", () => {
         NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
       }),
     ).toThrow(/NEXT_PUBLIC_SITE_URL/);
+  });
+
+  it("rejects staging because only local and live environments are supported", () => {
+    expect(() =>
+      parseClientEnv({
+        ...validServerEnvironment,
+        NEXT_PUBLIC_APP_ENV: "staging",
+        NEXT_PUBLIC_SITE_URL: "https://preview.example.com",
+        NEXT_PUBLIC_SUPABASE_URL: "https://staging.supabase.co",
+      }),
+    ).toThrow(/NEXT_PUBLIC_APP_ENV/);
   });
 
   it("accepts PostgreSQL URLs but rejects other protocols without echoing secrets", () => {

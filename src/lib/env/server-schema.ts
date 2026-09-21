@@ -4,12 +4,12 @@ import { databaseUrlSchema } from "./database-url";
 import {
   EnvironmentValidationError,
   invalidVariables,
+  optionalEnvironmentString,
   publicEnvironmentShape,
   requireHttpsOutsideLocal,
 } from "./schema";
 
 const nonEmptyString = z.string().trim().min(1);
-const positiveInteger = z.coerce.number().int().positive();
 
 const serverEnvironmentSchema = z
   .object({
@@ -21,15 +21,33 @@ const serverEnvironmentSchema = z
       .min(16)
       .refine((value) => !value.startsWith("sb_publishable_")),
     SUPABASE_PUBLIC_ASSET_BUCKET: nonEmptyString,
-    SUPABASE_PRIVATE_MEDIA_BUCKET: nonEmptyString,
-    META_CAPI_DATASET_ID: z.string().regex(/^\d+$/),
-    META_CAPI_ACCESS_TOKEN: z.string().min(16),
-    EVENT_RATE_LIMIT_WINDOW_SECONDS: positiveInteger.max(3600),
-    EVENT_RATE_LIMIT_PER_IP: positiveInteger.max(10_000),
-    EVENT_RATE_LIMIT_GLOBAL: positiveInteger.max(100_000),
+    META_CAPI_DATASET_ID: optionalEnvironmentString(
+      z.string().regex(/^\d+$/),
+    ),
+    META_CAPI_ACCESS_TOKEN: optionalEnvironmentString(z.string().min(16)),
+    TRACKING_ENABLED: z.enum(["true", "false"]).default("false"),
     CRON_SECRET: z.string().min(16),
   })
-  .superRefine(requireHttpsOutsideLocal);
+  .superRefine((environment, context) => {
+    requireHttpsOutsideLocal(environment, context);
+
+    if (environment.TRACKING_ENABLED !== "true") return;
+
+    for (const variable of [
+      "NEXT_PUBLIC_META_PIXEL_ID",
+      "NEXT_PUBLIC_GTM_CONTAINER_ID",
+      "META_CAPI_DATASET_ID",
+      "META_CAPI_ACCESS_TOKEN",
+    ] as const) {
+      if (!environment[variable]) {
+        context.addIssue({
+          code: "custom",
+          path: [variable],
+          message: "Required when tracking is enabled.",
+        });
+      }
+    }
+  });
 
 export function parseServerEnv(input: unknown) {
   const result = serverEnvironmentSchema.safeParse(input);

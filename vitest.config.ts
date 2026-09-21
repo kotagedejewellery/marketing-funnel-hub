@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   test: {
+    maxWorkers: process.platform === "win32" ? 1 : undefined,
     projects: [
       {
         extends: true,
@@ -26,6 +27,7 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
+          testTimeout: 15_000,
           include: ["src/**/*.integration.test.ts"],
         },
       },

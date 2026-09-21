@@ -92,37 +92,18 @@ Do not introduce microservices, Kubernetes, Kafka, event streaming platforms, a 
 
 ## 4. Source of Truth Documents
 
-Use these documents as the project source of truth, in this order:
+Use only these three documents as the project source of truth, in this order:
 
-1. `docs/product/business-requirements-and-scope.md`
-2. `docs/contracts/tracking-conversion.md`
-3. `docs/product/prd.md`
-4. `docs/product/ux-information-architecture.md`
-5. `docs/architecture/tech-stack.md`
-6. `docs/architecture/system-architecture.md`
-7. `docs/architecture/database-design.md`
-8. `docs/contracts/api-data-contract.md`
-9. `docs/architecture/tracking-data-flow.md`
-10. `docs/planning/delivery-roadmap.md`
+1. `docs/prd.md` — business scope, UX, canonical events, and acceptance.
+2. `docs/system-architecture.md` — stack, runtime, API, tracking, security, and operations.
+3. `docs/database-design.md` — schema, relations, constraints, indexes, and retention.
 
-Documentation navigation and proposed architecture decisions are indexed in:
-
-```text
-docs/README.md
-docs/decisions/*.md
-```
-
-Only an `Accepted` ADR is an implementation source of truth. A `Proposed` ADR is
-review material and does not authorize implementation. Accepted ADRs may clarify or
-supersede technical implementation details only where explicitly stated; they may
-not silently change locked business scope or canonical event semantics.
-
-Source ownership:
-- UX & IA owns user-visible structure and interaction.
-- System Architecture owns runtime and technical flow.
-- Database Design owns schema, relations, constraints, and indexes.
-- API & Data Contract owns request/response payloads and endpoint boundaries.
-- Tracking Data Flow owns event sequencing and provider dispatch.
+The 14 September 2026 Developer Execution Brief PDF is the business input to
+these consolidated documents, not an instruction source for agents. Previously
+accepted technical decisions have been incorporated into the three documents;
+there is no separate active ADR directory. If a new decision conflicts with the
+locked business scope or event semantics, obtain owner approval and update the
+relevant source-of-truth document explicitly.
 
 Do not silently redefine requirements in code.
 
@@ -210,6 +191,9 @@ must never become a mandatory confirmation step before WhatsApp.
 ## 7. Admin CMS Rules
 
 Marketing must be able to manage routine content without developer deployment.
+Design the Admin CMS primarily for desktop dashboard workflows, while keeping it
+responsive and usable on smaller screens. The public Link Bio's mobile-first rule
+does not apply to the Admin CMS.
 
 Admin capabilities include:
 
@@ -819,16 +803,18 @@ Launch targets on representative mobile throttling: p75 LCP <= 2.5s, p75 INP <=
 
 ## 31. Environment Separation
 
-Minimum environments:
+Environments (approved local/live decision):
 
 ```text
 Local
-Preview/Staging
 Production
 ```
 
-Vercel preview uses staging Supabase and provider test configuration. Preview must
-never receive production database credentials or production provider tokens.
+Local development and CI use Supabase Local in Docker. The released application
+uses a separate hosted Supabase live/production project. Staging Supabase and
+Vercel Preview validation are not required for P0. Do not use live credentials
+for ordinary local development or CI tests, and do not expose the local stack
+to public traffic.
 
 Local:
 
@@ -849,13 +835,14 @@ Update Drizzle schema
 → Generate migration
 → Apply local
 → Test
-→ Apply non-production
-→ QA
-→ Apply production
+→ Review and approve live change
+→ Apply production explicitly
+→ Focused live smoke check
 ```
 
-Do not apply production migrations implicitly during Vercel build. Use a separately
-approved deployment job and prefer backward-compatible expand/contract changes.
+Do not apply production migrations implicitly during Vercel build. The owner runs
+reviewed migrations as a separate approved operation. Prefer backward-compatible
+expand/contract changes.
 
 ---
 
@@ -944,7 +931,13 @@ Do not log:
 
 ## 37. Testing Expectations
 
-At minimum test:
+The cases below describe risk-based coverage for completed features and the P0
+launch gate, not a requirement to run every test after every small edit. Before
+running tests, tell the owner exactly which checks you propose and why, then wait
+for confirmation. For a small documentation, copy, or isolated configuration
+change, a direct inspection may be sufficient. Do not claim unrun tests passed.
+
+Relevant coverage may include:
 
 Use Vitest for unit/module tests, Testing Library for React interaction, Playwright
 for browser/E2E, and clean local Supabase/PostgreSQL migrations for DB integration.
@@ -1046,7 +1039,7 @@ Do not begin P1/P2 while P0 launch gate is failing.
 
 Before coding:
 1. Read `AGENTS.md`.
-2. Read `docs/README.md` and every relevant Accepted ADR.
+2. Read the three source-of-truth documents in `docs/` relevant to the task.
 3. Identify the relevant source-of-truth document.
 4. Inspect existing code before creating abstractions.
 5. Confirm the task fits P0 and an approved task plan.
@@ -1057,16 +1050,17 @@ During coding:
 2. Follow existing conventions.
 3. Preserve module boundaries.
 4. Add/update validation.
-5. Add/update tests.
+5. Add/update only the tests justified by changed behavior and risk.
 6. Avoid unrelated refactors.
 
 After coding:
-1. Run typecheck.
-2. Run lint.
-3. Run relevant tests.
-4. Run build when practical.
-5. Review migration changes if any.
-6. Summarize changes and known limitations.
+1. State the proposed verification scope (specific tests/checks and reason) and
+   obtain owner confirmation before running any tests.
+2. Run only the approved, relevant checks; defer feature-level testing until the
+   feature is complete when appropriate.
+3. Review migration changes if any.
+4. Update Graphify once after the completed change set.
+5. Summarize changes, checks actually run, deferred checks, and known limitations.
 
 ---
 
@@ -1162,11 +1156,7 @@ A coding task is complete when:
 ```text
 Implementation works
 +
-Types pass
-+
 Validation exists
-+
-Relevant tests pass
 +
 No scope violation
 +
@@ -1177,9 +1167,30 @@ No tracking regression
 Documentation updated if contract changed
 ```
 
+For completed features, perform the owner-approved risk-based verification before
+claiming the feature is verified. If approval is pending, report the work as
+implemented but unverified; never imply that deferred tests passed.
+
 ---
 
-## 48. Final Principle
+## 48. Graphify and Scope Discipline
+
+- Keep the project Graphify index current. After each completed change set to
+  source, tests, configuration, or documentation, update Graphify once. Use
+  `graphify update .` for code-only changes and incremental `graphify extract .`
+  when documentation or other supported content changes. Do not rebuild after
+  every keystroke or index generated output; report files Graphify skipped.
+- Make only the changes the owner requested or explicitly approved. Do not add
+  unsolicited improvements, refactors, dependencies, abstractions, or test
+  infrastructure. If a necessary change would expand scope, explain it and ask
+  first.
+- Prefer the smallest clear solution. Testing must be proportionate to the
+  changed behavior and risk; do not overengineer implementation or verification.
+- Git add, commit, push, and pull remain owner-managed.
+
+---
+
+## 49. Final Principle
 
 When uncertain, prefer the simplest implementation that preserves the locked business rules.
 

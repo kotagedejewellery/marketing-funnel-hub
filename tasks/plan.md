@@ -2,38 +2,34 @@
 
 ## Status
 
-In progress — T0-01 through T0-09 are complete. T0-10 is configured and awaiting
-GitHub-hosted verification. Git operations for T0-01 remained user-managed;
-Docker and host firewall remain user-managed. T0-11 onward remains planned.
+In progress — T0-01 through T0-10 are complete (GitHub verification reported by
+the repository owner). T0-11 was retired by the local/live decision now recorded
+in `docs/system-architecture.md`; T0-12 remains in progress.
+Git and host firewall operations remain user-managed; the owner subsequently
+authorized local Docker/database work for Sprint 1.
 
 ## Objective
 
 Create a reproducible, secure, testable foundation for the KGJ P0 modular monolith
 without implementing public, CMS, database-domain, or tracking features. Sprint 0
-ends when the empty application shell, local services, quality gates, staging
-connection, and operating runbooks are proven.
+ends when the empty application shell, local services, quality gates, and
+operating runbooks are proven.
 
 ## Scope boundaries
 
 Sprint 0 includes repository initialization, pinned tooling, the minimal Next.js
 shell, Tailwind/shadcn foundations, validation and test harnesses, Supabase Local,
-Drizzle connectivity, Auth/Storage client boundaries, CI, and preview deployment.
+Drizzle connectivity, Auth/Storage client boundaries, and CI.
 
 Sprint 0 excludes domain tables, CMS screens, public product UI, canonical event
 behavior, provider integrations, production migrations, and real production secrets.
 
 ## Accepted architecture decisions
 
-- ADR-001: App Router, server-first rendering, Node runtime for privileged paths,
-  pnpm, and exact version pinning.
-- ADR-002: server-side domain access, least-privilege database role, RLS defense in
-  depth, explicit role checks, and protected Storage writes.
-- ADR-003: canonical event ownership and consent-aware, WhatsApp-safe delivery; only
-  interfaces required by later sprints are prepared here.
-- ADR-004: normalized Product/Contact/content contracts; no domain implementation in
-  Sprint 0.
-- ADR-005: Vitest, Testing Library, Playwright, CI gates, isolated environments, and
-  controlled migration/deployment workflows.
+The original ADR decisions are consolidated in `docs/system-architecture.md` and
+`docs/database-design.md`: App Router/Node, server-side access and RLS, canonical
+tracking and WhatsApp-safe delivery, Product–Branch rules, risk-based verification,
+and local/live-only environments. No separate ADR files remain.
 
 ## Dependency graph
 
@@ -54,8 +50,6 @@ T0-05 + T0-07 → T0-09 Supabase Auth/Storage boundaries
 T0-04 + T0-06 + T0-08 + T0-09
   ↓
 T0-10 CI quality gates
-  ↓
-T0-11 Vercel preview/staging validation
   ↓
 T0-12 Sprint 0 completion checkpoint
 ```
@@ -91,16 +85,16 @@ T0-12 Sprint 0 completion checkpoint
 
 ### Phase C — Automated delivery foundation
 
-- [ ] T0-10: Add CI quality gates (workflow configured; GitHub gate verification pending)
-- [ ] T0-11: Validate Vercel preview with staging-only services
+- [x] T0-10: Add CI quality gates (GitHub gate verification owner-reported)
+- T0-11: Retired by the local/live decision; no staging/Preview validation required.
 - [ ] T0-12: Complete Sprint 0 documentation and readiness review
 
 ### Checkpoint C
 
 - [ ] Pull-request quality gates pass.
-- [ ] Preview deploys without production credentials.
+- [ ] Local-only tests and CI use no live Supabase credentials.
 - [ ] Environment, migration, rollback, admin-bootstrap, and secret-ownership runbooks
-  are reviewed.
+      are reviewed.
 - [ ] Human approval is recorded before Sprint 1.
 
 ## Parallelization
@@ -111,21 +105,21 @@ lockfile changes, migrations, and CI integration remain sequential to avoid conf
 
 ## Risks and mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Unsupported framework/runtime combination | High | Verify Vercel and framework support, then pin exact versions and lockfile |
-| Preview receives production credentials | High | Separate staging variables and automated environment validation |
-| Drizzle path bypasses intended access controls | High | Dedicated least-privilege role plus explicit RLS/direct-access tests |
-| Tooling overwhelms the greenfield baseline | Medium | Install only the accepted stack; no feature libraries in Sprint 0 |
-| CI differs from local execution | Medium | Use the same pnpm scripts and clean-service startup in both environments |
-| External account setup blocks automation | Medium | Isolate repository work and document the exact user-owned connection step |
+| Risk                                           | Impact | Mitigation                                                                |
+| ---------------------------------------------- | ------ | ------------------------------------------------------------------------- |
+| Unsupported framework/runtime combination      | High   | Verify Vercel and framework support, then pin exact versions and lockfile |
+| Local tests touch live data                    | High   | Keep test URLs local and reject remote migration targets                  |
+| Drizzle path bypasses intended access controls | High   | Dedicated least-privilege role plus explicit RLS/direct-access tests      |
+| Tooling overwhelms the greenfield baseline     | Medium | Install only the accepted stack; no feature libraries in Sprint 0         |
+| CI differs from local execution                | Medium | Use the same pnpm scripts and clean-service startup in both environments  |
+| External account setup blocks automation       | Medium | Isolate repository work and document the exact user-owned connection step |
 
 ## Decisions recorded during Sprint 0
 
 The following are execution records, not reopened architecture choices:
 
-- exact Node.js and package versions selected under ADR-001;
-- named owners for staging, production, provider accounts, migrations, and releases;
+- exact Node.js and package versions selected under the system architecture;
+- named owner for live Supabase, provider accounts, migrations, and releases;
 - environment-variable inventory without secret values;
 - initial deployment-edge rate-limit thresholds for later `/api/events` work;
 - alert destinations and escalation owner.
