@@ -75,6 +75,30 @@ describe("environment contract", () => {
     ).toThrow(/NEXT_PUBLIC_SITE_URL/);
   });
 
+  it("reports malformed public URLs by variable name without leaking their values", () => {
+    const invalidUrl = "https://[not-an-ipv6-address]";
+
+    for (const variable of [
+      "NEXT_PUBLIC_SITE_URL",
+      "NEXT_PUBLIC_SUPABASE_URL",
+    ] as const) {
+      try {
+        parseServerEnv({
+          ...validServerEnvironment,
+          NEXT_PUBLIC_APP_ENV: "production",
+          NEXT_PUBLIC_SITE_URL: "https://marketing.example.com",
+          NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+          [variable]: invalidUrl,
+        });
+        throw new Error("Expected invalid environment configuration");
+      } catch (error) {
+        expect(error).toBeInstanceOf(EnvironmentValidationError);
+        expect(String(error)).toContain(variable);
+        expect(String(error)).not.toContain(invalidUrl);
+      }
+    }
+  });
+
   it("rejects staging because only local and live environments are supported", () => {
     expect(() =>
       parseClientEnv({

@@ -2,8 +2,12 @@ import * as z from "zod";
 
 const environmentName = z.enum(["local", "production"]);
 const webUrl = z.url().refine((value) => {
-  const protocol = new URL(value).protocol;
-  return protocol === "http:" || protocol === "https:";
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
 });
 
 export function optionalEnvironmentString(schema: z.ZodString) {
@@ -44,7 +48,15 @@ export function requireHttpsOutsideLocal(
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_SUPABASE_URL",
   ] as const) {
-    if (new URL(environment[variable]).protocol !== "https:") {
+    let protocol: string;
+    try {
+      protocol = new URL(environment[variable]).protocol;
+    } catch {
+      // The field validator already reports an invalid URL for this variable.
+      continue;
+    }
+
+    if (protocol !== "https:") {
       context.addIssue({
         code: "custom",
         path: [variable],
