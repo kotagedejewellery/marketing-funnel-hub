@@ -1,39 +1,46 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { AccountMenu } from "@/components/admin/account-menu";
 
-const items = [
+const items: {
+  href: string;
+  label: string;
+  icon: string;
+  separatorBefore?: boolean;
+}[] = [
   {
     href: "/admin",
     label: "Dashboard",
     icon: "M3 3h8v8H3z M13 3h8v5h-8z M13 10h8v11h-8z M3 13h8v8H3z",
   },
   {
-    href: "/admin/content",
-    label: "Konten",
-    icon: "M5 3h11l3 3v15H5z M8 10h8 M8 14h8 M8 18h5",
-  },
-  {
-    href: "/admin/campaigns",
-    label: "Kampanye",
-    icon: "M3 10h4l10-5v14L7 14H3z M7 14l2 6h3",
-  },
-  {
-    href: "/admin/products",
-    label: "Produk",
-    icon: "M3 9 8 3h8l5 6-9 12z M3 9h18 M8 3l4 18 4-18",
-  },
-  {
     href: "/admin/branches",
-    label: "Cabang",
+    label: "Link Bio cabang",
     icon: "M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z M12 8a2 2 0 1 0 0 4a2 2 0 1 0 0-4",
   },
   {
+    href: "/admin/products",
+    label: "Produk utama",
+    icon: "M3 9 8 3h8l5 6-9 12z M3 9h18 M8 3l4 18 4-18",
+  },
+  {
+    href: "/admin/content",
+    label: "Konten halaman gabungan",
+    icon: "M5 3h11l3 3v15H5z M8 10h8 M8 14h8 M8 18h5",
+    separatorBefore: true,
+  },
+  {
+    href: "/admin/campaigns",
+    label: "Kampanye halaman gabungan",
+    icon: "M3 10h4l10-5v14L7 14H3z M7 14l2 6h3",
+  },
+  {
     href: "/admin/links",
-    label: "Tautan",
+    label: "Tautan halaman gabungan",
     icon: "M10 14l4-4 M8 16H6a4 4 0 0 1 0-8h4 M14 8h4a4 4 0 0 1 0 8h-4",
   },
   {
@@ -105,32 +112,39 @@ export function AdminNavigation({
             pathname === item.href ||
             (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={item.label}
-              aria-current={active ? "page" : undefined}
-              className={`group relative flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kgj-accent-soft)] motion-reduce:transition-none ${item.href === "/admin/settings" ? "lg:mt-auto" : ""} ${active ? "bg-card text-[var(--kgj-dark)] shadow-[0_8px_20px_-14px_rgba(0,0,0,0.8)]" : "text-[var(--kgj-on-dark-muted)] hover:bg-white/15"}`}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-5"
+            <Fragment key={item.href}>
+              {item.separatorBefore && (
+                <span
+                  aria-hidden="true"
+                  className="mx-1 h-7 w-px shrink-0 bg-white/20 lg:mx-0 lg:my-2 lg:h-px lg:w-8"
+                />
+              )}
+              <Link
+                href={item.href}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+                className={`group relative flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kgj-accent-soft)] motion-reduce:transition-none ${item.href === "/admin/settings" ? "lg:mt-auto" : ""} ${active ? "bg-card text-[var(--kgj-dark)] shadow-[0_8px_20px_-14px_rgba(0,0,0,0.8)]" : "text-[var(--kgj-on-dark-muted)] hover:bg-white/15"}`}
               >
-                <path d={item.icon} />
-              </svg>
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 left-[calc(100%+0.75rem)] z-30 hidden -translate-y-1/2 rounded-lg bg-[var(--kgj-dark)] px-3 py-2 text-xs font-semibold whitespace-nowrap text-[var(--primary-foreground)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 lg:block motion-reduce:transition-none"
-              >
-                {item.label}
-              </span>
-            </Link>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-5"
+                >
+                  <path d={item.icon} />
+                </svg>
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 left-[calc(100%+0.75rem)] z-30 hidden -translate-y-1/2 rounded-lg bg-[var(--kgj-dark)] px-3 py-2 text-xs font-semibold whitespace-nowrap text-[var(--primary-foreground)] opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 lg:block motion-reduce:transition-none"
+                >
+                  {item.label}
+                </span>
+              </Link>
+            </Fragment>
           );
         })}
       </nav>

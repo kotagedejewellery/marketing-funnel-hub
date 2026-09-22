@@ -21,14 +21,17 @@ export default async function CampaignsPage({
           <p className="text-xs font-semibold tracking-[0.18em] text-[var(--kgj-accent)] uppercase">
             Promosi
           </p>
-          <h1 className="mt-3 font-serif text-4xl sm:text-5xl">Kampanye</h1>
+          <h1 className="mt-3 font-serif text-4xl sm:text-5xl">
+            Kampanye halaman gabungan
+          </h1>
           <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
-            Kelola kampanye yang dapat tampil di Link Bio.
+            Kampanye di sini hanya tampil pada URL utama (/). Kampanye tiap
+            cabang dikelola dari halaman Link Bio cabang.
           </p>
         </div>
         <FormDialog
           key={create === "1" ? "create-open" : "create-closed"}
-          title="Tambah kampanye"
+          title="Tambah kampanye halaman gabungan"
           triggerLabel="Tambah kampanye"
           primary
           initiallyOpen={create === "1"}

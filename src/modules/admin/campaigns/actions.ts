@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDatabase } from "@/lib/db/client";
-import { auditLogs, campaigns } from "@/lib/db/schema";
+import { auditLogs, branches, campaigns } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 
 import { campaignSchema, parseWibDate } from "./validation";
@@ -34,7 +34,21 @@ export async function saveCampaign(
   }
 
   const input = parsed.data;
+  const branchId = input.branchId || null;
+  const [branch] = branchId
+    ? await getDatabase()
+        .select({ slug: branches.slug })
+        .from(branches)
+        .where(eq(branches.id, branchId))
+        .limit(1)
+    : [null];
+  if (branchId && !branch)
+    return {
+      message: "Cabang tidak ditemukan.",
+      errors: { branchId: "Cabang tidak valid." },
+    };
   const values = {
+    branchId,
     name: input.name,
     title: input.title,
     description: input.description,
@@ -50,11 +64,11 @@ export async function saveCampaign(
     savedId = await getDatabase().transaction(async (tx) => {
       if (input.id) {
         const [current] = await tx
-          .select({ id: campaigns.id })
+          .select({ id: campaigns.id, branchId: campaigns.branchId })
           .from(campaigns)
           .where(eq(campaigns.id, input.id))
           .limit(1);
-        if (!current) return "";
+        if (!current || current.branchId !== branchId) return "";
         await tx
           .update(campaigns)
           .set({ ...values, updatedAt: new Date() })
@@ -86,7 +100,8 @@ export async function saveCampaign(
   }
   if (!savedId) return { message: "Kampanye tidak ditemukan.", errors: {} };
 
-  revalidatePath("/");
+  revalidatePath(branch ? `/b/${branch.slug}` : "/");
+  if (branchId) revalidatePath(`/admin/branches/${branchId}/link-bio`);
   revalidatePath("/admin/campaigns");
   redirect(`/admin/campaigns/${savedId}?saved=1`);
 }

@@ -3,9 +3,13 @@ import "server-only";
 import { asc, eq } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
+import { serverEnv } from "@/lib/env/server";
 import { branches, productBranches, siteSettings } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
-import { resolveWhatsappCta } from "@/modules/public-content/links";
+import {
+  publicAssetUrl,
+  resolveWhatsappCta,
+} from "@/modules/public-content/links";
 
 export async function getProductAssignments(
   productId: string,
@@ -37,7 +41,7 @@ export async function getProductAssignments(
     const assignment = byBranchId.get(branch.id);
     const cta = resolveWhatsappCta({
       number: branch.whatsappNumber,
-      product: productName,
+      product: assignment?.displayName || productName,
       branch: branch.name,
       assignmentLabel: assignment?.ctaLabel ?? null,
       branchLabel: branch.ctaLabel,
@@ -48,10 +52,18 @@ export async function getProductAssignments(
     return {
       id: branch.id,
       name: branch.name,
+      assignmentId: assignment?.id ?? null,
       isBranchActive: branch.isActive,
       isActive: assignment?.isActive ?? false,
       sortOrder: assignment?.sortOrder ?? branch.sortOrder,
       ctaLabel: assignment?.ctaLabel ?? "",
+      displayName: assignment?.displayName ?? "",
+      description: assignment?.description ?? "",
+      imageUrl: publicAssetUrl(
+        serverEnv.NEXT_PUBLIC_SUPABASE_URL,
+        serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET,
+        assignment?.imagePath ?? null,
+      ),
       whatsappMessageTemplate: assignment?.whatsappMessageTemplate ?? "",
       resolvedLabel: cta.ctaLabel,
       resolvedMessage: cta.message,

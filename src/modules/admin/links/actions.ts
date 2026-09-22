@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDatabase } from "@/lib/db/client";
-import { auditLogs, links } from "@/lib/db/schema";
+import { auditLogs, branches, links } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 
 import { linkSchema } from "./validation";
@@ -34,7 +34,21 @@ export async function saveLink(
   }
 
   const input = parsed.data;
+  const branchId = input.branchId || null;
+  const [branch] = branchId
+    ? await getDatabase()
+        .select({ slug: branches.slug })
+        .from(branches)
+        .where(eq(branches.id, branchId))
+        .limit(1)
+    : [null];
+  if (branchId && !branch)
+    return {
+      message: "Cabang tidak ditemukan.",
+      errors: { branchId: "Cabang tidak valid." },
+    };
   const values = {
+    branchId,
     label: input.label,
     url: input.url,
     linkType: input.linkType,
@@ -49,11 +63,11 @@ export async function saveLink(
     savedId = await getDatabase().transaction(async (tx) => {
       if (input.id) {
         const [current] = await tx
-          .select({ id: links.id })
+          .select({ id: links.id, branchId: links.branchId })
           .from(links)
           .where(eq(links.id, input.id))
           .limit(1);
-        if (!current) return "";
+        if (!current || current.branchId !== branchId) return "";
         await tx
           .update(links)
           .set({ ...values, updatedAt: new Date() })
@@ -85,7 +99,12 @@ export async function saveLink(
   }
   if (!savedId) return { message: "Tautan tidak ditemukan.", errors: {} };
 
-  revalidatePath("/");
+  revalidatePath(branch ? `/b/${branch.slug}` : "/");
+  if (branchId) revalidatePath(`/admin/branches/${branchId}/link-bio`);
   revalidatePath("/admin/links");
-  redirect("/admin/links?saved=1");
+  redirect(
+    branchId
+      ? `/admin/branches/${branchId}/link-bio?saved=1`
+      : "/admin/links?saved=1",
+  );
 }

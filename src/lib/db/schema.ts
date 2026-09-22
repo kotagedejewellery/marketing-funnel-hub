@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -62,24 +63,41 @@ export const siteSettings = pgTable(
   ],
 ).enableRLS();
 
-export const contentSections = pgTable("content_sections", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  sectionKey: text("section_key").notNull().unique(),
-  label: text("label").notNull(),
-  sortOrder: integer("sort_order").notNull().default(0),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-}).enableRLS();
+export const contentSections = pgTable(
+  "content_sections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id").references(() => branches.id, {
+      onDelete: "restrict",
+    }),
+    sectionKey: text("section_key").notNull(),
+    label: text("label").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("content_sections_global_key_unique")
+      .on(table.sectionKey)
+      .where(sql`${table.branchId} is null`),
+    uniqueIndex("content_sections_branch_key_unique")
+      .on(table.branchId, table.sectionKey)
+      .where(sql`${table.branchId} is not null`),
+  ],
+).enableRLS();
 
 export const campaigns = pgTable(
   "campaigns",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id").references(() => branches.id, {
+      onDelete: "restrict",
+    }),
     name: text("name").notNull(),
     title: text("title"),
     description: text("description"),
@@ -102,6 +120,12 @@ export const campaigns = pgTable(
       sql`${table.activeUntil} is null or ${table.activeFrom} is null or ${table.activeUntil} > ${table.activeFrom}`,
     ),
     index("campaigns_visibility_idx").on(
+      table.isActive,
+      table.sortOrder,
+      table.activeFrom.desc(),
+    ),
+    index("campaigns_branch_visibility_idx").on(
+      table.branchId,
       table.isActive,
       table.sortOrder,
       table.activeFrom.desc(),
@@ -139,6 +163,9 @@ export const branches = pgTable(
     slug: text("slug").notNull().unique(),
     whatsappNumber: text("whatsapp_number").notNull(),
     ctaLabel: text("cta_label"),
+    headline: text("headline"),
+    introduction: text("introduction"),
+    logoPath: text("logo_path"),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -166,6 +193,9 @@ export const productBranches = pgTable(
     branchId: uuid("branch_id")
       .notNull()
       .references(() => branches.id, { onDelete: "restrict" }),
+    displayName: text("display_name"),
+    description: text("description"),
+    imagePath: text("image_path"),
     whatsappMessageTemplate: text("whatsapp_message_template"),
     ctaLabel: text("cta_label"),
     isActive: boolean("is_active").notNull().default(true),
@@ -189,6 +219,9 @@ export const links = pgTable(
   "links",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id").references(() => branches.id, {
+      onDelete: "restrict",
+    }),
     label: text("label").notNull(),
     url: text("url").notNull(),
     linkType: text("link_type").notNull(),
@@ -208,6 +241,7 @@ export const links = pgTable(
       "links_type_check",
       sql`${table.linkType} in ('secondary', 'social')`,
     ),
+    index("links_branch_sort_idx").on(table.branchId, table.sortOrder),
   ],
 ).enableRLS();
 

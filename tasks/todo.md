@@ -34,6 +34,57 @@ operations remain owner-managed.
       retention schedule before production activation.
 - [ ] Deploy and perform one focused live funnel smoke check.
 
+## Link Bio per cabang — ekstensi disetujui 22 September 2026
+
+Kontrak fitur ada di tiga dokumen `docs/`; `/` tetap halaman gabungan. Kode
+B1–B6 telah disiapkan, tetapi checklist tetap terbuka sampai migrasi lokal dan
+pemeriksaan fokus disetujui serta selesai. Setiap pemeriksaan perlu konfirmasi
+cakupan dari pemilik lebih dahulu; Git dan migrasi live tetap dikerjakan pemilik.
+
+- [ ] B1 — Tambah kolom scope/override dan migrasi Drizzle yang additive.
+  - Terima: data global lama tetap `branch_id NULL`; section unik per scope;
+    FK/index/RLS tetap benar; tidak ada migrasi live otomatis.
+  - Verifikasi yang akan dimintakan: tinjau SQL dan migrasi lokal.
+  - Berkas: `src/lib/db/schema.ts`, `drizzle/`.
+- [ ] B2 — Tampilkan Link Bio `/b/[slug]` dari cabang/assignment aktif.
+  - Terima: 404 untuk cabang nonaktif/tidak ada; hanya produk yang ditugaskan;
+    CTA langsung ke WhatsApp cabang; `/` tidak berubah.
+  - Verifikasi yang akan dimintakan: pembacaan lokal cabang aktif/nonaktif
+    dan satu klik CTA; tanpa suite browser besar.
+  - Berkas: `src/modules/public-content/`, `src/app/b/[slug]/`,
+    `src/components/public/`.
+- [ ] B3 — Terima path cabang dalam sesi/UTM dan `/api/events`.
+  - Terima: hanya `/` atau `/b/{slug-aktif}` diterima; Contact harus cocok
+    dengan cabang pada URL; ViewContent tetap product-only; query tidak disimpan.
+  - Verifikasi yang akan dimintakan: tes fokus untuk path, Contact salah
+    cabang, dan satu alur consented; WhatsApp tetap non-blocking.
+  - Berkas: `src/proxy.ts`, `src/app/api/events/route.ts`,
+    `src/modules/tracking/`.
+- [ ] B4 — Edit identitas dan section halaman cabang di CMS.
+  - Terima: headline/pengantar/logo/section milik cabang yang dipilih,
+    fallback terdefinisi, Zod + audit, tidak mengubah halaman lain.
+  - Verifikasi yang akan dimintakan: satu simpan lalu lihat halaman cabang.
+  - Berkas: `src/modules/admin/branches/`, `src/modules/admin/content/`,
+    `src/app/admin/(cms)/branches/`, `src/components/admin/`.
+- [ ] B5 — Kelola kampanye dan tautan dalam scope halaman cabang.
+  - Terima: form/list dapat memilih konteks global atau cabang; satu kampanye
+    eligible per halaman; tautan cabang tidak muncul di `/`/cabang lain.
+  - Verifikasi yang akan dimintakan: satu edit kampanye/tautan per cabang.
+  - Berkas: `src/modules/admin/campaigns/`, `src/modules/admin/links/`,
+    `src/app/admin/(cms)/campaigns/`, `src/app/admin/(cms)/links/`.
+- [ ] B6 — Edit override tampilan produk pada assignment cabang.
+  - Terima: nama/deskripsi/gambar/urutan dapat berbeda per cabang; slug
+    kategori dan aturan nomor/CTA tetap kanonis; root tetap memakai data global.
+  - Verifikasi yang akan dimintakan: satu produk di dua cabang berbeda.
+  - Berkas: `src/modules/admin/assignments/`,
+    `src/components/admin/branch-assignment-editor.tsx`,
+    `src/modules/public-content/`.
+- [ ] B7 — Pemeriksaan fokus dan handoff live.
+  - Terima: hanya cek yang disetujui pemilik dijalankan; hasil dicatat jujur;
+    pemilik meninjau migrasi live sebelum deploy, lalu memeriksa funnel live.
+  - Verifikasi yang akan dimintakan: `pnpm typecheck`, tes modul yang berubah,
+    dan satu alur manual; tidak otomatis menjalankan semuanya.
+
 ## T0-01: Initialize repository and documentation baseline
 
 **Description:** Initialize Git and make the normalized documentation the first

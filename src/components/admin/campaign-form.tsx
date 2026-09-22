@@ -8,6 +8,7 @@ import { toWibInput } from "@/modules/admin/campaigns/validation";
 
 type Campaign = {
   id: string;
+  branchId?: string | null;
   name: string;
   title: string | null;
   description: string | null;
@@ -21,7 +22,13 @@ type Campaign = {
 const inputClass =
   "mt-2 min-h-12 w-full rounded-sm border border-border bg-background px-4 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kgj-accent)]";
 
-export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
+export function CampaignForm({
+  campaign,
+  branchId = null,
+}: {
+  campaign: Campaign | null;
+  branchId?: string | null;
+}) {
   const [state, action, pending] = useActionState(saveCampaign, {
     message: "",
     errors: {},
@@ -30,6 +37,11 @@ export function CampaignForm({ campaign }: { campaign: Campaign | null }) {
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="id" value={campaign?.id ?? ""} />
+      <input
+        type="hidden"
+        name="branchId"
+        value={campaign?.branchId ?? branchId ?? ""}
+      />
       <div>
         <p className="text-sm leading-6 text-muted-foreground">
           Nama internal membantu pengelolaan; judul dan deskripsi digunakan pada

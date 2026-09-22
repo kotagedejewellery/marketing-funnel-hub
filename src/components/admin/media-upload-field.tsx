@@ -8,7 +8,7 @@ import { FormDialog } from "@/components/admin/form-dialog";
 import { uploadMedia } from "@/modules/admin/media/actions";
 import { maxImageBytes } from "@/modules/admin/media/validation";
 
-type MediaType = "site" | "campaign" | "product";
+type MediaType = "site" | "branch" | "campaign" | "product" | "assignment";
 type SelectedImage = {
   name: string;
   size: number;
@@ -30,7 +30,7 @@ export function MediaUploadField({
   label: string;
   previewUrl: string | null;
 }) {
-  const isLogo = entityType === "site";
+  const isLogo = entityType === "site" || entityType === "branch";
   const recommendedSize = isLogo ? "800 × 800 px (1:1)" : "1200 × 900 px (4:3)";
 
   return (
@@ -95,9 +95,11 @@ function MediaUploadForm({
   const [fileError, setFileError] = useState("");
   const [dragging, setDragging] = useState(false);
   const previewUrl = selected?.url;
-  const isLogo = entityType === "site";
+  const isLogo = entityType === "site" || entityType === "branch";
   const recommendedWidth = isLogo ? 800 : 1200;
   const recommendedHeight = isLogo ? 800 : 900;
+  const inputId = `media-${entityType}-${entityId}`;
+  const guideId = `media-guide-${entityType}-${entityId}`;
 
   useEffect(() => {
     if (!previewUrl) return;
@@ -146,20 +148,17 @@ function MediaUploadForm({
       <input type="hidden" name="entityId" value={entityId} />
       <div>
         <p className="font-medium">Pilih gambar baru</p>
-        <p
-          id={`media-guide-${entityType}`}
-          className="mt-1 text-sm text-muted-foreground"
-        >
+        <p id={guideId} className="mt-1 text-sm text-muted-foreground">
           Disarankan {recommendedSize}. JPEG, PNG, atau WebP; maksimal 5 MB.
         </p>
         <input
           ref={inputRef}
-          id={`media-${entityType}`}
+          id={inputId}
           name="file"
           type="file"
           accept="image/jpeg,image/png,image/webp"
           aria-label={`Pilih ${label.toLowerCase()}`}
-          aria-describedby={`media-guide-${entityType}`}
+          aria-describedby={guideId}
           required
           disabled={pending}
           className="peer sr-only"
@@ -169,7 +168,7 @@ function MediaUploadForm({
           }}
         />
         <label
-          htmlFor={`media-${entityType}`}
+          htmlFor={inputId}
           onDragOver={(event) => {
             event.preventDefault();
             if (!pending) setDragging(true);

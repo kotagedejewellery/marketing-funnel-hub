@@ -103,6 +103,8 @@ export async function saveProduct(
   if (!savedId) return { message: "Produk tidak ditemukan.", errors: {} };
 
   revalidatePath("/");
+  revalidatePath("/b/[slug]", "page");
+  revalidatePath("/admin/branches/[id]/link-bio", "page");
   revalidatePath("/admin/products");
   redirect(`/admin/products/${savedId}?saved=1`);
 }

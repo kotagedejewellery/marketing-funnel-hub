@@ -17,6 +17,16 @@ export const assignmentSchema = z.object({
     .trim()
     .max(120)
     .transform((value) => value || null),
+  displayName: z
+    .string()
+    .trim()
+    .max(160)
+    .transform((value) => value || null),
+  description: z
+    .string()
+    .trim()
+    .max(2000)
+    .transform((value) => value || null),
   whatsappMessageTemplate: z
     .string()
     .trim()

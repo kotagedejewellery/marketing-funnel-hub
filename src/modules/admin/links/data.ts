@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import * as z from "zod";
 
@@ -13,7 +13,10 @@ const pageSize = 20;
 export async function getLinkList(requestedPage: number) {
   await requireAdmin();
   const db = getDatabase();
-  const [totalRows] = await db.select({ value: count() }).from(links);
+  const [totalRows] = await db
+    .select({ value: count() })
+    .from(links)
+    .where(isNull(links.branchId));
   const pageCount = Math.max(1, Math.ceil((totalRows?.value ?? 0) / pageSize));
   const page =
     Number.isSafeInteger(requestedPage) && requestedPage > 0
@@ -22,6 +25,7 @@ export async function getLinkList(requestedPage: number) {
   const rows = await db
     .select()
     .from(links)
+    .where(isNull(links.branchId))
     .orderBy(asc(links.sortOrder), asc(links.id))
     .limit(pageSize)
     .offset((page - 1) * pageSize);
@@ -34,7 +38,7 @@ export async function getLink(id: string) {
   const [row] = await getDatabase()
     .select()
     .from(links)
-    .where(eq(links.id, id))
+    .where(and(eq(links.id, id), isNull(links.branchId)))
     .limit(1);
   if (!row) notFound();
   return row;

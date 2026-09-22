@@ -15,6 +15,13 @@
       "when": 1789628614178,
       "tag": "0001_p0_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790042506114,
+      "tag": "0002_stormy_prowler",
+      "breakpoints": true
     }
   ]
 }

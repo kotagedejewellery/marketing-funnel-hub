@@ -13,9 +13,12 @@ export default async function SettingsPage() {
       <p className="text-xs font-semibold tracking-[0.18em] text-[var(--kgj-accent)] uppercase">
         Identitas & pesan
       </p>
-      <h1 className="mt-3 font-serif text-4xl sm:text-5xl">Pengaturan</h1>
+      <h1 className="mt-3 font-serif text-4xl sm:text-5xl">
+        Pengaturan situs &amp; default
+      </h1>
       <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
-        Identitas halaman dan pesan WhatsApp standar.
+        Identitas halaman gabungan dan nilai bawaan untuk cabang yang belum
+        mengatur identitas atau pesan WhatsApp sendiri.
       </p>
       <div className="mt-8 grid gap-4 xl:grid-cols-2">
         <section

@@ -20,14 +20,17 @@ export default async function LinksPage({
           <p className="text-xs font-semibold tracking-[0.18em] text-[var(--kgj-accent)] uppercase">
             Destinasi
           </p>
-          <h1 className="mt-3 font-serif text-4xl sm:text-5xl">Tautan</h1>
+          <h1 className="mt-3 font-serif text-4xl sm:text-5xl">
+            Tautan halaman gabungan
+          </h1>
           <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
-            Tautan tambahan dan kanal sosial untuk halaman publik.
+            Tautan di sini hanya tampil pada URL utama (/). Tautan tiap cabang
+            dikelola dari halaman Link Bio cabang.
           </p>
         </div>
         <FormDialog
           key={create === "1" ? "create-open" : "create-closed"}
-          title="Tambah tautan"
+          title="Tambah tautan halaman gabungan"
           triggerLabel="Tambah tautan"
           primary
           initiallyOpen={create === "1"}

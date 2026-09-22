@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
@@ -100,6 +100,7 @@ export async function changeContentSection(
           isActive: contentSections.isActive,
         })
         .from(contentSections)
+        .where(isNull(contentSections.branchId))
         .orderBy(asc(contentSections.sortOrder), asc(contentSections.id));
       const index = sections.findIndex((section) => section.id === id);
       if (index < 0) return false;
@@ -110,7 +111,9 @@ export async function changeContentSection(
         await tx
           .update(contentSections)
           .set({ isActive, updatedAt: new Date() })
-          .where(eq(contentSections.id, id));
+          .where(
+            and(eq(contentSections.id, id), isNull(contentSections.branchId)),
+          );
         await tx.insert(auditLogs).values({
           adminId: profile.id,
           action: isActive ? "activate" : "deactivate",
@@ -129,7 +132,12 @@ export async function changeContentSection(
         await tx
           .update(contentSections)
           .set({ sortOrder: position * 10, updatedAt: new Date() })
-          .where(eq(contentSections.id, section.id));
+          .where(
+            and(
+              eq(contentSections.id, section.id),
+              isNull(contentSections.branchId),
+            ),
+          );
       }
       await tx.insert(auditLogs).values({
         adminId: profile.id,

@@ -11,19 +11,29 @@ import { publicAssetUrl } from "@/modules/public-content/links";
 
 export default async function EditProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ branch?: string }>;
 }) {
   const product = await getProduct((await params).id);
   const assignments = await getProductAssignments(product.id, product.name);
+  const branchId = (await searchParams).branch;
+  const selectedBranch = assignments.find((row) => row.id === branchId);
 
   return (
     <div>
       <Link
-        href="/admin/products"
+        href={
+          selectedBranch
+            ? `/admin/branches/${selectedBranch.id}/link-bio`
+            : "/admin/products"
+        }
         className="text-sm underline underline-offset-4"
       >
-        Kembali ke produk
+        {selectedBranch
+          ? `Kembali ke Link Bio ${selectedBranch.name}`
+          : "Kembali ke produk"}
       </Link>
       <h1 className="mt-5 font-serif text-4xl">Edit produk</h1>
       <div className="mt-8">
@@ -51,6 +61,7 @@ export default async function EditProductPage({
         productId={product.id}
         productIsActive={product.isActive}
         assignments={assignments}
+        focusBranchId={selectedBranch?.id}
       />
     </div>
   );

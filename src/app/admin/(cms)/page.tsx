@@ -33,15 +33,24 @@ export default async function AdminDashboardPage() {
             Dashboard
           </h1>
           <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
-            Lihat konten yang aktif dan lanjutkan pengelolaan Link Bio KGJ.
+            Kelola Link Bio tiap cabang dari satu CMS. Halaman gabungan tetap
+            tersedia di alamat utama.
           </p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center rounded-full bg-[var(--kgj-dark)] px-5 text-sm font-bold text-[var(--primary-foreground)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
-        >
-          Lihat halaman publik
-        </Link>
+        <div className="flex flex-wrap items-center gap-4">
+          <Link
+            href="/admin/branches"
+            className="inline-flex min-h-11 items-center rounded-full bg-[var(--kgj-dark)] px-5 text-sm font-bold text-[var(--primary-foreground)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
+          >
+            Kelola Link Bio cabang
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            Lihat halaman gabungan
+          </Link>
+        </div>
       </div>
 
       <section
@@ -58,24 +67,24 @@ export default async function AdminDashboardPage() {
         />
         <Summary
           href="/admin/campaigns"
-          label="Kampanye tampil"
+          label="Kampanye halaman gabungan"
           value={dashboard.campaignName ?? "Tidak ada"}
-          action="Kelola kampanye"
+          action="Kelola kampanye gabungan"
           className="bg-[var(--kgj-accent-soft)] md:col-span-2"
-        />
-        <Summary
-          href="/admin/products"
-          label="Produk aktif"
-          value={String(dashboard.activeProducts)}
-          action="Kelola produk"
-          className="bg-card md:col-span-3"
-          numeric
         />
         <Summary
           href="/admin/branches"
           label="Cabang aktif"
           value={String(dashboard.activeBranches)}
-          action="Kelola cabang"
+          action="Kelola Link Bio cabang"
+          className="bg-card md:col-span-3"
+          numeric
+        />
+        <Summary
+          href="/admin/products"
+          label="Produk utama aktif"
+          value={String(dashboard.activeProducts)}
+          action="Kelola produk utama"
           className="bg-card md:col-span-3"
           numeric
         />
@@ -136,11 +145,15 @@ export default async function AdminDashboardPage() {
             Akses cepat
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Lanjutkan pekerjaan yang paling sering dilakukan.
+            Pilih halaman yang ingin Anda ubah.
           </p>
           <div className="mt-5 grid gap-1">
-            <QuickLink href="/admin/content" label="Atur konten halaman" />
-            <QuickLink href="/admin/products" label="Kelola produk" />
+            <QuickLink href="/admin/branches" label="Kelola Link Bio cabang" />
+            <QuickLink
+              href="/admin/content"
+              label="Atur konten halaman gabungan"
+            />
+            <QuickLink href="/admin/products" label="Kelola produk utama" />
             <QuickLink href="/admin/tracking" label="Validasi tracking" />
           </div>
         </aside>

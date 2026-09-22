@@ -50,6 +50,8 @@ export async function saveProductAssignments(
       isActive: formData.get(`active:${id}`) === "on",
       sortOrder: formData.get(`order:${id}`),
       ctaLabel: formData.get(`cta:${id}`),
+      displayName: formData.get(`name:${id}`),
+      description: formData.get(`description:${id}`),
       whatsappMessageTemplate: formData.get(`message:${id}`),
     });
     if (!parsed.success) {
@@ -84,6 +86,8 @@ export async function saveProductAssignments(
           isActive: input.isActive,
           sortOrder: input.sortOrder,
           ctaLabel: input.ctaLabel,
+          displayName: input.displayName,
+          description: input.description,
           whatsappMessageTemplate: input.whatsappMessageTemplate,
         };
         if (previous) {
@@ -124,6 +128,8 @@ export async function saveProductAssignments(
   }
 
   revalidatePath("/");
+  revalidatePath("/b/[slug]", "page");
+  revalidatePath("/admin/branches/[id]/link-bio", "page");
   revalidatePath(`/admin/products/${productId}`);
   return { message: "Penugasan cabang tersimpan.", errors: {}, ok: true };
 }

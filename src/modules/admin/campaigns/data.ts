@@ -1,6 +1,6 @@
 import "server-only";
 
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import * as z from "zod";
 
@@ -13,7 +13,10 @@ const pageSize = 20;
 export async function getCampaignList(requestedPage: number) {
   await requireAdmin();
   const db = getDatabase();
-  const [totalRows] = await db.select({ value: count() }).from(campaigns);
+  const [totalRows] = await db
+    .select({ value: count() })
+    .from(campaigns)
+    .where(isNull(campaigns.branchId));
   const pageCount = Math.max(1, Math.ceil((totalRows?.value ?? 0) / pageSize));
   const page =
     Number.isSafeInteger(requestedPage) && requestedPage > 0
@@ -23,6 +26,7 @@ export async function getCampaignList(requestedPage: number) {
     db
       .select()
       .from(campaigns)
+      .where(isNull(campaigns.branchId))
       .orderBy(desc(campaigns.createdAt), desc(campaigns.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize),
@@ -33,7 +37,7 @@ export async function getCampaignList(requestedPage: number) {
         activeUntil: campaigns.activeUntil,
       })
       .from(campaigns)
-      .where(eq(campaigns.isActive, true)),
+      .where(and(eq(campaigns.isActive, true), isNull(campaigns.branchId))),
   ]);
 
   const hasOverlap = activeWindows.some((first, index) =>

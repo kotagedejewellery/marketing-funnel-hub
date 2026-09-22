@@ -1,6 +1,6 @@
 # System Architecture — KGJ Marketing Funnel Hub
 
-**Status:** rancangan P0 disetujui · **Acuan:** brief bisnis v1.0 (14 September 2026) dan keputusan teknis proyek (15–17 September 2026) · **Diperbarui:** 20 September 2026
+**Status:** rancangan P0 disetujui; implementasi ekstensi per cabang disiapkan, verifikasi dan migrasi masih menunggu persetujuan · **Acuan:** brief bisnis v1.0 (14 September 2026) dan keputusan teknis proyek (15–22 September 2026) · **Diperbarui:** 22 September 2026
 
 Brief PDF menetapkan tujuan dan prinsip sederhana, tetapi tidak memilih stack, keamanan, atau topologi environment. Pilihan di bawah adalah keputusan proyek sesudah brief, bukan klaim bahwa semuanya tertulis di PDF. Produk dan kriteria penerimaan ada di [PRD](prd.md); relasi dan constraint ada di [Database Design](database-design.md).
 
@@ -17,7 +17,7 @@ Satu **modular monolith** Next.js App Router (`src/app`) dengan TypeScript ketat
 | Sinyal | Meta Pixel, Meta CAPI, GTM → GA4, dan tabel event internal |
 | Verifikasi | Vitest, Testing Library, Playwright, database lokal; cakupan berdasarkan risiko |
 
-Alur: browser membuka `/` → server membaca konten aktif melalui modul domain/Drizzle → halaman menampilkan CTA `wa.me` final → interaksi yang diizinkan consent membentuk canonical event → browser mengirim Pixel dan `dataLayer`, serta `POST /api/events` best-effort → server memvalidasi, menyimpan event idempotent, lalu mengirim Meta CAPI dengan timeout terbatas. GTM meneruskan GA4; tidak ada jalur `gtag` GA4 kedua. Tabel domain tidak diakses langsung oleh browser.
+Alur: browser membuka `/` atau `/b/{slug-cabang}` → server membaca konten aktif melalui modul domain/Drizzle → halaman menampilkan CTA `wa.me` final → interaksi yang diizinkan consent membentuk canonical event → browser mengirim Pixel dan `dataLayer`, serta `POST /api/events` best-effort → server memvalidasi, menyimpan event idempotent, lalu mengirim Meta CAPI dengan timeout terbatas. GTM meneruskan GA4; tidak ada jalur `gtag` GA4 kedua. Tabel domain tidak diakses langsung oleh browser.
 
 Jalur event internal aktif di lokal. Di production, `TRACKING_ENABLED` default `false`; pemilik mengubahnya ke `true` hanya setelah consent/privacy, konfigurasi Pixel/GTM/GA4, dan pemeriksaan rilis disetujui. ID Pixel, ID kontainer GTM, ID dataset CAPI, dan token CAPI hanya wajib ketika tracking diaktifkan. Skrip Pixel/GTM baru dimuat setelah consent terkait; CAPI hanya mengirim event yang baru tersimpan dengan consent pemasaran. Pada GTM, gunakan kontainer khusus GA4 tanpa tag pemasaran lain; buat trigger untuk `kgj_page_view`, `kgj_view_content`, dan `kgj_contact`, petakan parameter dari `dataLayer` ke GA4, serta nonaktifkan page-view otomatis agar tidak menggandakan event aplikasi. Perubahan consent dari mengizinkan ke menolak memuat ulang halaman untuk membuang skrip penyedia yang sudah ada. Pemetaan `dataLayer` mengikuti [panduan resmi Google](https://developers.google.com/tag-platform/tag-manager/datalayer).
 
@@ -27,6 +27,16 @@ Jalur event internal aktif di lokal. Di production, `TRACKING_ENABLED` default `
 - `src/modules/admin`: autentikasi/otorisasi, validasi dan mutasi konten, media, audit, serta tampilan validasi event internal.
 - `src/modules/tracking`: consent, sesi/atribusi, canonical event, validasi, penyimpanan, dan pemetaan penyedia.
 - `src/lib/db` dan `src/lib/supabase`: koneksi server, Supabase Auth/Storage, dan schema; kredensial tidak diimpor ke komponen browser.
+
+### Ekstensi Link Bio per cabang (disetujui 22 September 2026; implementasi menunggu verifikasi)
+
+`/` tetap membaca konten global dan menampilkan CTA per cabang seperti sekarang. Route Server Component `/b/[slug]` memuat hanya cabang aktif, assignment dan produk aktif, serta konten yang khusus dimiliki cabang itu; slug tidak ada/nonaktif memakai 404. Seluruh halaman memakai satu template/desain KGJ dan komponen publik yang sama. Pada halaman cabang, produk dibuka untuk `ViewContent`, sedangkan CTA `wa.me` langsung menuju cabang halaman tanpa daftar cabang lagi. Tidak ada aplikasi, database, provider, role, atau event baru.
+
+Model baca cabang memakai fallback global untuk identitas/headline/pengantar/logo dan nilai tampilan produk yang tidak di-override. Kampanye dan tautan adalah milik halaman yang dipilih (`branch_id IS NULL` untuk `/`, `branch_id = cabang` untuk halaman cabang), tanpa fallback lintas halaman. Section cabang memakai konfigurasi global jika belum mempunyai satu set konfigurasi sendiri. Urutan produk cabang mengikuti `product_branches.sort_order`. CMS menambah konteks cabang untuk edit profil halaman, section, kampanye, tautan, dan override tampilan assignment; setiap mutasi tetap memakai Auth, Zod, audit log, serta invalidasi path halaman terkait. Slug cabang adalah URL publik yang stabil; perubahan setelah dibagikan harus diberi peringatan di CMS.
+
+Proxy sesi/UTM juga berjalan pada `/b/:path*`. `/api/events` menerima hanya path `/` atau `/b/{slug-cabang}` pada origin situs; query string dibuang sebelum penyimpanan. Untuk path cabang, server memastikan cabang aktif, `ViewContent` merujuk produk dengan assignment aktif ke cabang halaman, dan `Contact.branch.id` sama dengan cabang halaman. `PageView`/`ViewContent` tetap tanpa `branch` pada event; path halaman adalah konteks lokasi, bukan perubahan semantik event. `event_id`, consent, idempotensi, dan navigasi WhatsApp non-blocking tidak berubah.
+
+Migrasi Drizzle hanya menambah kolom/index dan mengubah keunikan section global menjadi keunikan per scope; data lama tetap scope global. Deploy live berurutan: pemilik meninjau dan menjalankan migrasi live, lalu deploy kode yang membaca schema baru. Tidak ada migrasi otomatis saat build Vercel. Pemeriksaan fitur dilakukan setelah cakupannya disetujui pemilik; tidak perlu staging atau suite tes besar.
 
 `GET /api/public/config` adalah bentuk DTO internal jika dibutuhkan, bukan request kedua yang wajib untuk render halaman. DTO mengembalikan `campaign: null` atau satu kampanye, produk aktif dengan cabang eligible, serta section/tautan aktif secara deterministik. `POST /api/events` adalah **satu-satunya mutasi tracking publik**; Meta CAPI tidak memiliki endpoint publik. CMS dapat memakai Server Actions. Respons error HTTP memakai `{ "ok": false, "error": { "code", "message", "fields"? } }`; 400 JSON rusak, 401 belum login, 403 tidak berhak, 404 tidak ada, 409 konflik, 422 validasi domain, 429 pembatasan laju, 500 kesalahan internal tersanitasi.
 

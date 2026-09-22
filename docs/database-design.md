@@ -1,6 +1,6 @@
 # Database Design — KGJ Marketing Funnel Hub
 
-**Status:** model P0 disetujui; implementasi schema ada di `src/lib/db/schema.ts` dan migrasi `drizzle/` · **Acuan:** brief bisnis v1.0 (14 September 2026) serta keputusan data proyek · **Diperbarui:** 20 September 2026
+**Status:** model P0 disetujui; migrasi ekstensi per cabang telah dihasilkan tetapi belum diterapkan; implementasi schema ada di `src/lib/db/schema.ts` dan migrasi `drizzle/` · **Acuan:** brief bisnis v1.0 (14 September 2026) serta keputusan data proyek · **Diperbarui:** 22 September 2026
 
 Brief PDF meminta kategori produk, cabang, CMS, atribusi, dan tracking, tetapi tidak menetapkan tabel. Desain berikut adalah keputusan proyek untuk memenuhi brief tanpa menambah CRM. Lihat [PRD](prd.md) untuk makna bisnis dan [System Architecture](system-architecture.md) untuk akses/API.
 
@@ -16,16 +16,24 @@ PostgreSQL/Supabase; nama kolom `snake_case`, PK UUID, waktu `timestamptz` UTC, 
 | --- | --- |
 | `admin_profiles` | `id` UUID PK = Auth user ID, `display_name?`, `role` ∈ `admin`/`technical_admin`, `is_active`; timestamp konten. Hanya profil aktif berhak masuk CMS. |
 | `site_settings` | Satu baris dengan `id = 00000000-0000-0000-0000-000000000001` (CHECK), `site_name`, `headline?`, `introduction?`, `logo_path?`, `default_whatsapp_message`, `default_cta_label`, `privacy_url?`; timestamp konten. Tautan sosial tidak diduplikasi di sini. |
-| `content_sections` | `id`, `section_key` unik, `label`, `sort_order` default 0, `is_active`; timestamp konten. |
-| `campaigns` | `id`, `name`, `title?`, `description?`, `banner_path?`, `target_url?`, `active_from?`, `active_until?`, `is_active`, `sort_order`; timestamp konten. Jika kedua tanggal ada, `active_until > active_from`. |
+| `content_sections` | `id`, `branch_id?` (null = halaman gabungan), `section_key` unik per halaman, `label`, `sort_order` default 0, `is_active`; timestamp konten. |
+| `campaigns` | `id`, `branch_id?` (null = halaman gabungan), `name`, `title?`, `description?`, `banner_path?`, `target_url?`, `active_from?`, `active_until?`, `is_active`, `sort_order`; timestamp konten. Jika kedua tanggal ada, `active_until > active_from`. |
 | `products` | `id`, `name`, `slug` unik, `description?`, `image_path?`, `is_active`, `sort_order`; timestamp konten. Satu baris = kategori/kebutuhan, bukan SKU; `slug` adalah `product_category` stabil. |
-| `branches` | `id`, `name`, `slug` unik, `whatsapp_number` wajib dalam format kode negara (`^[1-9][0-9]{7,14}$`), `cta_label?`, `is_active`, `sort_order`; timestamp konten. |
-| `product_branches` | `id`, `product_id` FK, `branch_id` FK, `whatsapp_message_template?`, `cta_label?`, `is_active`, `sort_order`; timestamp konten; kombinasi (`product_id`, `branch_id`) unik. |
-| `links` | `id`, `label`, `url`, `link_type` ∈ `secondary`/`social`, `platform?`, `icon_key?`, `is_active`, `sort_order`; timestamp konten. Semua tautan sosial/sekunder ada di sini. |
+| `branches` | `id`, `name`, `slug` unik, `whatsapp_number` wajib dalam format kode negara (`^[1-9][0-9]{7,14}$`), `cta_label?`, override halaman `headline?`, `introduction?`, `logo_path?`, `is_active`, `sort_order`; timestamp konten. |
+| `product_branches` | `id`, `product_id` FK, `branch_id` FK, `display_name?`, `description?`, `image_path?` untuk override tampilan, `whatsapp_message_template?`, `cta_label?`, `is_active`, `sort_order`; timestamp konten; kombinasi (`product_id`, `branch_id`) unik. |
+| `links` | `id`, `branch_id?` (null = halaman gabungan), `label`, `url`, `link_type` ∈ `secondary`/`social`, `platform?`, `icon_key?`, `is_active`, `sort_order`; timestamp konten. Semua tautan sosial/sekunder ada di sini. |
 | `events` | `id` UUID PK, `event_id` teks unik, `anonymous_session_id`, `event_name`, `event_time`, `page_url?`, `product_id?`, `branch_id?`, snapshot `product_category?`/`branch_name?`, `cta?`, `source?`, `campaign?`, lima `utm_*?`, `metadata?` JSONB, `created_at`. |
 | `audit_logs` | `id`, `admin_id?` FK, `action`, `entity_type`, `entity_id?`, `changes?` JSONB tersanitasi, `created_at`. Aksi utama: create/update/activate/deactivate/assign/unassign. |
 
 `?` berarti nullable. Semua `id` adalah UUID; `sort_order` integer dan `is_active` boolean. Primary key default acak, kecuali `admin_profiles.id` mengikuti Auth dan `site_settings.id` tetap. Path gambar adalah referensi Supabase Storage, bukan binary database.
+
+### Scope halaman per cabang (disetujui 22 September 2026; migrasi belum diterapkan)
+
+Tidak ada tabel baru. `branch_id` nullable pada `content_sections`, `campaigns`, dan `links` menentukan pemilik konten: `NULL` untuk `/`, ID cabang untuk `/b/{slug}`. FK baru ke `branches.id` memakai `ON DELETE RESTRICT`; baris lama tetap `NULL`. Keunikan lama `content_sections.section_key` diganti dua unique index parsial: satu untuk `(section_key)` ketika `branch_id IS NULL`, satu untuk `(branch_id, section_key)` ketika `branch_id IS NOT NULL`. Ini mencegah duplikasi section pada satu halaman tanpa melarang nama section sama di cabang lain. Index scope dan urutan disediakan untuk baca halaman.
+
+`branches.headline/introduction/logo_path` yang kosong memakai nilai `site_settings`; identitas `site_name` tetap global. `product_branches.display_name/description/image_path` yang kosong memakai nilai `products`, tetapi `products.slug` tetap kategori kanonis untuk tracking. Pada halaman cabang, hanya assignment aktif ke cabang aktif dan produk aktif yang tampil, diurutkan menurut assignment. Nomor WhatsApp tetap hanya dari `branches.whatsapp_number`.
+
+Kampanye dan tautan dipilih tepat dalam scope halaman, tanpa fallback ke scope global. Kampanye tetap maksimal satu sesuai urutan dan periode existing. Section cabang, jika belum ada satu pun baris scoped, memakai section global; setelah Marketing menyimpan set section cabang, hanya baris scoped yang dipakai sehingga seluruh section dapat diatur independen. Satu-satunya perubahan pada event ialah `page_url` dapat menyimpan path kanonis `/b/{slug}`; constraint tiga event dan FK historis tidak berubah. Semua tabel tetap RLS dengan akses domain hanya dari modul server.
 
 ## Aturan baca dan integritas
 

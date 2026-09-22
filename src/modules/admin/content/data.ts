@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc } from "drizzle-orm";
+import { asc, isNull } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
 import { contentSections, siteSettings } from "@/lib/db/schema";
@@ -20,6 +20,7 @@ export async function getContentSettings() {
         isActive: contentSections.isActive,
       })
       .from(contentSections)
+      .where(isNull(contentSections.branchId))
       .orderBy(asc(contentSections.sortOrder), asc(contentSections.id)),
   ]);
 

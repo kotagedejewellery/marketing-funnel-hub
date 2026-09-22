@@ -142,3 +142,59 @@ claimed complete by the local P0 implementation closeout.
 Git operations, Vercel account/plan decisions, provider accounts, and live
 activation remain owner-managed. No P1/P2 feature or staging environment is
 needed for this implementation closeout.
+
+## Approved extension: Link Bio per branch (22 September 2026)
+
+This is a new feature after the local P0 closeout, not a reopening of the
+completed P0 checklist. The owner approved a customizable page for each branch
+and explicitly chose to keep `/` as the combined page. The feature contract is
+in the three source-of-truth docs; implementation has not started yet.
+
+### Objective and boundaries
+
+Marketing can publish `/b/{branch-slug}` using the same KGJ template with
+branch-specific text, logo, campaign, links, section order, and assigned-product
+display overrides. Products/categories, branch phone numbers, auth roles,
+consent, and the three event names remain shared/canonical. No page builder,
+per-branch app/database, redirect registry, new provider, or CRM scope.
+
+Assumptions made explicit: empty branch text/image overrides inherit global
+values; branch campaigns/links do not inherit global rows; branch section
+settings inherit the global set until first saved; branch slug is a stable
+public URL and changing it needs a CMS warning. These choices keep the content
+separate without creating a new design system or additional tables.
+
+### Structure, commands, and style
+
+- Schema/migrations: `src/lib/db/schema.ts`, `drizzle/`; generate with
+  `pnpm db:generate`, then owner-approved local migration using
+  `pnpm db:migrate:local`. Live migration is reviewed and run by the owner via
+  `pnpm db:migrate:live` before deployment.
+- Public read/route: `src/modules/public-content/`, `src/app/b/[slug]/`, and
+  existing `src/components/public/`. Tracking changes stay in
+  `src/modules/tracking/`, `src/app/api/events/`, and `src/proxy.ts`.
+- CMS: existing `src/modules/admin/` actions/validation and
+  `src/app/admin/(cms)/` pages. Reuse existing modal, toast, media, and audit
+  patterns. Strict TypeScript, Drizzle snake_case DB mapping, Zod at untrusted
+  boundaries, and no new dependency. Example contract: an inactive branch or
+  inactive product assignment yields no public CTA.
+- Verification to request before running: `pnpm typecheck`, focused public
+  content/tracking tests, one local branch-page → WhatsApp check, and local
+  migration inspection. Do not run these or a full suite without owner consent.
+
+### Dependency order and release checkpoint
+
+1. Additive schema/migration while old `/` remains compatible.
+2. Branch read model and route, with active filtering and direct WhatsApp CTA.
+3. Path-aware signed journey and event validation; preserve canonical events.
+4. CMS branch identity/sections, then branch campaigns/links and product display
+   overrides, each with Zod, audit, and targeted invalidation.
+5. Owner-approved focused verification; owner performs live migration first,
+   then deploys code and checks the live branch funnel. No automatic live write.
+
+Risk: changing a shared slug breaks a published URL; warn at edit time and keep
+slug stable operationally. Risk: branch content leaks to `/` or another branch;
+every read/write uses an explicit scope and root rows retain `branch_id = NULL`.
+Risk: event payloads could claim a different branch from their page URL; server
+resolves the active page branch and validates Contact against it. A tracking
+failure still cannot block the final WhatsApp anchor.

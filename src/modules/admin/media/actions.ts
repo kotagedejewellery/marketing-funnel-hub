@@ -6,7 +6,14 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
-import { auditLogs, campaigns, products, siteSettings } from "@/lib/db/schema";
+import {
+  auditLogs,
+  branches,
+  campaigns,
+  productBranches,
+  products,
+  siteSettings,
+} from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import { createPrivilegedSupabase } from "@/lib/supabase/server";
 import { requireAdmin } from "@/modules/admin/access";
@@ -50,20 +57,37 @@ export async function uploadMedia(
           .from(siteSettings)
           .where(eq(siteSettings.id, entityId))
           .limit(1)
-      : entityType === "campaign"
+      : entityType === "branch"
         ? await db
-            .select({ id: campaigns.id })
-            .from(campaigns)
-            .where(eq(campaigns.id, entityId))
+            .select({ id: branches.id })
+            .from(branches)
+            .where(eq(branches.id, entityId))
             .limit(1)
-        : await db
-            .select({ id: products.id })
-            .from(products)
-            .where(eq(products.id, entityId))
-            .limit(1);
+        : entityType === "campaign"
+          ? await db
+              .select({ id: campaigns.id })
+              .from(campaigns)
+              .where(eq(campaigns.id, entityId))
+              .limit(1)
+          : entityType === "assignment"
+            ? await db
+                .select({ id: productBranches.id })
+                .from(productBranches)
+                .where(eq(productBranches.id, entityId))
+                .limit(1)
+            : await db
+                .select({ id: products.id })
+                .from(products)
+                .where(eq(products.id, entityId))
+                .limit(1);
   if (!existing) return { ok: false, message: "Data tujuan tidak ditemukan." };
 
-  const folder = entityType === "site" ? "brand" : `${entityType}s`;
+  const folder =
+    entityType === "site"
+      ? "brand"
+      : entityType === "assignment"
+        ? "product-branches"
+        : `${entityType}s`;
   const path = `${folder}/${entityId}/${randomUUID()}.${extension}`;
   const { storage } = createPrivilegedSupabase();
   try {
@@ -82,11 +106,21 @@ export async function uploadMedia(
           .update(siteSettings)
           .set({ logoPath: path, updatedAt: new Date() })
           .where(eq(siteSettings.id, entityId));
+      } else if (entityType === "branch") {
+        await tx
+          .update(branches)
+          .set({ logoPath: path, updatedAt: new Date() })
+          .where(eq(branches.id, entityId));
       } else if (entityType === "campaign") {
         await tx
           .update(campaigns)
           .set({ bannerPath: path, updatedAt: new Date() })
           .where(eq(campaigns.id, entityId));
+      } else if (entityType === "assignment") {
+        await tx
+          .update(productBranches)
+          .set({ imagePath: path, updatedAt: new Date() })
+          .where(eq(productBranches.id, entityId));
       } else {
         await tx
           .update(products)
@@ -96,15 +130,22 @@ export async function uploadMedia(
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "update",
-        entityType: entityType === "site" ? "site_settings" : `${entityType}s`,
+        entityType:
+          entityType === "site"
+            ? "site_settings"
+            : entityType === "assignment"
+              ? "product_branches"
+              : `${entityType}s`,
         entityId,
         changes: {
           field:
             entityType === "site"
               ? "logoPath"
-              : entityType === "campaign"
-                ? "bannerPath"
-                : "imagePath",
+              : entityType === "branch"
+                ? "logoPath"
+                : entityType === "campaign"
+                  ? "bannerPath"
+                  : "imagePath",
         },
       });
     });
@@ -116,12 +157,24 @@ export async function uploadMedia(
   }
 
   revalidatePath("/");
-  revalidatePath(
-    entityType === "site"
-      ? "/admin/settings"
-      : entityType === "campaign"
-        ? `/admin/campaigns/${entityId}`
-        : `/admin/products/${entityId}`,
-  );
+  revalidatePath("/b/[slug]", "page");
+  if (entityType === "assignment") {
+    const [assignment] = await db
+      .select({ productId: productBranches.productId })
+      .from(productBranches)
+      .where(eq(productBranches.id, entityId))
+      .limit(1);
+    if (assignment) revalidatePath(`/admin/products/${assignment.productId}`);
+  } else {
+    revalidatePath(
+      entityType === "site"
+        ? "/admin/settings"
+        : entityType === "branch"
+          ? `/admin/branches/${entityId}/link-bio`
+          : entityType === "campaign"
+            ? `/admin/campaigns/${entityId}`
+            : `/admin/products/${entityId}`,
+    );
+  }
   return { ok: true, message: "Gambar berhasil diunggah." };
 }

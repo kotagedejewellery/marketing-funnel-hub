@@ -4,15 +4,20 @@ import { useActionState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
+import { MediaUploadField } from "@/components/admin/media-upload-field";
 import { saveProductAssignments } from "@/modules/admin/assignments/actions";
 
 type Assignment = {
   id: string;
   name: string;
+  assignmentId: string | null;
   isBranchActive: boolean;
   isActive: boolean;
   sortOrder: number;
   ctaLabel: string;
+  displayName: string;
+  description: string;
+  imageUrl: string | null;
   whatsappMessageTemplate: string;
   resolvedLabel: string;
   resolvedMessage: string;
@@ -26,10 +31,12 @@ export function BranchAssignmentEditor({
   productId,
   productIsActive,
   assignments,
+  focusBranchId,
 }: {
   productId: string;
   productIsActive: boolean;
   assignments: Assignment[];
+  focusBranchId?: string;
 }) {
   const [state, action, pending] = useActionState(saveProductAssignments, {
     message: "",
@@ -39,6 +46,13 @@ export function BranchAssignmentEditor({
   const hasActiveBranch = assignments.some(
     (row) => row.isBranchActive && row.isActive,
   );
+  const orderedAssignments = focusBranchId
+    ? [...assignments].sort(
+        (left, right) =>
+          Number(right.id === focusBranchId) -
+          Number(left.id === focusBranchId),
+      )
+    : assignments;
 
   return (
     <section
@@ -71,16 +85,19 @@ export function BranchAssignmentEditor({
             title="Atur cabang produk"
             triggerLabel="Atur cabang"
             primary
+            initiallyOpen={Boolean(focusBranchId)}
           >
             <form action={action} noValidate className="space-y-5">
               <input type="hidden" name="productId" value={productId} />
-              {assignments.map((row) => (
+              {orderedAssignments.map((row) => (
                 <details
                   key={row.id}
                   open={
+                    row.id === focusBranchId ||
                     Object.keys(state.errors).some((key) =>
                       key.startsWith(`${row.id}:`),
-                    ) || undefined
+                    ) ||
+                    undefined
                   }
                   className="group rounded-xl border border-border bg-background"
                 >
@@ -166,6 +183,42 @@ export function BranchAssignmentEditor({
                       </div>
                     </div>
                     <div className="mt-4">
+                      <label htmlFor={`name:${row.id}`} className="font-medium">
+                        Nama tampilan khusus cabang (opsional)
+                      </label>
+                      <input
+                        id={`name:${row.id}`}
+                        name={`name:${row.id}`}
+                        defaultValue={row.displayName}
+                        className={inputClass}
+                        maxLength={160}
+                        placeholder="Kosongkan untuk memakai nama produk utama"
+                      />
+                      <FieldError
+                        message={state.errors[`${row.id}:displayName`]}
+                      />
+                    </div>
+                    <div className="mt-4">
+                      <label
+                        htmlFor={`description:${row.id}`}
+                        className="font-medium"
+                      >
+                        Deskripsi khusus cabang (opsional)
+                      </label>
+                      <textarea
+                        id={`description:${row.id}`}
+                        name={`description:${row.id}`}
+                        defaultValue={row.description}
+                        className={inputClass}
+                        rows={3}
+                        maxLength={2000}
+                        placeholder="Kosongkan untuk memakai deskripsi produk utama"
+                      />
+                      <FieldError
+                        message={state.errors[`${row.id}:description`]}
+                      />
+                    </div>
+                    <div className="mt-4">
                       <label
                         htmlFor={`message:${row.id}`}
                         className="font-medium"
@@ -218,6 +271,27 @@ export function BranchAssignmentEditor({
               </button>
             </form>
           </FormDialog>
+          {assignments.some((row) => row.assignmentId) && (
+            <div className="mt-8">
+              <p className="mb-4 text-sm text-muted-foreground">
+                Tanpa gambar khusus, halaman cabang memakai gambar produk utama.
+                Simpan penugasan baru dahulu sebelum mengunggah gambarnya.
+              </p>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {assignments.map((row) =>
+                  row.assignmentId ? (
+                    <MediaUploadField
+                      key={row.assignmentId}
+                      entityType="assignment"
+                      entityId={row.assignmentId}
+                      label={`Gambar khusus ${row.name}`}
+                      previewUrl={row.imageUrl}
+                    />
+                  ) : null,
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

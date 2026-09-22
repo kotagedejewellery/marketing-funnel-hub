@@ -38,6 +38,7 @@ export async function getAdminDashboard(now = new Date()) {
         .from(campaigns)
         .where(
           and(
+            isNull(campaigns.branchId),
             eq(campaigns.isActive, true),
             or(isNull(campaigns.activeFrom), lte(campaigns.activeFrom, now)),
             or(isNull(campaigns.activeUntil), gte(campaigns.activeUntil, now)),

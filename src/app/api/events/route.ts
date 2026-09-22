@@ -1,5 +1,8 @@
 import { cookies } from "next/headers";
+import { and, eq } from "drizzle-orm";
 
+import { getDatabase } from "@/lib/db/client";
+import { branches, productBranches } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import {
   consentCookieName,
@@ -106,15 +109,63 @@ export async function POST(request: Request) {
     );
   if (event.pageUrl && new URL(event.pageUrl).origin !== expectedOrigin)
     return error(422, "INVALID_PAGE_URL", "Page URL must use this origin.");
-  if (event.pageUrl && new URL(event.pageUrl).pathname !== "/")
-    return error(422, "INVALID_PAGE_URL", "Page URL must be the public page.");
+  const pagePath = event.pageUrl ? new URL(event.pageUrl).pathname : null;
+  const branchSlug = pagePath?.match(/^\/b\/([a-z0-9]+(?:-[a-z0-9]+)*)$/)?.[1];
+  if (pagePath && pagePath !== "/" && !branchSlug)
+    return error(422, "INVALID_PAGE_URL", "Page URL must be a public page.");
   // Avoid persisting arbitrary query parameters from a client-supplied URL.
   const canonicalEvent = {
     ...event,
-    pageUrl: event.pageUrl ? `${expectedOrigin}/` : null,
+    pageUrl: pagePath ? `${expectedOrigin}${pagePath}` : null,
   };
 
   try {
+    if (branchSlug) {
+      const db = getDatabase();
+      const [pageBranch] = await db
+        .select({ id: branches.id })
+        .from(branches)
+        .where(and(eq(branches.slug, branchSlug), eq(branches.isActive, true)))
+        .limit(1);
+      let validPageContext = Boolean(pageBranch);
+      if (pageBranch && event.eventName === "Contact") {
+        validPageContext = event.branch.id === pageBranch.id;
+      }
+      if (pageBranch && event.eventName === "ViewContent") {
+        const [assignment] = await db
+          .select({ id: productBranches.id })
+          .from(productBranches)
+          .where(
+            and(
+              eq(productBranches.branchId, pageBranch.id),
+              eq(productBranches.productId, event.product.id),
+              eq(productBranches.isActive, true),
+            ),
+          )
+          .limit(1);
+        validPageContext = Boolean(assignment);
+      }
+      if (!validPageContext) {
+        const previous = await existingEventStatus(canonicalEvent);
+        if (previous === "duplicate")
+          return Response.json({
+            ok: true,
+            eventId: event.eventId,
+            duplicate: true,
+          });
+        if (previous === "conflict")
+          return error(
+            409,
+            "EVENT_CONFLICT",
+            "Event ID already has different data.",
+          );
+        return error(
+          422,
+          "INVALID_CONTEXT",
+          "Page and branch context do not match.",
+        );
+      }
+    }
     const resolved = await resolveEventContext(canonicalEvent);
     if (!resolved) {
       const previous = await existingEventStatus(canonicalEvent);

@@ -6,7 +6,7 @@ export const mediaTargetSchema = z.union([
     entityId: z.literal("00000000-0000-0000-0000-000000000001"),
   }),
   z.object({
-    entityType: z.enum(["campaign", "product"]),
+    entityType: z.enum(["branch", "campaign", "product", "assignment"]),
     entityId: z.uuid(),
   }),
 ]);

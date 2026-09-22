@@ -4,6 +4,7 @@ import { isAllowedPublicUrl } from "@/modules/admin/url-validation";
 
 export const linkSchema = z.object({
   id: z.union([z.uuid(), z.literal("")]),
+  branchId: z.union([z.uuid(), z.literal("")]).default(""),
   label: z.string().trim().min(1, "Label tautan wajib diisi.").max(120),
   url: z
     .string()

@@ -7,6 +7,7 @@ import { saveLink } from "@/modules/admin/links/actions";
 
 type LinkRecord = {
   id: string;
+  branchId?: string | null;
   label: string;
   url: string;
   linkType: string;
@@ -19,7 +20,13 @@ type LinkRecord = {
 const inputClass =
   "mt-2 min-h-12 w-full rounded-sm border border-border bg-background px-4 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kgj-accent)]";
 
-export function LinkForm({ link }: { link: LinkRecord | null }) {
+export function LinkForm({
+  link,
+  branchId = null,
+}: {
+  link: LinkRecord | null;
+  branchId?: string | null;
+}) {
   const [state, action, pending] = useActionState(saveLink, {
     message: "",
     errors: {},
@@ -28,6 +35,11 @@ export function LinkForm({ link }: { link: LinkRecord | null }) {
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="id" value={link?.id ?? ""} />
+      <input
+        type="hidden"
+        name="branchId"
+        value={link?.branchId ?? branchId ?? ""}
+      />
       <div>
         <p className="text-sm leading-6 text-muted-foreground">
           Tentukan label, tujuan, dan posisi tautan pada halaman publik.

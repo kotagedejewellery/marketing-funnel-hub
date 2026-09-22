@@ -261,7 +261,11 @@ export function LinkBio({
                                 className="group mt-6 border-t border-border"
                               >
                                 <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-4 py-3 font-bold text-foreground transition-colors hover:text-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2">
-                                  <span>Lihat cabang</span>
+                                  <span>
+                                    {content.pageBranch
+                                      ? "Lihat detail dan hubungi cabang"
+                                      : "Lihat cabang"}
+                                  </span>
                                   <svg
                                     aria-hidden="true"
                                     viewBox="0 0 24 24"
@@ -273,26 +277,41 @@ export function LinkBio({
                                     <path d="m6 9 6 6 6-6" />
                                   </svg>
                                 </summary>
-                                <ul className="border-t border-border">
-                                  {product.branches.map((branch) => (
-                                    <li
-                                      key={branch.id}
-                                      className="grid min-w-0 gap-3 border-b border-border py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                                {content.pageBranch ? (
+                                  <div className="border-t border-border pt-4">
+                                    <a
+                                      href={product.branches[0].whatsappUrl}
+                                      data-track-branch-id={
+                                        product.branches[0].id
+                                      }
+                                      className="inline-flex min-h-12 min-w-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-center text-sm font-bold break-words text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
+                                      aria-label={`${product.branches[0].ctaLabel}, ${content.pageBranch.name}`}
                                     >
-                                      <span className="min-w-0 font-medium break-words">
-                                        {branch.name}
-                                      </span>
-                                      <a
-                                        href={branch.whatsappUrl}
-                                        data-track-branch-id={branch.id}
-                                        className="inline-flex min-h-12 min-w-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-center text-sm font-bold break-words text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
-                                        aria-label={`${branch.ctaLabel}, ${branch.name}`}
+                                      {product.branches[0].ctaLabel}
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <ul className="border-t border-border">
+                                    {product.branches.map((branch) => (
+                                      <li
+                                        key={branch.id}
+                                        className="grid min-w-0 gap-3 border-b border-border py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                                       >
-                                        {branch.ctaLabel}
-                                      </a>
-                                    </li>
-                                  ))}
-                                </ul>
+                                        <span className="min-w-0 font-medium break-words">
+                                          {branch.name}
+                                        </span>
+                                        <a
+                                          href={branch.whatsappUrl}
+                                          data-track-branch-id={branch.id}
+                                          className="inline-flex min-h-12 min-w-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-center text-sm font-bold break-words text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
+                                          aria-label={`${branch.ctaLabel}, ${branch.name}`}
+                                        >
+                                          {branch.ctaLabel}
+                                        </a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                               </details>
                             )}
                           </div>

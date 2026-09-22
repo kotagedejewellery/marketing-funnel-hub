@@ -55,6 +55,12 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
           pattern="[a-z0-9]+(-[a-z0-9]+)*"
           placeholder="surabaya"
         />
+        {branch && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Slug menjadi URL halaman cabang. Mengubahnya akan memutus tautan
+            lama yang sudah dibagikan.
+          </p>
+        )}
         <FieldError message={state.errors.slug} />
       </div>
       <div>

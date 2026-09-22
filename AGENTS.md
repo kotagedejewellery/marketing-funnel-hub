@@ -107,6 +107,14 @@ relevant source-of-truth document explicitly.
 
 Do not silently redefine requirements in code.
 
+Approved extension (22 September 2026): add independently editable Link Bio content
+for each active branch at `/b/{slug}` while preserving the existing combined `/`
+page. This is a post-P0 feature change documented in the three source-of-truth
+documents; it does not add CRM scope, new tracking events, or separate apps.
+The branch URL fixes the branch context for that page; the product-scoped
+WhatsApp CTA still triggers `Contact` directly to that branch. On `/`, visitors
+continue choosing the branch at each product's CTA.
+
 ---
 
 ## 5. P0 Scope Guard

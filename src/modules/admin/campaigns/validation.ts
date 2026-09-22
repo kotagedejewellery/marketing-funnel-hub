@@ -12,6 +12,7 @@ const wibDateInput = z
 export const campaignSchema = z
   .object({
     id: z.union([z.uuid(), z.literal("")]),
+    branchId: z.union([z.uuid(), z.literal("")]).default(""),
     name: z.string().trim().min(1, "Nama kampanye wajib diisi.").max(120),
     title: z
       .string()
