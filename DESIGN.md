@@ -80,7 +80,7 @@ The public Link Bio is a compact boutique choice board; the CMS is a clear worki
 
 - Shared warm palette across public and admin surfaces.
 - Unequal bento panels, softly rounded cards, and pill-shaped actions.
-- Product and campaign imagery appears only when an asset is available.
+- Branch gallery imagery is independent from product WhatsApp actions.
 - State motion is light, with reduced-motion fallbacks.
 
 ## Colors
@@ -115,7 +115,7 @@ Charcoal anchors the hierarchy, warm ivory keeps the canvas quiet, and bronze ma
 
 ## Layout
 
-The public page is mobile-first within a centered `max-w-3xl` container. It uses 1rem side padding, increasing at `sm`. The flow is deliberately linear: compact centered profile, single featured content block, two-column product gallery, full-width product WhatsApp list, FAQ, optional links, and footer. The gallery shows at most the first four eligible product images in 4:5 frames. It is derived from the same ordered products as the CTA list and is not a second content collection.
+The public page is mobile-first within a centered `max-w-3xl` container. It uses 1rem side padding, increasing at `sm`. The flow is deliberately linear: compact centered profile, single featured content block, branch-owned product gallery, full-width product WhatsApp list, FAQ, optional links, and footer. The gallery initially shows six images in 4:5 frames using two columns on mobile and three at `sm`; additional images appear through a native **Lihat semua koleksi** disclosure. Gallery content is independent from the ordered CTA products.
 
 The admin shell is desktop-oriented: a narrow floating icon rail appears at `lg` beside full-width content, spans the viewport from top to bottom, and uses centered concave cuts instead of capsule ends. There is no persistent desktop header card, and account access sits at the foot of the rail. Its dashboard uses an unequal six-column summary grid at `md`, then an activity/quick-access split at `xl`. On smaller screens, a slim brand/account bar stays above a horizontal icon rail in normal flow and cards stack. Observed card gaps are 1rem, rising to 1.25rem in the public product grid at `sm`.
 
@@ -125,7 +125,7 @@ Most surfaces are flat and distinguished by color or a thin border. The public h
 
 ## Shapes
 
-Cards and large panels have soft 1rem corners (`rounded.card`); product image wells use 0.75rem (`rounded.media`). Primary actions use full pill ends (`rounded.pill`). On desktop the admin navigation rail has straight vertical sides with centered concave cuts at the viewport edges; its active icon sits in a self-contained ivory rounded square without extending outside the rail. Thin sand-colored borders separate branch rows, activity rows, quick links, and the footer. Public image panels clip to their card silhouette.
+Cards and large panels have soft 1rem corners (`rounded.card`); gallery image wells use 0.75rem (`rounded.media`). Primary actions use full pill ends (`rounded.pill`). On desktop the admin navigation rail has straight vertical sides with centered concave cuts at the viewport edges; its active icon sits in a self-contained ivory rounded square without extending outside the rail. Thin sand-colored borders separate branch rows, activity rows, quick links, and the footer. Public image panels clip to their card silhouette.
 
 ## Components
 
@@ -138,7 +138,8 @@ Cards and large panels have soft 1rem corners (`rounded.card`); product image we
 ### Cards and containers
 
 - **Featured campaign:** a single 4:5 banner image without separate public title, description, or CTA text. When a destination exists, the image itself is the accessible link; campaigns without an image do not create an empty panel.
-- **Product gallery and CTA list:** up to four eligible images form a separate 4:5 gallery above the CTA list. Every eligible product remains represented exactly once in the CTA list. Turning off image visibility removes only that product from the gallery; the stored asset, name, description, and WhatsApp action remain intact.
+- **Product gallery:** a branch-owned collection of 4:5 images with optional title and description. It has no product assignment, CTA, WhatsApp destination, or tracking behavior. Six items appear initially; native disclosure reveals the rest without a carousel dependency.
+- **Product CTA list:** every eligible assigned product is represented exactly once as a direct WhatsApp action. CTA copy and ordering remain independent from gallery imagery.
 - **Admin summary tiles:** dark cocoa for site identity, soft bronze for campaign state, ivory for active product and branch counts. All remain direct navigation links and lift on hover.
 - **Recent changes and quick access:** separate ivory and soft-bronze panels, with border-separated rows rather than floating subcards.
 
@@ -150,16 +151,16 @@ The public surface has no separate website-style navigation header. Its first se
 
 Create and edit forms open in a native modal dialog from their list or summary. The dialog has a visible title, close control, keyboard Escape behavior, and scrollable content; validation remains on the form and server. A successful save closes the dialog and shows a brief toast; a failed save shows a dismissible toast while keeping the dialog and its inputs open.
 
-Fields that support inheritance name both their scope and fallback source. Branch profile values identify **Pengaturan Bersama** as their source, while branch-product presentation identifies **Pustaka Produk** or the branch CTA setting. Existing branch-logo and branch-product image overrides provide a deliberate **Gunakan gambar bawaan** action. Product, assignment, and featured-content uploads use a 1080 × 1350 px (4:5) recommendation to match their public frame; logo uploads remain 800 × 800 px (1:1).
+Fields that support inheritance name both their scope and fallback source. Branch profile values identify **Pengaturan Bersama** as their source, while branch-product presentation identifies the **jenis produk bersama** or the branch CTA setting. Existing branch-logo overrides provide a deliberate **Gunakan gambar bawaan** action. Gallery and featured-content uploads use a 1080 × 1350 px (4:5) recommendation to match their public frame; logo uploads remain 800 × 800 px (1:1).
 
-The **Halaman Link Bio** list is the single entry point for creating a branch page. Its branch editor owns branch identity, WhatsApp destination, page content, product placement, and branch-specific product presentation. **Pustaka Produk** owns only reusable product defaults; it must not repeat branch assignment controls. Legacy branch routes may redirect into this flow, but the navigation must not expose a competing Data Cabang workflow.
+The **Halaman Link Bio** list is the single entry point for creating a branch page. Its branch editor owns branch identity, WhatsApp destination, page content, gallery, product placement, and branch-specific CTA presentation. **Galeri Produk** owns visual items and **Tombol WhatsApp** owns product assignment and contact copy; neither repeats the other's controls. Shared product types are selected, created, and secondarily maintained inside the Tombol WhatsApp panel instead of receiving a competing top-level navigation destination. Legacy branch and product-library routes redirect into the Halaman Link Bio flow.
 
 ## Do's and Don'ts
 
 ### Do:
 
 - **Do** reuse the shared ivory, charcoal, and bronze roles across public and admin surfaces.
-- **Do** keep product imagery conditional and retain useful text when it is absent.
+- **Do** keep gallery imagery independent from product CTA eligibility.
 - **Do** keep WhatsApp actions visibly primary and directly navigable.
 - **Do** retain visible focus and reduced-motion treatments on interactive elements.
 

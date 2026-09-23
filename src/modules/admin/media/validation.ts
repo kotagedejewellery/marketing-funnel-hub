@@ -6,13 +6,13 @@ export const mediaTargetSchema = z.union([
     entityId: z.literal("00000000-0000-0000-0000-000000000001"),
   }),
   z.object({
-    entityType: z.enum(["branch", "campaign", "product", "assignment"]),
+    entityType: z.enum(["branch", "campaign"]),
     entityId: z.uuid(),
   }),
 ]);
 
 export const mediaOverrideTargetSchema = z.object({
-  entityType: z.enum(["branch", "assignment"]),
+  entityType: z.literal("branch"),
   entityId: z.uuid(),
 });
 

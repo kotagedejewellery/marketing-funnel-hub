@@ -74,10 +74,10 @@ export default async function AdminDashboardPage() {
           numeric
         />
         <Summary
-          href="/admin/products"
-          label="Produk pustaka aktif"
-          value={String(dashboard.activeProducts)}
-          action="Kelola Pustaka Produk"
+          href="/admin/link-bio"
+          label="Tombol WhatsApp aktif"
+          value={String(dashboard.activeWhatsappButtons)}
+          action="Kelola dari halaman cabang"
           className="bg-card md:col-span-3"
           numeric
         />
@@ -143,7 +143,6 @@ export default async function AdminDashboardPage() {
           <div className="mt-5 grid gap-1">
             <QuickLink href="/admin/link-bio" label="Pilih halaman Link Bio" />
             <QuickLink href="/admin/settings" label="Pengaturan Bersama" />
-            <QuickLink href="/admin/products" label="Kelola Pustaka Produk" />
             <QuickLink href="/admin/tracking" label="Validasi tracking" />
           </div>
         </aside>

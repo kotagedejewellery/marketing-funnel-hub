@@ -9,6 +9,7 @@ import {
   campaigns,
   contentSections,
   faqs,
+  galleryItems,
   links,
   productBranches,
   products,
@@ -109,6 +110,7 @@ async function loadScopedContent(
     eligibleCampaigns,
     activeProducts,
     activeBranches,
+    activeGalleryItems,
     activeLinks,
     activeSections,
     pageFaqs,
@@ -143,7 +145,6 @@ async function loadScopedContent(
         name: products.name,
         slug: products.slug,
         description: products.description,
-        imagePath: products.imagePath,
       })
       .from(products)
       .where(eq(products.isActive, true))
@@ -154,8 +155,6 @@ async function loadScopedContent(
         assignmentSortOrder: productBranches.sortOrder,
         displayName: productBranches.displayName,
         displayDescription: productBranches.description,
-        displayImagePath: productBranches.imagePath,
-        showImage: productBranches.showImage,
         id: branches.id,
         name: branches.name,
         slug: branches.slug,
@@ -181,6 +180,22 @@ async function loadScopedContent(
         asc(branches.name),
         asc(branches.id),
       ),
+    db
+      .select({
+        id: galleryItems.id,
+        title: galleryItems.title,
+        description: galleryItems.description,
+        altText: galleryItems.altText,
+        imagePath: galleryItems.imagePath,
+      })
+      .from(galleryItems)
+      .where(
+        and(
+          eq(galleryItems.branchId, branch.id),
+          eq(galleryItems.isActive, true),
+        ),
+      )
+      .orderBy(asc(galleryItems.sortOrder), asc(galleryItems.id)),
     db
       .select({
         id: links.id,
@@ -257,19 +272,28 @@ async function loadScopedContent(
           targetUrl: safeHref(campaign.targetUrl),
         }
       : null,
+    gallery: activeGalleryItems.flatMap((item) => {
+      const imageUrl = assetUrl(item.imagePath);
+      return imageUrl
+        ? [
+            {
+              id: item.id,
+              title: item.title,
+              description: item.description,
+              altText: item.altText,
+              imageUrl,
+            },
+          ]
+        : [];
+    }),
     products: visibleProducts.map((product) => {
       const assignment = branchAssignments.get(product.id);
       const displayName = assignment?.displayName || product.name;
-      const showImage = assignment?.showImage ?? true;
       return {
         id: product.id,
         name: displayName,
         slug: product.slug,
         description: assignment?.displayDescription || product.description,
-        showImage,
-        imageUrl: showImage
-          ? assetUrl(assignment?.displayImagePath || product.imagePath)
-          : null,
         branches: activeBranches
           .filter((item) => item.productId === product.id)
           .map((item) => {

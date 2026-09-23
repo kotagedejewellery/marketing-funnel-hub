@@ -1,7 +1,7 @@
 import * as z from "zod";
 
 export const productSchema = z.object({
-  id: z.union([z.uuid(), z.literal("")]),
+  id: z.uuid(),
   name: z.string().trim().min(1, "Nama produk wajib diisi.").max(120),
   slug: z
     .string()

@@ -22,7 +22,7 @@ describe("media target validation", () => {
     ).toBe(false);
   });
 
-  it("allows only branch and assignment image overrides to be cleared", () => {
+  it("allows only branch logo overrides to be cleared", () => {
     const entityId = "11111111-1111-4111-8111-111111111111";
 
     expect(
@@ -34,7 +34,7 @@ describe("media target validation", () => {
         entityType: "assignment",
         entityId,
       }).success,
-    ).toBe(true);
+    ).toBe(false);
     expect(
       mediaOverrideTargetSchema.safeParse({ entityType: "site", entityId })
         .success,

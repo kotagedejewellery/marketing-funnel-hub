@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
@@ -21,6 +21,257 @@ type ActionState = {
   ok?: boolean;
 };
 
+const addExistingProductSchema = z.object({
+  branchId: z.uuid(),
+  productId: z.uuid(),
+});
+
+const createBranchProductSchema = z.object({
+  branchId: z.uuid(),
+  name: z.string().trim().min(1, "Nama produk wajib diisi.").max(120),
+  description: z
+    .string()
+    .trim()
+    .max(2000)
+    .transform((value) => value || null),
+});
+
+function createProductSlug(name: string) {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function revalidateBranchProductContent(branchId: string, branchSlug: string) {
+  revalidatePath(`/${branchSlug}`);
+  revalidatePath(`/admin/branches/${branchId}/link-bio`);
+  revalidatePath("/admin/link-bio");
+  revalidatePath("/admin");
+}
+
+export async function addExistingProductToBranch(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const profile = await requireAdmin();
+  const parsed = addExistingProductSchema.safeParse({
+    branchId: formData.get("branchId"),
+    productId: formData.get("productId"),
+  });
+  if (!parsed.success) {
+    return {
+      message: "Pilih jenis produk yang valid.",
+      errors: Object.fromEntries(
+        parsed.error.issues.map((issue) => [
+          String(issue.path[0]),
+          issue.message,
+        ]),
+      ),
+    };
+  }
+
+  const { branchId, productId } = parsed.data;
+  const db = getDatabase();
+  const [branch, product, existing] = await Promise.all([
+    db
+      .select({ id: branches.id, slug: branches.slug })
+      .from(branches)
+      .where(eq(branches.id, branchId))
+      .limit(1),
+    db
+      .select({ id: products.id, isActive: products.isActive })
+      .from(products)
+      .where(eq(products.id, productId))
+      .limit(1),
+    db
+      .select({ id: productBranches.id, isActive: productBranches.isActive })
+      .from(productBranches)
+      .where(
+        and(
+          eq(productBranches.branchId, branchId),
+          eq(productBranches.productId, productId),
+        ),
+      )
+      .limit(1),
+  ]);
+  if (!branch[0] || !product[0]) {
+    return { message: "Cabang atau jenis produk tidak ditemukan.", errors: {} };
+  }
+  if (!product[0].isActive) {
+    return {
+      message: "Jenis produk ini masih nonaktif.",
+      errors: { productId: "Aktifkan jenis produk sebelum menambahkannya." },
+    };
+  }
+  if (existing[0]?.isActive) {
+    return {
+      message: "Jenis produk ini sudah tampil pada cabang.",
+      errors: { productId: "Pilih jenis produk lain." },
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const [lastOrder] = await tx
+        .select({ value: max(productBranches.sortOrder) })
+        .from(productBranches)
+        .where(eq(productBranches.branchId, branchId));
+      const sortOrder = Number(lastOrder?.value ?? -1) + 1;
+
+      if (existing[0]) {
+        await tx
+          .update(productBranches)
+          .set({ isActive: true, sortOrder, updatedAt: new Date() })
+          .where(eq(productBranches.id, existing[0].id));
+      } else {
+        await tx.insert(productBranches).values({
+          branchId,
+          productId,
+          isActive: true,
+          sortOrder,
+        });
+      }
+      await tx.insert(auditLogs).values({
+        adminId: profile.id,
+        action: existing[0] ? "activate" : "assign",
+        entityType: "product_branches",
+        entityId: productId,
+        changes: { branchId },
+      });
+    });
+  } catch {
+    return {
+      message: "Tombol WhatsApp gagal ditambahkan. Coba lagi.",
+      errors: {},
+    };
+  }
+
+  revalidateBranchProductContent(branchId, branch[0].slug);
+  return {
+    message: "Tombol WhatsApp berhasil ditambahkan.",
+    errors: {},
+    ok: true,
+  };
+}
+
+export async function createProductForBranch(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const profile = await requireAdmin();
+  const parsed = createBranchProductSchema.safeParse({
+    branchId: formData.get("branchId"),
+    name: formData.get("name"),
+    description: formData.get("description"),
+  });
+  if (!parsed.success) {
+    return {
+      message: "Periksa kembali jenis produk baru.",
+      errors: Object.fromEntries(
+        parsed.error.issues.map((issue) => [
+          String(issue.path[0]),
+          issue.message,
+        ]),
+      ),
+    };
+  }
+
+  const input = parsed.data;
+  const slug = createProductSlug(input.name);
+  if (!slug) {
+    return {
+      message: "Nama produk belum dapat digunakan.",
+      errors: { name: "Gunakan nama yang memuat huruf atau angka." },
+    };
+  }
+
+  const db = getDatabase();
+  const [branch, duplicate] = await Promise.all([
+    db
+      .select({ id: branches.id, slug: branches.slug })
+      .from(branches)
+      .where(eq(branches.id, input.branchId))
+      .limit(1),
+    db
+      .select({ id: products.id, isActive: products.isActive })
+      .from(products)
+      .where(eq(products.slug, slug))
+      .limit(1),
+  ]);
+  if (!branch[0]) return { message: "Cabang tidak ditemukan.", errors: {} };
+  if (duplicate[0]) {
+    return {
+      message: "Jenis produk tersebut sudah tersedia.",
+      errors: {
+        name: duplicate[0].isActive
+          ? "Pilih jenis produk yang sudah ada dari daftar di atas."
+          : "Aktifkan jenis produk melalui bagian Kelola jenis produk bersama.",
+      },
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const [lastProductOrder, lastAssignmentOrder] = await Promise.all([
+        tx.select({ value: max(products.sortOrder) }).from(products),
+        tx
+          .select({ value: max(productBranches.sortOrder) })
+          .from(productBranches)
+          .where(eq(productBranches.branchId, input.branchId)),
+      ]);
+      const [created] = await tx
+        .insert(products)
+        .values({
+          name: input.name,
+          slug,
+          description: input.description,
+          isActive: true,
+          sortOrder: Number(lastProductOrder[0]?.value ?? -1) + 1,
+        })
+        .returning({ id: products.id });
+      if (!created) throw new Error("Product insert returned no row.");
+
+      await tx.insert(productBranches).values({
+        branchId: input.branchId,
+        productId: created.id,
+        isActive: true,
+        sortOrder: Number(lastAssignmentOrder[0]?.value ?? -1) + 1,
+      });
+      await tx.insert(auditLogs).values([
+        {
+          adminId: profile.id,
+          action: "create",
+          entityType: "products",
+          entityId: created.id,
+          changes: { fields: ["name", "slug", "description", "isActive"] },
+        },
+        {
+          adminId: profile.id,
+          action: "assign",
+          entityType: "product_branches",
+          entityId: created.id,
+          changes: { branchId: input.branchId },
+        },
+      ]);
+    });
+  } catch {
+    return {
+      message: "Jenis produk baru gagal dibuat. Coba lagi.",
+      errors: {},
+    };
+  }
+
+  revalidateBranchProductContent(input.branchId, branch[0].slug);
+  return {
+    message: "Jenis produk dan tombol WhatsApp berhasil dibuat.",
+    errors: {},
+    ok: true,
+  };
+}
+
 export async function saveBranchProduct(
   _previous: ActionState,
   formData: FormData,
@@ -30,7 +281,6 @@ export async function saveBranchProduct(
     productId: formData.get("productId"),
     branchId: formData.get("branchId"),
     isActive: formData.get("isActive") === "on",
-    showImage: formData.get("showImage") === "on",
     sortOrder: formData.get("sortOrder"),
     ctaLabel: formData.get("ctaLabel"),
     displayName: formData.get("displayName"),
@@ -82,7 +332,6 @@ export async function saveBranchProduct(
         .limit(1);
       const values = {
         isActive: input.isActive,
-        showImage: input.showImage,
         sortOrder: input.sortOrder,
         displayName: input.displayName,
         description: input.description,
@@ -110,7 +359,6 @@ export async function saveBranchProduct(
           branchId: input.branchId,
           fields: [
             "isActive",
-            "showImage",
             "sortOrder",
             "displayName",
             "description",
@@ -124,9 +372,7 @@ export async function saveBranchProduct(
     return { message: "Produk cabang gagal disimpan. Coba lagi.", errors: {} };
   }
 
-  revalidatePath(`/${branch[0].slug}`);
-  revalidatePath(`/admin/branches/${input.branchId}/link-bio`);
-  revalidatePath(`/admin/products/${input.productId}`);
+  revalidateBranchProductContent(input.branchId, branch[0].slug);
   return { message: "Produk cabang tersimpan.", errors: {}, ok: true };
 }
 
@@ -195,7 +441,6 @@ export async function moveBranchProduct(
   } catch {
     return { message: "Urutan produk gagal disimpan.", errors: {} };
   }
-  revalidatePath(`/${branch.slug}`);
-  revalidatePath(`/admin/branches/${branchId}/link-bio`);
+  revalidateBranchProductContent(branchId, branch.slug);
   return { message: "Urutan produk diperbarui.", errors: {}, ok: true };
 }

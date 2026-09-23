@@ -5,7 +5,7 @@ import { productSchema } from "./validation";
 describe("product input", () => {
   it("accepts a canonical slug and rejects spaces or uppercase", () => {
     const input = {
-      id: "",
+      id: "00000000-0000-4000-8000-000000000001",
       name: "Wedding Ring",
       slug: "wedding-ring",
       description: "",

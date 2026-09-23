@@ -6,14 +6,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
-import {
-  auditLogs,
-  branches,
-  campaigns,
-  productBranches,
-  products,
-  siteSettings,
-} from "@/lib/db/schema";
+import { auditLogs, branches, campaigns, siteSettings } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import { createPrivilegedSupabase } from "@/lib/supabase/server";
 import { requireAdmin } from "@/modules/admin/access";
@@ -68,31 +61,14 @@ export async function uploadMedia(
             .from(branches)
             .where(eq(branches.id, entityId))
             .limit(1)
-        : entityType === "campaign"
-          ? await db
-              .select({ id: campaigns.id })
-              .from(campaigns)
-              .where(eq(campaigns.id, entityId))
-              .limit(1)
-          : entityType === "assignment"
-            ? await db
-                .select({ id: productBranches.id })
-                .from(productBranches)
-                .where(eq(productBranches.id, entityId))
-                .limit(1)
-            : await db
-                .select({ id: products.id })
-                .from(products)
-                .where(eq(products.id, entityId))
-                .limit(1);
+        : await db
+            .select({ id: campaigns.id })
+            .from(campaigns)
+            .where(eq(campaigns.id, entityId))
+            .limit(1);
   if (!existing) return { ok: false, message: "Data tujuan tidak ditemukan." };
 
-  const folder =
-    entityType === "site"
-      ? "brand"
-      : entityType === "assignment"
-        ? "product-branches"
-        : `${entityType}s`;
+  const folder = entityType === "site" ? "brand" : `${entityType}s`;
   const path = `${folder}/${entityId}/${randomUUID()}.${extension}`;
   const { storage } = createPrivilegedSupabase();
   try {
@@ -116,31 +92,16 @@ export async function uploadMedia(
           .update(branches)
           .set({ logoPath: path, updatedAt: new Date() })
           .where(eq(branches.id, entityId));
-      } else if (entityType === "campaign") {
+      } else {
         await tx
           .update(campaigns)
           .set({ bannerPath: path, updatedAt: new Date() })
           .where(eq(campaigns.id, entityId));
-      } else if (entityType === "assignment") {
-        await tx
-          .update(productBranches)
-          .set({ imagePath: path, updatedAt: new Date() })
-          .where(eq(productBranches.id, entityId));
-      } else {
-        await tx
-          .update(products)
-          .set({ imagePath: path, updatedAt: new Date() })
-          .where(eq(products.id, entityId));
       }
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "update",
-        entityType:
-          entityType === "site"
-            ? "site_settings"
-            : entityType === "assignment"
-              ? "product_branches"
-              : `${entityType}s`,
+        entityType: entityType === "site" ? "site_settings" : `${entityType}s`,
         entityId,
         changes: {
           field:
@@ -148,9 +109,7 @@ export async function uploadMedia(
               ? "logoPath"
               : entityType === "branch"
                 ? "logoPath"
-                : entityType === "campaign"
-                  ? "bannerPath"
-                  : "imagePath",
+                : "bannerPath",
         },
       });
     });
@@ -165,17 +124,13 @@ export async function uploadMedia(
   revalidatePath("/[slug]", "page");
   revalidatePath("/admin/settings");
   revalidatePath("/admin/branches/[id]/link-bio", "page");
-  if (entityType !== "assignment") {
-    revalidatePath(
-      entityType === "site"
-        ? "/admin/settings"
-        : entityType === "branch"
-          ? `/admin/branches/${entityId}/link-bio`
-          : entityType === "campaign"
-            ? `/admin/campaigns/${entityId}`
-            : `/admin/products/${entityId}`,
-    );
-  }
+  revalidatePath(
+    entityType === "site"
+      ? "/admin/settings"
+      : entityType === "branch"
+        ? `/admin/branches/${entityId}/link-bio`
+        : `/admin/campaigns/${entityId}`,
+  );
   return { ok: true, message: "Gambar berhasil diunggah." };
 }
 
@@ -195,98 +150,47 @@ export async function clearMediaOverride(
   const db = getDatabase();
   const { entityType, entityId } = target.data;
 
-  if (entityType === "branch") {
-    const [existing] = await db
-      .select({
-        id: branches.id,
-        slug: branches.slug,
-        logoPath: branches.logoPath,
-      })
-      .from(branches)
-      .where(eq(branches.id, entityId))
-      .limit(1);
-    if (!existing) {
-      return { ok: false, message: "Cabang tidak ditemukan." };
-    }
-    if (!existing.logoPath) {
-      return { ok: true, message: "Logo sudah menggunakan gambar bawaan." };
-    }
-
-    try {
-      await db.transaction(async (tx) => {
-        await tx
-          .update(branches)
-          .set({ logoPath: null, updatedAt: new Date() })
-          .where(eq(branches.id, entityId));
-        await tx.insert(auditLogs).values({
-          adminId: profile.id,
-          action: "update",
-          entityType: "branches",
-          entityId,
-          changes: { field: "logoPath", mode: "inherited" },
-        });
-      });
-    } catch {
-      return {
-        ok: false,
-        message: "Logo belum dapat dikembalikan ke gambar bawaan.",
-      };
-    }
-
-    revalidatePath(`/${existing.slug}`);
-    revalidatePath(`/admin/branches/${entityId}/link-bio`);
-    return {
-      ok: true,
-      message: "Logo kembali mengikuti Pengaturan Bersama.",
-    };
-  }
-
   const [existing] = await db
     .select({
-      id: productBranches.id,
-      branchId: productBranches.branchId,
-      branchSlug: branches.slug,
-      imagePath: productBranches.imagePath,
+      id: branches.id,
+      slug: branches.slug,
+      logoPath: branches.logoPath,
     })
-    .from(productBranches)
-    .innerJoin(branches, eq(productBranches.branchId, branches.id))
-    .where(eq(productBranches.id, entityId))
+    .from(branches)
+    .where(eq(branches.id, entityId))
     .limit(1);
   if (!existing) {
-    return { ok: false, message: "Produk cabang tidak ditemukan." };
+    return { ok: false, message: "Cabang tidak ditemukan." };
   }
-  if (!existing.imagePath) {
-    return {
-      ok: true,
-      message: "Gambar sudah menggunakan gambar dari Pustaka Produk.",
-    };
+  if (!existing.logoPath) {
+    return { ok: true, message: "Logo sudah menggunakan gambar bawaan." };
   }
 
   try {
     await db.transaction(async (tx) => {
       await tx
-        .update(productBranches)
-        .set({ imagePath: null, updatedAt: new Date() })
-        .where(eq(productBranches.id, entityId));
+        .update(branches)
+        .set({ logoPath: null, updatedAt: new Date() })
+        .where(eq(branches.id, entityId));
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "update",
-        entityType: "product_branches",
+        entityType: "branches",
         entityId,
-        changes: { field: "imagePath", mode: "inherited" },
+        changes: { field: "logoPath", mode: "inherited" },
       });
     });
   } catch {
     return {
       ok: false,
-      message: "Gambar belum dapat dikembalikan ke gambar pustaka.",
+      message: "Logo belum dapat dikembalikan ke gambar bawaan.",
     };
   }
 
-  revalidatePath(`/${existing.branchSlug}`);
-  revalidatePath(`/admin/branches/${existing.branchId}/link-bio`);
+  revalidatePath(`/${existing.slug}`);
+  revalidatePath(`/admin/branches/${entityId}/link-bio`);
   return {
     ok: true,
-    message: "Gambar kembali mengikuti Pustaka Produk.",
+    message: "Logo kembali mengikuti Pengaturan Bersama.",
   };
 }

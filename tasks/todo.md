@@ -72,11 +72,12 @@ cakupan dari pemilik lebih dahulu; Git dan migrasi live tetap dikerjakan pemilik
   - Verifikasi yang akan dimintakan: satu edit kampanye/tautan per cabang.
   - Berkas: `src/modules/admin/campaigns/`, `src/modules/admin/links/`,
     `src/app/admin/(cms)/campaigns/`, `src/app/admin/(cms)/links/`.
-- [x] B6 — Kelola produk dan override tampilannya dari editor Link Bio cabang.
-  - Terima: Pustaka Produk hanya menyimpan data dasar; pemilihan,
-    nama/deskripsi/gambar/urutan/CTA khusus cabang dikelola dari Halaman Link
-    Bio; slug kategori dan aturan nomor/CTA tetap kanonis; root tidak
-    menampilkan produk.
+- [x] B6 — Kelola galeri dan CTA produk secara terpisah dari editor Link Bio cabang.
+  - Terima: Galeri Produk menyimpan koleksi visual independen per cabang tanpa
+    CTA; Tombol WhatsApp mengelola pemilihan, nama/deskripsi, urutan, CTA, dan
+    pesan produk tanpa gambar; jenis produk bersama dipilih, dibuat, dan
+    dipelihara secara kontekstual dari panel yang sama; slug kategori dan aturan
+    nomor/CTA tetap kanonis; root tidak menampilkan produk.
   - Verifikasi yang akan dimintakan: satu produk di dua cabang berbeda.
   - Berkas: `src/modules/admin/branches/product-actions.ts`,
     `src/components/admin/branch-product-manager.tsx`,
@@ -475,9 +476,9 @@ those behaviors; do not rebuild the page from scratch.
       CTA list, secondary/social links, and footer as readable mobile-first
       sections. Extract components such as `BrandHeader`, `CampaignBanner`,
       `ProductCard`, and `BranchWhatsAppLinks` only when reuse/clarity warrants it.
-- [x] Show logo, campaign banner, and product image from validated Supabase
-      Storage references with appropriate alt text, sizing, and text fallback.
-      A broken/missing image must not remove product information or a valid CTA.
+- [x] Show logo, campaign banner, and branch gallery images from validated
+      Supabase Storage references with appropriate alt text, sizing, and image
+      fallback. A broken gallery image must not remove a valid product CTA.
 - [x] Keep a single-page product interaction; the existing native expandable
       section is sufficient unless actual usability evidence requires a sheet.
       No mandatory product/branch modal, form, or interstitial before WhatsApp.
@@ -572,23 +573,24 @@ reflects successful changes and validation errors are actionable.
 **Verification to propose at feature completion:** One local save-to-public
 walkthrough for settings, campaign, and link, plus focused validation/role checks.
 
-### FE-04 — CMS for Link Bio branches, Product Library, and WhatsApp (Sprints 3–4)
+### FE-04 — CMS for Link Bio branches and WhatsApp (Sprints 3–4)
 
 **Sub-slices / components:**
 
-- [x] Build `ProductList` and `ProductForm` as a reusable Product Library for
-      name, canonical slug, description, base image, active status, and order.
-      A product is a customer-facing need/category, not an inventory SKU; this
-      page does not manage branch assignments.
+- [x] Maintain reusable product types contextually inside each branch's Tombol
+      WhatsApp panel for name, canonical slug, description, active status, and
+      order. A product is a customer-facing need/category, not an inventory SKU;
+      legacy `/admin/products*` routes redirect to Halaman Link Bio.
 - [x] Use the Halaman Link Bio list and `BranchForm` as the only UI for creating
       and editing branch name, slug, normalized WhatsApp number, optional CTA
       label, status, and order. Do not expose a separate Data Cabang menu.
-- [x] Manage product selection and branch-specific active state, order, image,
-      display copy, CTA label, and message override inside the selected Link Bio
-      editor. Do not create a matrix or product-centric assignment workflow.
+- [x] Manage product selection and branch-specific active state, order, display
+      copy, CTA label, and message override inside the selected Link Bio editor.
+      Manage gallery images in a separate panel; do not create a matrix or
+      product-centric assignment workflow.
 - [x] Show the resolved CTA/message context in the selected branch editor; the
-      server still generates the final URL. Product deactivation in the library
-      clearly warns that it affects all Link Bio pages.
+      server still generates the final URL. Deactivation of a shared product
+      type clearly warns that it affects all Link Bio pages.
 - [x] After a save/activate/deactivate, show actionable field or conflict
       errors and confirm the public product context reflects the change. Do
       not add destructive delete controls for routine Marketing actions.

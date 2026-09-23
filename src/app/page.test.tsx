@@ -14,6 +14,7 @@ const emptyContent: PublicContent = {
     privacyUrl: null,
   },
   campaign: null,
+  gallery: [],
   products: [],
   links: [],
   faqs: [],
@@ -49,8 +50,6 @@ describe("public Link Bio", () => {
               name: "Wedding Ring",
               slug: "wedding-ring",
               description: "Cincin custom",
-              showImage: false,
-              imageUrl: "/wedding-ring.jpg",
               branches: [
                 {
                   id: "branch-1",
@@ -66,8 +65,6 @@ describe("public Link Bio", () => {
               name: "Nusantara Series",
               slug: "nusantara-series",
               description: "Cincin motif Nusantara",
-              showImage: true,
-              imageUrl: "/nusantara-series.jpg",
               branches: [
                 {
                   id: "branch-1",
@@ -88,12 +85,6 @@ describe("public Link Bio", () => {
       screen.getByRole("heading", { name: "Nusantara Series" }),
     ).toBeVisible();
     expect(
-      screen.queryByRole("img", { name: "Wedding Ring" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: "Nusantara Series" }),
-    ).toHaveAttribute("src");
-    expect(
       screen.getByRole("link", {
         name: /Hubungi via WhatsApp, WhatsApp Solo/i,
       }),
@@ -103,6 +94,34 @@ describe("public Link Bio", () => {
         name: /Konsultasi Nusantara, WhatsApp Solo/i,
       }),
     ).toHaveAttribute("href", "https://wa.me/628123456789?text=Nusantara");
+  });
+
+  it("shows gallery images independently from WhatsApp products", () => {
+    render(
+      <LinkBio
+        content={{
+          ...emptyContent,
+          gallery: [
+            {
+              id: "gallery-1",
+              title: "Koleksi Favorit",
+              description: "Detail cincin bertekstur",
+              altText: "Sepasang cincin nikah bertekstur",
+              imageUrl: "/favorite.jpg",
+            },
+          ],
+          sections: [{ sectionKey: "gallery" }],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", { name: "Sepasang cincin nikah bertekstur" }),
+    ).toHaveAttribute("src");
+    expect(screen.getByText("Koleksi Favorit")).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: /WhatsApp/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows campaign artwork without separate title or description text", () => {

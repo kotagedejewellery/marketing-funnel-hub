@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function NewProductPage() {
-  redirect("/admin/products?create=1");
+  redirect("/admin/link-bio");
 }

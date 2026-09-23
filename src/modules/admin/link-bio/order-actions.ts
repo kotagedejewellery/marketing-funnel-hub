@@ -5,13 +5,19 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { getDatabase } from "@/lib/db/client";
-import { auditLogs, branches, faqs, links } from "@/lib/db/schema";
+import {
+  auditLogs,
+  branches,
+  faqs,
+  galleryItems,
+  links,
+} from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 
 type ActionState = { message: string; ok?: boolean };
 
 const moveSchema = z.object({
-  kind: z.enum(["link", "faq"]),
+  kind: z.enum(["link", "faq", "gallery"]),
   id: z.uuid(),
   branchId: z.union([z.uuid(), z.literal("")]),
   direction: z.enum(["up", "down"]),
@@ -61,12 +67,20 @@ export async function movePageItem(
               .where(and(scope, eq(links.linkType, target.linkType)))
               .orderBy(asc(links.sortOrder), asc(links.id))
           : [];
-      } else {
+      } else if (kind === "faq") {
         rows = await tx
           .select({ id: faqs.id })
           .from(faqs)
           .where(branchId ? eq(faqs.branchId, branchId) : isNull(faqs.branchId))
           .orderBy(asc(faqs.sortOrder), asc(faqs.id));
+      } else {
+        rows = branchId
+          ? await tx
+              .select({ id: galleryItems.id })
+              .from(galleryItems)
+              .where(eq(galleryItems.branchId, branchId))
+              .orderBy(asc(galleryItems.sortOrder), asc(galleryItems.id))
+          : [];
       }
       const index = rows.findIndex((row) => row.id === id);
       const other = direction === "up" ? index - 1 : index + 1;
@@ -78,17 +92,23 @@ export async function movePageItem(
             .update(links)
             .set({ sortOrder: position, updatedAt: new Date() })
             .where(eq(links.id, row.id));
-        } else {
+        } else if (kind === "faq") {
           await tx
             .update(faqs)
             .set({ sortOrder: position, updatedAt: new Date() })
             .where(eq(faqs.id, row.id));
+        } else {
+          await tx
+            .update(galleryItems)
+            .set({ sortOrder: position, updatedAt: new Date() })
+            .where(eq(galleryItems.id, row.id));
         }
       }
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "update",
-        entityType: kind === "link" ? "links" : "faqs",
+        entityType:
+          kind === "link" ? "links" : kind === "faq" ? "faqs" : "gallery_items",
         entityId: id,
         changes: { field: "sortOrder", branchId: branchId || null },
       });

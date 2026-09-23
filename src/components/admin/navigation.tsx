@@ -11,6 +11,7 @@ const items: {
   label: string;
   icon: string;
   separatorBefore?: boolean;
+  technicalOnly?: boolean;
 }[] = [
   {
     href: "/admin",
@@ -21,11 +22,6 @@ const items: {
     href: "/admin/link-bio",
     label: "Halaman Link Bio",
     icon: "M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z M12 8a2 2 0 1 0 0 4a2 2 0 1 0 0-4",
-  },
-  {
-    href: "/admin/products",
-    label: "Pustaka Produk",
-    icon: "M3 9 8 3h8l5 6-9 12z M3 9h18 M8 3l4 18 4-18",
   },
   {
     href: "/admin/settings",
@@ -42,11 +38,13 @@ const items: {
     href: "/admin/profiles",
     label: "Profil admin",
     icon: "M8 10a3 3 0 1 0 0-6a3 3 0 1 0 0 6 M16 10a3 3 0 1 0 0-6a3 3 0 1 0 0 6 M2 20v-2a6 6 0 0 1 12 0v2z M14 14a6 6 0 0 1 8 6h-6",
+    technicalOnly: true,
   },
   {
     href: "/admin/diagnostics",
     label: "Diagnostik",
     icon: "M4 4h16v16H4z M7 12h3l2-4 2 8 2-4h1",
+    technicalOnly: true,
   },
 ];
 
@@ -58,7 +56,9 @@ export function AdminNavigation({
   displayName: string;
 }) {
   const pathname = usePathname();
-  const visibleItems = role === "technical_admin" ? items : items.slice(0, 5);
+  const visibleItems = items.filter(
+    (item) => !item.technicalOnly || role === "technical_admin",
+  );
 
   return (
     <div className="kgj-admin-rail relative flex items-center gap-1 rounded-full bg-[var(--kgj-dark)] p-2 text-[var(--kgj-on-dark-muted)] shadow-[0_20px_45px_-32px_rgba(40,33,28,0.7)] lg:h-full lg:flex-col lg:rounded-none lg:py-10">
@@ -69,24 +69,6 @@ export function AdminNavigation({
       <span
         aria-hidden="true"
         className="absolute bottom-0 left-1/2 z-20 hidden size-11 -translate-x-1/2 translate-y-1/2 rounded-full bg-background lg:block"
-      />
-      <span
-        aria-hidden="true"
-        className="hidden size-10 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-accent-soft)] text-[var(--kgj-dark)] lg:flex"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          className="size-5"
-        >
-          <path d="M12 2 21 12 12 22 3 12 12 2Z M3 12h18 M12 2l-4 10 4 10 4-10-4-10Z" />
-        </svg>
-      </span>
-      <span
-        aria-hidden="true"
-        className="hidden h-px w-8 bg-white/20 lg:block"
       />
       <nav
         aria-label="Navigasi admin"

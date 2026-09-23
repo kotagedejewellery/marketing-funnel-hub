@@ -6,6 +6,7 @@ import { BranchProductManager } from "@/components/admin/branch-product-manager"
 import { BranchPublicUrl } from "@/components/admin/branch-public-url";
 import { FaqManager } from "@/components/admin/faq-manager";
 import { FormDialog } from "@/components/admin/form-dialog";
+import { GalleryManager } from "@/components/admin/gallery-manager";
 import { MediaUploadField } from "@/components/admin/media-upload-field";
 import {
   PageCampaigns,
@@ -26,6 +27,7 @@ export default async function BranchLinkBioPage({
     sections,
     inheritsSections,
     campaigns,
+    gallery,
     links,
     faqs,
     inheritsFaqs,
@@ -170,18 +172,14 @@ export default async function BranchLinkBioPage({
             </ol>
           </section>
           <PageCampaigns rows={campaigns} branchId={branch.id} />
-          <BranchProductManager
+          <GalleryManager
             branchId={branch.id}
-            products={products.map((product) => ({
-              ...product,
-              assignment: product.assignment
-                ? {
-                    ...product.assignment,
-                    imageUrl: assetUrl(product.assignment.imagePath),
-                  }
-                : null,
-            }))}
+            items={gallery.flatMap((item) => {
+              const imageUrl = assetUrl(item.imagePath);
+              return imageUrl ? [{ ...item, imageUrl }] : [];
+            })}
           />
+          <BranchProductManager branchId={branch.id} products={products} />
           <FaqManager
             faqs={faqs}
             branchId={branch.id}

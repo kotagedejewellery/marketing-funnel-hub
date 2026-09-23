@@ -246,6 +246,35 @@ export const links = pgTable(
   ],
 ).enableRLS();
 
+export const galleryItems = pgTable(
+  "gallery_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    imagePath: text("image_path").notNull(),
+    title: text("title"),
+    description: text("description"),
+    altText: text("alt_text").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("gallery_items_branch_visibility_idx").on(
+      table.branchId,
+      table.isActive,
+      table.sortOrder,
+    ),
+  ],
+).enableRLS();
+
 export const faqs = pgTable(
   "faqs",
   {

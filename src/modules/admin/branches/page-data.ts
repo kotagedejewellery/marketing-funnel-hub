@@ -7,6 +7,7 @@ import {
   campaigns,
   contentSections,
   faqs,
+  galleryItems,
   links,
   productBranches,
   products,
@@ -46,6 +47,7 @@ export async function getBranchPageSettings(id: string) {
     branchCampaigns,
     branchLinks,
     branchFaqs,
+    branchGallery,
     productRows,
     assignmentRows,
   ] = await Promise.all([
@@ -65,11 +67,16 @@ export async function getBranchPageSettings(id: string) {
       .where(eq(faqs.branchId, branch.id))
       .orderBy(asc(faqs.sortOrder), asc(faqs.id)),
     db
+      .select()
+      .from(galleryItems)
+      .where(eq(galleryItems.branchId, branch.id))
+      .orderBy(asc(galleryItems.sortOrder), asc(galleryItems.id)),
+    db
       .select({
         id: products.id,
         name: products.name,
+        slug: products.slug,
         description: products.description,
-        imagePath: products.imagePath,
         isActive: products.isActive,
         sortOrder: products.sortOrder,
       })
@@ -81,8 +88,6 @@ export async function getBranchPageSettings(id: string) {
         productId: productBranches.productId,
         displayName: productBranches.displayName,
         description: productBranches.description,
-        imagePath: productBranches.imagePath,
-        showImage: productBranches.showImage,
         ctaLabel: productBranches.ctaLabel,
         whatsappMessageTemplate: productBranches.whatsappMessageTemplate,
         isActive: productBranches.isActive,
@@ -107,6 +112,7 @@ export async function getBranchPageSettings(id: string) {
     inheritsSections: scoped.length === 0,
     campaigns: branchCampaigns,
     links: branchLinks,
+    gallery: branchGallery,
     faqs: branchFaqs.length ? branchFaqs : inheritedFaqs,
     inheritsFaqs: branchFaqs.length === 0,
     products: productRows

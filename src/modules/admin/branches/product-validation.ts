@@ -4,7 +4,6 @@ export const branchProductSchema = z.object({
   productId: z.uuid(),
   branchId: z.uuid(),
   isActive: z.boolean(),
-  showImage: z.boolean(),
   sortOrder: z
     .string()
     .regex(/^\d+$/, "Urutan harus angka nol atau lebih.")

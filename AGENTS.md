@@ -121,6 +121,13 @@ table is an additive post-P0 content table; no new tracking event or WhatsApp
 step is introduced. Google review integration is a separate, not-yet-implemented
 feature.
 
+Approved independent gallery extension (23 September 2026): each branch owns an
+ordered `gallery_items` collection that is independent from Products and
+WhatsApp CTA assignments. Gallery items have an image, accessible alt text,
+optional title/description, order, and active state; they do not carry product,
+CTA, WhatsApp, or tracking context. The public page initially shows six active
+items in a responsive grid and reveals the remainder through native disclosure.
+
 ---
 
 ## 5. P0 Scope Guard
@@ -185,9 +192,9 @@ Recommended content order:
 ```text
 Brand Header
 Campaign Banner
-Products
-Product Context
-WhatsApp CTA per Branch
+Gallery Products
+Product WhatsApp CTA per Branch
+FAQ
 Secondary Links
 Social Links
 Footer / Legal
@@ -223,6 +230,7 @@ Admin capabilities include:
 Headline
 Introduction
 Campaign Banner
+Gallery Images
 Products
 Branches
 Product ↔ Branch Assignment
@@ -793,7 +801,7 @@ access by default. Browser Supabase usage is limited to Auth and approved Storag
 Use Supabase Storage for:
 
 ```text
-product images
+branch gallery images
 campaign banners
 brand assets
 ```

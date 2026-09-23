@@ -3,6 +3,7 @@ import * as z from "zod";
 export const branchSectionKeys = [
   "brand_header",
   "campaign_banner",
+  "gallery",
   "products",
   "faq",
   "secondary_links",
@@ -16,7 +17,8 @@ export const branchSectionLabels: Record<
 > = {
   brand_header: "Profil",
   campaign_banner: "Konten unggulan",
-  products: "Produk & WhatsApp",
+  gallery: "Galeri Produk",
+  products: "Tombol WhatsApp",
   faq: "FAQ",
   secondary_links: "Tautan tambahan",
   social_links: "Media sosial",

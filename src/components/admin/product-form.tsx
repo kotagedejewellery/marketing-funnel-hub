@@ -17,15 +17,16 @@ type Product = {
 const inputClass =
   "mt-2 min-h-11 w-full border border-border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2";
 
-export function ProductForm({ product }: { product: Product | null }) {
+export function ProductForm({ product }: { product: Product }) {
   const [state, action, pending] = useActionState(saveProduct, {
     message: "",
     errors: {},
+    ok: false,
   });
 
   return (
     <form action={action} className="space-y-6">
-      <input type="hidden" name="id" value={product?.id ?? ""} />
+      <input type="hidden" name="id" value={product.id} />
       <div>
         <label htmlFor="name" className="font-medium">
           Nama produk / kebutuhan
@@ -33,7 +34,7 @@ export function ProductForm({ product }: { product: Product | null }) {
         <input
           id="name"
           name="name"
-          defaultValue={product?.name ?? ""}
+          defaultValue={product.name}
           className={inputClass}
           required
           maxLength={120}
@@ -42,12 +43,12 @@ export function ProductForm({ product }: { product: Product | null }) {
       </div>
       <div>
         <label htmlFor="slug" className="font-medium">
-          Slug
+          Slug tracking
         </label>
         <input
           id="slug"
           name="slug"
-          defaultValue={product?.slug ?? ""}
+          defaultValue={product.slug}
           className={inputClass}
           required
           maxLength={120}
@@ -63,7 +64,7 @@ export function ProductForm({ product }: { product: Product | null }) {
         <textarea
           id="description"
           name="description"
-          defaultValue={product?.description ?? ""}
+          defaultValue={product.description ?? ""}
           className={inputClass}
           rows={4}
           maxLength={2000}
@@ -80,7 +81,7 @@ export function ProductForm({ product }: { product: Product | null }) {
           type="number"
           min={0}
           max={2147483647}
-          defaultValue={product?.sortOrder ?? 0}
+          defaultValue={product.sortOrder}
           className={inputClass}
           required
         />
@@ -90,15 +91,15 @@ export function ProductForm({ product }: { product: Product | null }) {
         <input
           type="checkbox"
           name="isActive"
-          defaultChecked={product?.isActive ?? true}
+          defaultChecked={product.isActive}
           className="size-5 accent-primary"
         />
         Aktif
       </label>
       <p className="text-sm leading-6 text-muted-foreground">
-        Perubahan data ini berlaku pada semua Link Bio yang masih memakai data
-        bawaan produk. Menonaktifkan produk akan menyembunyikannya dari seluruh
-        Link Bio.
+        Ini adalah jenis produk bersama. Perubahan nama atau deskripsi berlaku
+        pada semua Link Bio yang masih memakai nilai bawaan. Menonaktifkannya
+        akan menyembunyikan tombol tersebut dari seluruh cabang.
       </p>
       <FormFeedback state={state} pending={pending} />
       <button
@@ -106,7 +107,7 @@ export function ProductForm({ product }: { product: Product | null }) {
         disabled={pending}
         className="min-h-11 bg-primary px-5 font-medium text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
       >
-        {pending ? "Menyimpan..." : "Simpan produk"}
+        {pending ? "Menyimpan..." : "Simpan jenis produk"}
       </button>
     </form>
   );

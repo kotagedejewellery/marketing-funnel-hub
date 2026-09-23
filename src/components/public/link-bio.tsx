@@ -45,9 +45,6 @@ export function LinkBio({
   const hasProducts =
     content.products.length > 0 &&
     content.sections.some((section) => section.sectionKey === "products");
-  const galleryProducts = content.products
-    .filter((product) => product.showImage && product.imageUrl)
-    .slice(0, 4);
   const logoFallback = (
     <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-dark)] font-serif text-3xl font-bold text-[var(--kgj-accent-soft)]">
       KJ
@@ -162,6 +159,85 @@ export function LinkBio({
               );
             }
 
+            case "gallery": {
+              if (content.gallery.length === 0) return null;
+              const visibleGallery = content.gallery.slice(0, 6);
+              const remainingGallery = content.gallery.slice(6);
+              const galleryClass =
+                content.gallery.length === 1
+                  ? "mx-auto grid max-w-sm grid-cols-1 gap-3 sm:gap-4"
+                  : "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4";
+              const renderGalleryItems = (items: typeof content.gallery) =>
+                items.map((item) => (
+                  <li key={item.id}>
+                    <figure className="overflow-hidden rounded-2xl bg-card">
+                      <PublicImage
+                        src={item.imageUrl}
+                        alt={item.altText}
+                        width={1080}
+                        height={1350}
+                        sizes="(min-width: 640px) 224px, calc((100vw - 44px) / 2)"
+                        className="aspect-[4/5] w-full object-cover"
+                        unoptimized={bypassImageOptimization(item.imageUrl)}
+                      />
+                      {(item.title || item.description) && (
+                        <figcaption className="px-4 py-4">
+                          {item.title && (
+                            <h3 className="font-serif font-bold text-balance">
+                              {item.title}
+                            </h3>
+                          )}
+                          {item.description && (
+                            <p className="mt-1 text-sm leading-6 whitespace-pre-line text-muted-foreground">
+                              {item.description}
+                            </p>
+                          )}
+                        </figcaption>
+                      )}
+                    </figure>
+                  </li>
+                ));
+
+              return (
+                <section
+                  key={sectionKey}
+                  aria-labelledby="gallery-title"
+                  className="py-10 sm:py-14"
+                >
+                  <h2
+                    id="gallery-title"
+                    className="text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
+                  >
+                    Galeri produk
+                  </h2>
+                  <ul
+                    aria-label="Galeri produk"
+                    className={`mt-7 ${galleryClass}`}
+                  >
+                    {renderGalleryItems(visibleGallery)}
+                  </ul>
+                  {remainingGallery.length > 0 && (
+                    <details className="group mt-5">
+                      <summary className="mx-auto flex min-h-11 w-fit cursor-pointer list-none items-center rounded-full border border-border bg-card px-5 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+                        <span className="group-open:hidden">
+                          Lihat semua koleksi ({content.gallery.length})
+                        </span>
+                        <span className="hidden group-open:inline">
+                          Sembunyikan koleksi tambahan
+                        </span>
+                      </summary>
+                      <ul
+                        aria-label="Galeri produk tambahan"
+                        className={`mt-5 ${galleryClass}`}
+                      >
+                        {renderGalleryItems(remainingGallery)}
+                      </ul>
+                    </details>
+                  )}
+                </section>
+              );
+            }
+
             case "products":
               return (
                 <section
@@ -184,31 +260,6 @@ export function LinkBio({
                     </p>
                   ) : (
                     <>
-                      {galleryProducts.length > 0 && (
-                        <ul
-                          aria-label="Galeri produk"
-                          className="mt-7 grid grid-cols-2 gap-3 sm:gap-4"
-                        >
-                          {galleryProducts.map((product) => (
-                            <li
-                              key={product.id}
-                              className="overflow-hidden rounded-2xl bg-card"
-                            >
-                              <PublicImage
-                                src={product.imageUrl!}
-                                alt={product.name}
-                                width={1080}
-                                height={1350}
-                                sizes="(min-width: 768px) 344px, calc((100vw - 44px) / 2)"
-                                className="aspect-[4/5] h-full w-full object-cover"
-                                unoptimized={bypassImageOptimization(
-                                  product.imageUrl!,
-                                )}
-                              />
-                            </li>
-                          ))}
-                        </ul>
-                      )}
                       <ul className="mt-7 space-y-3">
                         {content.products.map((product) => {
                           const destination = product.branches[0];

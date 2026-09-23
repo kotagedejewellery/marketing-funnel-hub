@@ -8,7 +8,7 @@ import { FormDialog } from "@/components/admin/form-dialog";
 import { clearMediaOverride, uploadMedia } from "@/modules/admin/media/actions";
 import { maxImageBytes } from "@/modules/admin/media/validation";
 
-type MediaType = "site" | "branch" | "campaign" | "product" | "assignment";
+type MediaType = "site" | "branch" | "campaign";
 type SelectedImage = {
   name: string;
   size: number;
@@ -72,8 +72,7 @@ export function MediaUploadField({
             recommendedSize={recommendedSize}
           />
         </FormDialog>
-        {previewUrl &&
-        (entityType === "branch" || entityType === "assignment") ? (
+        {previewUrl && entityType === "branch" ? (
           <FormDialog
             title="Gunakan gambar bawaan"
             triggerLabel="Gunakan gambar bawaan"
@@ -318,23 +317,20 @@ function MediaOverrideResetForm({
   entityType,
   entityId,
 }: {
-  entityType: "branch" | "assignment";
+  entityType: "branch";
   entityId: string;
 }) {
   const [state, action, pending] = useActionState(clearMediaOverride, {
     ok: false,
     message: "",
   });
-  const source =
-    entityType === "branch" ? "Pengaturan Bersama" : "Pustaka Produk";
-
   return (
     <form action={action} className="space-y-5">
       <input type="hidden" name="entityType" value={entityType} />
       <input type="hidden" name="entityId" value={entityId} />
       <p className="text-sm leading-6 text-muted-foreground">
         Gambar khusus tidak lagi dipakai. Halaman ini akan kembali mengikuti
-        gambar dari {source}.
+        gambar dari Pengaturan Bersama.
       </p>
       <FormFeedback state={state} pending={pending} />
       <button
