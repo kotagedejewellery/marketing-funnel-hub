@@ -196,6 +196,7 @@ export const productBranches = pgTable(
     displayName: text("display_name"),
     description: text("description"),
     imagePath: text("image_path"),
+    showImage: boolean("show_image").notNull().default(true),
     whatsappMessageTemplate: text("whatsapp_message_template"),
     ctaLabel: text("cta_label"),
     isActive: boolean("is_active").notNull().default(true),
@@ -242,6 +243,29 @@ export const links = pgTable(
       sql`${table.linkType} in ('secondary', 'social')`,
     ),
     index("links_branch_sort_idx").on(table.branchId, table.sortOrder),
+  ],
+).enableRLS();
+
+export const faqs = pgTable(
+  "faqs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id").references(() => branches.id, {
+      onDelete: "restrict",
+    }),
+    question: text("question").notNull(),
+    answer: text("answer").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("faqs_branch_sort_idx").on(table.branchId, table.sortOrder),
   ],
 ).enableRLS();
 

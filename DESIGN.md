@@ -90,7 +90,7 @@ Charcoal anchors the hierarchy, warm ivory keeps the canvas quiet, and bronze ma
 ### Primary
 
 - **Ink Charcoal** (`colors.ink-charcoal`): main text and primary WhatsApp action.
-- **Dark Cocoa** (`colors.dark-cocoa`): brand hero, admin rail, and dark summary tile.
+- **Dark Cocoa** (`colors.dark-cocoa`): product CTA blocks, admin rail, and dark summary tile.
 - **Bronze** (`colors.bronze`): focus outline, hover emphasis, and action text.
 - **Soft Bronze** (`colors.bronze-soft`): featured product, campaign/quick-access panels, and light hero action.
 
@@ -107,7 +107,7 @@ Charcoal anchors the hierarchy, warm ivory keeps the canvas quiet, and bronze ma
 
 **Display and heading font:** Bricolage Grotesque, provided by `next/font/google`; **body and label font:** Manrope. Both fall back to the system sans stack. The pairing makes short headings expressive while operational labels and longer text stay plain to scan.
 
-- **Display** (`typography.display`): balanced hero headline with the observed fluid size, tight leading, and negative tracking.
+- **Display** (`typography.display`): reserved for prominent editorial headings; the compact public profile uses the smaller headline scale.
 - **Headline** (`typography.headline`): section and dashboard headings; responsive headings enlarge at the `sm` breakpoint.
 - **Title** (`typography.title`): product, campaign, and panel headings.
 - **Body** (`typography.body`): introduction, descriptions, and explanatory text; muted when subordinate.
@@ -115,7 +115,7 @@ Charcoal anchors the hierarchy, warm ivory keeps the canvas quiet, and bronze ma
 
 ## Layout
 
-The public page is mobile-first within a centered `max-w-6xl` container. It uses 1rem side padding, increasing at `sm` and `lg`. Hero and campaign panels become two-column compositions at `md` when their asset exists; product cards become a two-column grid, with the first product spanning both columns. Branch choices expand in place inside the product card.
+The public page is mobile-first within a centered `max-w-3xl` container. It uses 1rem side padding, increasing at `sm`. The flow is deliberately linear: compact centered profile, single featured content block, two-column product gallery, full-width product WhatsApp list, FAQ, optional links, and footer. The gallery shows at most the first four eligible product images in 4:5 frames. It is derived from the same ordered products as the CTA list and is not a second content collection.
 
 The admin shell is desktop-oriented: a narrow floating icon rail appears at `lg` beside full-width content, spans the viewport from top to bottom, and uses centered concave cuts instead of capsule ends. There is no persistent desktop header card, and account access sits at the foot of the rail. Its dashboard uses an unequal six-column summary grid at `md`, then an activity/quick-access split at `xl`. On smaller screens, a slim brand/account bar stays above a horizontal icon rail in normal flow and cards stack. Observed card gaps are 1rem, rising to 1.25rem in the public product grid at `sm`.
 
@@ -131,23 +131,28 @@ Cards and large panels have soft 1rem corners (`rounded.card`); product image we
 
 ### Actions
 
-- **Primary WhatsApp:** a normal, final `wa.me` anchor inside each eligible branch row; charcoal fill, cream text, bold Manrope, 3rem minimum height, and pill corners. Hover lifts by 0.125rem; keyboard focus receives an offset outline. Reduced-motion removes the transition.
-- **Hero action:** soft-bronze pill on the dark hero, with the same restrained lift and a matching visible focus outline.
+- **Primary WhatsApp:** a normal, final `wa.me` anchor directly visible for each eligible product; charcoal fill, cream text, WhatsApp icon, product name, supporting description, and CTA label in one full-width rounded block. Hover lifts by 0.125rem; keyboard focus receives an offset outline. Reduced-motion removes the transition.
+- **Profile action:** a compact charcoal pill below the branch profile, scrolling directly to products when products exist.
 - **Secondary links:** full-width ivory cards with bold labels; the background becomes soft bronze on hover.
 
 ### Cards and containers
 
-- **Product cards:** standard ivory, except the first card in the list, which uses soft bronze and spans the desktop grid. If an image exists, it occupies a clipped 4:3 well; otherwise the text layout remains usable.
+- **Featured campaign:** a single 4:5 banner image without separate public title, description, or CTA text. When a destination exists, the image itself is the accessible link; campaigns without an image do not create an empty panel.
+- **Product gallery and CTA list:** up to four eligible images form a separate 4:5 gallery above the CTA list. Every eligible product remains represented exactly once in the CTA list. Turning off image visibility removes only that product from the gallery; the stored asset, name, description, and WhatsApp action remain intact.
 - **Admin summary tiles:** dark cocoa for site identity, soft bronze for campaign state, ivory for active product and branch counts. All remain direct navigation links and lift on hover.
 - **Recent changes and quick access:** separate ivory and soft-bronze panels, with border-separated rows rather than floating subcards.
 
 ### Navigation and disclosure
 
-The public header stays compact and exposes a product jump link only when products are present. Product branches use native `details`/`summary` disclosure with a rotating chevron and visible focus treatment. The admin rail follows the owner-provided narrow dark reference: inset from the left edge, full viewport height on desktop, icon-only, and finished with concave cuts at the top and bottom. The active destination is an ivory rounded square contained fully inside the rail, while hover/focus tooltips reveal labels. An account icon at the rail foot opens a small panel showing the signed-in name, role, and sign-out action, separate from navigation links. On smaller screens, the rail scrolls horizontally below a slim bar with visible account access.
+The public surface has no separate website-style navigation header. Its first section is the branch profile itself: one logo, branch name, optional title/description, and a product jump action only when products are present. Product contact actions are visible without disclosure; FAQ entries retain native `details`/`summary`. The admin rail follows the owner-provided narrow dark reference: inset from the left edge, full viewport height on desktop, icon-only, and finished with concave cuts at the top and bottom. The active destination is an ivory rounded square contained fully inside the rail, while hover/focus tooltips reveal labels. An account icon at the rail foot opens a small panel showing the signed-in name, role, and sign-out action, separate from navigation links. On smaller screens, the rail scrolls horizontally below a slim bar with visible account access.
 
 ### Admin forms
 
 Create and edit forms open in a native modal dialog from their list or summary. The dialog has a visible title, close control, keyboard Escape behavior, and scrollable content; validation remains on the form and server. A successful save closes the dialog and shows a brief toast; a failed save shows a dismissible toast while keeping the dialog and its inputs open.
+
+Fields that support inheritance name both their scope and fallback source. Branch profile values identify **Pengaturan Bersama** as their source, while branch-product presentation identifies **Pustaka Produk** or the branch CTA setting. Existing branch-logo and branch-product image overrides provide a deliberate **Gunakan gambar bawaan** action. Product, assignment, and featured-content uploads use a 1080 × 1350 px (4:5) recommendation to match their public frame; logo uploads remain 800 × 800 px (1:1).
+
+The **Halaman Link Bio** list is the single entry point for creating a branch page. Its branch editor owns branch identity, WhatsApp destination, page content, product placement, and branch-specific product presentation. **Pustaka Produk** owns only reusable product defaults; it must not repeat branch assignment controls. Legacy branch routes may redirect into this flow, but the navigation must not expose a competing Data Cabang workflow.
 
 ## Do's and Don'ts
 
@@ -163,3 +168,4 @@ Create and edit forms open in a native modal dialog from their list or summary. 
 - **Don't** add a competing generic SaaS accent color or decorative treatment that outranks product choice.
 - **Don't** turn the public surface into a multi-step funnel before WhatsApp.
 - **Don't** imply every card is elevated; most observed panels are flat.
+- **Don't** add testimonial/review UI until its separate data and integration work is approved.

@@ -95,6 +95,11 @@ export function ProductForm({ product }: { product: Product | null }) {
         />
         Aktif
       </label>
+      <p className="text-sm leading-6 text-muted-foreground">
+        Perubahan data ini berlaku pada semua Link Bio yang masih memakai data
+        bawaan produk. Menonaktifkan produk akan menyembunyikannya dari seluruh
+        Link Bio.
+      </p>
       <FormFeedback state={state} pending={pending} />
       <button
         type="submit"

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("renders the local public Link Bio in a real browser", async ({
+test("renders the local branch directory in a real browser", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -15,14 +15,14 @@ test("renders the local public Link Bio in a real browser", async ({
   const response = await page.goto("/");
 
   expect(response?.ok()).toBe(true);
-  await expect(page).toHaveTitle("Kotagede Jewellery | Pilihan Produk");
+  await expect(page).toHaveTitle("Kotagede Jewellery | Link Bio Cabang");
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "KGJ",
+      name: "Temukan Link Bio cabang Anda",
     }),
   ).toBeVisible();
-  await expect(page.getByText(/Pilihan produk belum tersedia/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /WhatsApp/i })).toHaveCount(0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -32,7 +32,7 @@ test("renders the local public Link Bio in a real browser", async ({
   expect(pageErrors).toEqual([]);
 });
 
-test("persists a consented UTM PageView without duplicating its event ID", async ({
+test("does not send a business event from the branch directory", async ({
   page,
 }) => {
   const eventRequests: string[] = [];
@@ -46,36 +46,10 @@ test("persists a consented UTM PageView without duplicating its event ID", async
   );
   expect(eventRequests).toHaveLength(0);
 
-  await page.getByRole("button", { name: "Atur preferensi" }).click();
-  const firstEvent = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      response.url().endsWith("/api/events"),
-  );
-  await page.getByRole("button", { name: "Izinkan semua" }).click();
-  const response = await firstEvent;
-  const responseBody = await response.json();
-  expect(response.status(), JSON.stringify(responseBody)).toBe(200);
-
-  const payload = response.request().postDataJSON();
-  expect(payload).toMatchObject({
-    eventName: "PageView",
-    attribution: {
-      source: "instagram",
-      campaign: "wedding_september",
-      utmSource: "instagram",
-      utmMedium: "paid_social",
-      utmCampaign: "wedding_september",
-      utmContent: "video_a",
-      utmTerm: null,
-    },
-  });
-  const duplicate = await page.request.post("/api/events", {
-    data: payload,
-    headers: { Origin: "http://127.0.0.1:3100" },
-  });
-  expect(duplicate.status()).toBe(200);
-  await expect(duplicate.json()).resolves.toMatchObject({ duplicate: true });
+  await expect(
+    page.getByRole("heading", { name: /Temukan Link Bio cabang/ }),
+  ).toBeVisible();
+  expect(eventRequests).toHaveLength(0);
 });
 
 test("keeps the desktop public page responsive and protects the Admin CMS", async ({

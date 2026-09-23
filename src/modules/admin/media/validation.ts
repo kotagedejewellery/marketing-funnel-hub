@@ -11,6 +11,11 @@ export const mediaTargetSchema = z.union([
   }),
 ]);
 
+export const mediaOverrideTargetSchema = z.object({
+  entityType: z.enum(["branch", "assignment"]),
+  entityId: z.uuid(),
+});
+
 export const maxImageBytes = 5 * 1024 * 1024;
 
 const imageTypes: Record<

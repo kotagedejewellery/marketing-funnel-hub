@@ -161,6 +161,7 @@ export function TrackingBehavior({
   products: TrackingProduct[];
 }) {
   const pageViewSent = useRef(false);
+  const viewedProductIds = useRef(new Set<string>());
 
   useEffect(() => {
     const root = document.getElementById("main-content");
@@ -197,40 +198,36 @@ export function TrackingBehavior({
       );
     }
 
-    function onToggle(event: Event) {
-      const details = event.target;
-      if (!(details instanceof HTMLDetailsElement) || !details.open) return;
-      if (!root?.contains(details)) return;
-      const product = byId.get(details.dataset.trackProductId ?? "");
-      const consent = currentConsent();
-      if (!product || !consent) return;
-      sendEvent(
-        {
-          ...baseEvent(),
-          eventName: "ViewContent",
-          product: { id: product.id, category: product.slug },
-          branch: null,
-          cta: null,
-        },
-        consent,
-      );
-    }
-
     function onClick(event: MouseEvent) {
       if (!(event.target instanceof Element)) return;
       const anchor = event.target.closest<HTMLAnchorElement>(
         "a[data-track-branch-id]",
       );
       if (!anchor || !root?.contains(anchor)) return;
-      const details = anchor.closest<HTMLDetailsElement>(
-        "details[data-track-product-id]",
+      const productCard = anchor.closest<HTMLElement>(
+        "article[data-track-product-id]",
       );
-      const product = byId.get(details?.dataset.trackProductId ?? "");
+      const product = byId.get(productCard?.dataset.trackProductId ?? "");
       const branch = product?.branches.find(
         (item) => item.id === anchor.dataset.trackBranchId,
       );
       const consent = currentConsent();
       if (!product || !branch || !consent) return;
+      if (!viewedProductIds.current.has(product.id)) {
+        sendEvent(
+          {
+            ...baseEvent(),
+            eventName: "ViewContent",
+            product: { id: product.id, category: product.slug },
+            branch: null,
+            cta: null,
+          },
+          consent,
+        );
+        if (consent.analytics || consent.marketing) {
+          viewedProductIds.current.add(product.id);
+        }
+      }
       sendEvent(
         {
           ...baseEvent(),
@@ -245,12 +242,10 @@ export function TrackingBehavior({
 
     pageView();
     window.addEventListener(consentChangedEventName, pageView);
-    root.addEventListener("toggle", onToggle, true);
     root.addEventListener("click", onClick);
 
     return () => {
       window.removeEventListener(consentChangedEventName, pageView);
-      root.removeEventListener("toggle", onToggle, true);
       root.removeEventListener("click", onClick);
     };
   }, [context, products]);

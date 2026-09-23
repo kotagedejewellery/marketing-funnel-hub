@@ -23,9 +23,11 @@ const inputClass =
 export function LinkForm({
   link,
   branchId = null,
+  stayOnPage = false,
 }: {
   link: LinkRecord | null;
   branchId?: string | null;
+  stayOnPage?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveLink, {
     message: "",
@@ -35,11 +37,14 @@ export function LinkForm({
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="id" value={link?.id ?? ""} />
+      {stayOnPage && <input type="hidden" name="stayOnPage" value="1" />}
       <input
         type="hidden"
         name="branchId"
         value={link?.branchId ?? branchId ?? ""}
       />
+      <input type="hidden" name="platform" value={link?.platform ?? ""} />
+      <input type="hidden" name="iconKey" value={link?.iconKey ?? ""} />
       <div>
         <p className="text-sm leading-6 text-muted-foreground">
           Tentukan label, tujuan, dan posisi tautan pada halaman publik.
@@ -89,35 +94,6 @@ export function LinkForm({
           <option value="social">Sosial</option>
         </select>
         <FieldError message={state.errors.linkType} />
-      </div>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div>
-          <label htmlFor="platform" className="font-medium">
-            Platform (opsional)
-          </label>
-          <input
-            id="platform"
-            name="platform"
-            defaultValue={link?.platform ?? ""}
-            className={inputClass}
-            maxLength={80}
-            placeholder="instagram"
-          />
-          <FieldError message={state.errors.platform} />
-        </div>
-        <div>
-          <label htmlFor="iconKey" className="font-medium">
-            Kunci ikon (opsional)
-          </label>
-          <input
-            id="iconKey"
-            name="iconKey"
-            defaultValue={link?.iconKey ?? ""}
-            className={inputClass}
-            maxLength={80}
-          />
-          <FieldError message={state.errors.iconKey} />
-        </div>
       </div>
       <div>
         <label htmlFor="sortOrder" className="font-medium">

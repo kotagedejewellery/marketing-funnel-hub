@@ -25,9 +25,11 @@ const inputClass =
 export function CampaignForm({
   campaign,
   branchId = null,
+  stayOnPage = false,
 }: {
   campaign: Campaign | null;
   branchId?: string | null;
+  stayOnPage?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveCampaign, {
     message: "",
@@ -37,6 +39,7 @@ export function CampaignForm({
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="id" value={campaign?.id ?? ""} />
+      {stayOnPage && <input type="hidden" name="stayOnPage" value="1" />}
       <input
         type="hidden"
         name="branchId"
@@ -44,13 +47,13 @@ export function CampaignForm({
       />
       <div>
         <p className="text-sm leading-6 text-muted-foreground">
-          Nama internal membantu pengelolaan; judul dan deskripsi digunakan pada
-          halaman publik.
+          Nama internal membantu pengelolaan; judul, deskripsi, dan gambar
+          membentuk konten unggulan di halaman publik.
         </p>
       </div>
       <div>
         <label htmlFor="name" className="font-medium">
-          Nama internal kampanye
+          Nama internal
         </label>
         <input
           id="name"
@@ -147,7 +150,7 @@ export function CampaignForm({
           required
         />
         <p className="mt-2 text-sm text-muted-foreground">
-          Angka lebih kecil tampil lebih dahulu jika beberapa kampanye memenuhi
+          Angka lebih kecil tampil lebih dahulu jika beberapa konten memenuhi
           jadwal.
         </p>
         <FieldError message={state.errors.sortOrder} />
@@ -167,7 +170,7 @@ export function CampaignForm({
         disabled={pending}
         className="min-h-12 cursor-pointer bg-primary px-6 font-semibold text-primary-foreground hover:bg-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50"
       >
-        {pending ? "Menyimpan..." : "Simpan kampanye"}
+        {pending ? "Menyimpan..." : "Simpan konten unggulan"}
       </button>
     </form>
   );

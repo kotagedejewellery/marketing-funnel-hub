@@ -18,7 +18,12 @@ import { serverEnv } from "@/lib/env/server";
 import { createPrivilegedSupabase } from "@/lib/supabase/server";
 import { requireAdmin } from "@/modules/admin/access";
 
-import { imageExtension, maxImageBytes, mediaTargetSchema } from "./validation";
+import {
+  imageExtension,
+  maxImageBytes,
+  mediaOverrideTargetSchema,
+  mediaTargetSchema,
+} from "./validation";
 
 type ActionState = { message: string; ok: boolean };
 
@@ -157,15 +162,10 @@ export async function uploadMedia(
   }
 
   revalidatePath("/");
-  revalidatePath("/b/[slug]", "page");
-  if (entityType === "assignment") {
-    const [assignment] = await db
-      .select({ productId: productBranches.productId })
-      .from(productBranches)
-      .where(eq(productBranches.id, entityId))
-      .limit(1);
-    if (assignment) revalidatePath(`/admin/products/${assignment.productId}`);
-  } else {
+  revalidatePath("/[slug]", "page");
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/branches/[id]/link-bio", "page");
+  if (entityType !== "assignment") {
     revalidatePath(
       entityType === "site"
         ? "/admin/settings"
@@ -177,4 +177,116 @@ export async function uploadMedia(
     );
   }
   return { ok: true, message: "Gambar berhasil diunggah." };
+}
+
+export async function clearMediaOverride(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const profile = await requireAdmin();
+  const target = mediaOverrideTargetSchema.safeParse({
+    entityType: formData.get("entityType"),
+    entityId: formData.get("entityId"),
+  });
+  if (!target.success) {
+    return { ok: false, message: "Tujuan gambar tidak valid." };
+  }
+
+  const db = getDatabase();
+  const { entityType, entityId } = target.data;
+
+  if (entityType === "branch") {
+    const [existing] = await db
+      .select({
+        id: branches.id,
+        slug: branches.slug,
+        logoPath: branches.logoPath,
+      })
+      .from(branches)
+      .where(eq(branches.id, entityId))
+      .limit(1);
+    if (!existing) {
+      return { ok: false, message: "Cabang tidak ditemukan." };
+    }
+    if (!existing.logoPath) {
+      return { ok: true, message: "Logo sudah menggunakan gambar bawaan." };
+    }
+
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(branches)
+          .set({ logoPath: null, updatedAt: new Date() })
+          .where(eq(branches.id, entityId));
+        await tx.insert(auditLogs).values({
+          adminId: profile.id,
+          action: "update",
+          entityType: "branches",
+          entityId,
+          changes: { field: "logoPath", mode: "inherited" },
+        });
+      });
+    } catch {
+      return {
+        ok: false,
+        message: "Logo belum dapat dikembalikan ke gambar bawaan.",
+      };
+    }
+
+    revalidatePath(`/${existing.slug}`);
+    revalidatePath(`/admin/branches/${entityId}/link-bio`);
+    return {
+      ok: true,
+      message: "Logo kembali mengikuti Pengaturan Bersama.",
+    };
+  }
+
+  const [existing] = await db
+    .select({
+      id: productBranches.id,
+      branchId: productBranches.branchId,
+      branchSlug: branches.slug,
+      imagePath: productBranches.imagePath,
+    })
+    .from(productBranches)
+    .innerJoin(branches, eq(productBranches.branchId, branches.id))
+    .where(eq(productBranches.id, entityId))
+    .limit(1);
+  if (!existing) {
+    return { ok: false, message: "Produk cabang tidak ditemukan." };
+  }
+  if (!existing.imagePath) {
+    return {
+      ok: true,
+      message: "Gambar sudah menggunakan gambar dari Pustaka Produk.",
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(productBranches)
+        .set({ imagePath: null, updatedAt: new Date() })
+        .where(eq(productBranches.id, entityId));
+      await tx.insert(auditLogs).values({
+        adminId: profile.id,
+        action: "update",
+        entityType: "product_branches",
+        entityId,
+        changes: { field: "imagePath", mode: "inherited" },
+      });
+    });
+  } catch {
+    return {
+      ok: false,
+      message: "Gambar belum dapat dikembalikan ke gambar pustaka.",
+    };
+  }
+
+  revalidatePath(`/${existing.branchSlug}`);
+  revalidatePath(`/admin/branches/${existing.branchId}/link-bio`);
+  return {
+    ok: true,
+    message: "Gambar kembali mengikuti Pustaka Produk.",
+  };
 }

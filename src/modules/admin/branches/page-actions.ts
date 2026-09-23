@@ -20,6 +20,10 @@ export async function saveBranchPage(
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await requireAdmin();
+  const mode = formData.get("mode");
+  if (mode !== "identity" && mode !== "sections") {
+    return { message: "Jenis perubahan halaman tidak valid.", errors: {} };
+  }
   const parsed = branchPageSchema.safeParse({
     branchId: formData.get("branchId"),
     headline: formData.get("headline"),
@@ -54,28 +58,33 @@ export async function saveBranchPage(
         .limit(1);
       if (!branch) return "";
 
-      const [globalSections, scopedSections] = await Promise.all([
-        tx
-          .select({
-            sectionKey: contentSections.sectionKey,
-            label: contentSections.label,
-          })
-          .from(contentSections)
-          .where(isNull(contentSections.branchId)),
-        tx
-          .select({
-            id: contentSections.id,
-            sectionKey: contentSections.sectionKey,
-          })
-          .from(contentSections)
-          .where(eq(contentSections.branchId, branchId)),
-      ]);
+      const [globalSections, scopedSections] =
+        mode === "sections"
+          ? await Promise.all([
+              tx
+                .select({
+                  sectionKey: contentSections.sectionKey,
+                  label: contentSections.label,
+                })
+                .from(contentSections)
+                .where(isNull(contentSections.branchId)),
+              tx
+                .select({
+                  id: contentSections.id,
+                  sectionKey: contentSections.sectionKey,
+                })
+                .from(contentSections)
+                .where(eq(contentSections.branchId, branchId)),
+            ])
+          : [[], []];
 
-      await tx
-        .update(branches)
-        .set({ headline, introduction, updatedAt: new Date() })
-        .where(eq(branches.id, branchId));
-      for (const section of sections) {
+      if (mode === "identity") {
+        await tx
+          .update(branches)
+          .set({ headline, introduction, updatedAt: new Date() })
+          .where(eq(branches.id, branchId));
+      }
+      for (const section of mode === "sections" ? sections : []) {
         const existing = scopedSections.find(
           (item) => item.sectionKey === section.sectionKey,
         );
@@ -112,7 +121,10 @@ export async function saveBranchPage(
         action: "update",
         entityType: "branch_page",
         entityId: branchId,
-        changes: { fields: ["headline", "introduction", "sections"] },
+        changes: {
+          fields:
+            mode === "identity" ? ["headline", "introduction"] : ["sections"],
+        },
       });
       return branch.slug;
     });
@@ -124,7 +136,14 @@ export async function saveBranchPage(
   }
   if (!slug) return { message: "Cabang tidak ditemukan.", errors: {} };
 
-  revalidatePath(`/b/${slug}`);
+  revalidatePath(`/${slug}`);
   revalidatePath(`/admin/branches/${branchId}/link-bio`);
-  return { message: "Halaman cabang tersimpan.", errors: {}, ok: true };
+  return {
+    message:
+      mode === "identity"
+        ? "Profil cabang tersimpan."
+        : "Susunan cabang tersimpan.",
+    errors: {},
+    ok: true,
+  };
 }

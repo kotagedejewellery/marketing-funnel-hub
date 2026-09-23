@@ -24,7 +24,7 @@ export function SectionList({ sections }: { sections: Section[] }) {
           Susunan bagian
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Urutan lebih atas akan tampil lebih dahulu pada Link Bio.
+          Susunan bawaan untuk cabang yang belum mengatur bagiannya sendiri.
         </p>
       </div>
       <FormFeedback state={state} pending={pending} />

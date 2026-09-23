@@ -11,7 +11,7 @@ web
 ## Users
 
 - Public visitors arriving from Meta Ads, Instagram, or organic channels use a mobile-first Link Bio to discover a product category and contact the relevant KGJ branch through WhatsApp.
-- Marketing administrators maintain routine public content, campaigns, product categories, branches, assignments, links, and site settings through a desktop-oriented CMS that remains usable on smaller screens.
+- Marketing administrators create and manage every branch page from the Halaman Link Bio workflow, reuse product defaults from Pustaka Produk, and maintain routine content, campaigns, links, and shared settings through a desktop-oriented CMS that remains usable on smaller screens.
 - Technical administrators also manage admin access and technical diagnostics.
 
 ## Product Purpose

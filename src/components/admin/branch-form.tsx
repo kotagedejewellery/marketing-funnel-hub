@@ -55,6 +55,9 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
           pattern="[a-z0-9]+(-[a-z0-9]+)*"
           placeholder="surabaya"
         />
+        <p className="mt-2 text-sm text-muted-foreground">
+          Contoh alamat publik: /surabaya
+        </p>
         {branch && (
           <p className="mt-2 text-sm text-muted-foreground">
             Slug menjadi URL halaman cabang. Mengubahnya akan memutus tautan
@@ -85,7 +88,7 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
       </div>
       <div>
         <label htmlFor="ctaLabel" className="font-medium">
-          Label CTA cabang (opsional)
+          Label CTA bawaan cabang (opsional)
         </label>
         <input
           id="ctaLabel"
@@ -94,11 +97,15 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
           className={inputClass}
           maxLength={120}
         />
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Dipakai oleh produk cabang yang tidak memiliki label khusus. Kosongkan
+          untuk mengikuti Pengaturan Bersama.
+        </p>
         <FieldError message={state.errors.ctaLabel} />
       </div>
       <div>
         <label htmlFor="sortOrder" className="font-medium">
-          Urutan tampil
+          Urutan di daftar cabang
         </label>
         <input
           id="sortOrder"
@@ -119,7 +126,7 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
           defaultChecked={branch?.isActive ?? true}
           className="size-5 accent-primary"
         />
-        Aktif
+        Halaman Link Bio aktif
       </label>
       <FormFeedback state={state} pending={pending} />
       <button
@@ -127,7 +134,11 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
         disabled={pending}
         className="min-h-11 bg-primary px-5 font-medium text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
       >
-        {pending ? "Menyimpan..." : "Simpan cabang"}
+        {pending
+          ? "Menyimpan..."
+          : branch
+            ? "Simpan informasi halaman"
+            : "Buat Halaman Link Bio"}
       </button>
     </form>
   );

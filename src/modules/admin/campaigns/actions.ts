@@ -10,7 +10,11 @@ import { requireAdmin } from "@/modules/admin/access";
 
 import { campaignSchema, parseWibDate } from "./validation";
 
-type ActionState = { message: string; errors: Record<string, string> };
+type ActionState = {
+  message: string;
+  errors: Record<string, string>;
+  ok?: boolean;
+};
 
 export async function saveCampaign(
   _previous: ActionState,
@@ -100,8 +104,11 @@ export async function saveCampaign(
   }
   if (!savedId) return { message: "Kampanye tidak ditemukan.", errors: {} };
 
-  revalidatePath(branch ? `/b/${branch.slug}` : "/");
+  if (branch) revalidatePath(`/${branch.slug}`);
   if (branchId) revalidatePath(`/admin/branches/${branchId}/link-bio`);
   revalidatePath("/admin/campaigns");
+  if (formData.get("stayOnPage") === "1") {
+    return { message: "Kampanye berhasil disimpan.", errors: {}, ok: true };
+  }
   redirect(`/admin/campaigns/${savedId}?saved=1`);
 }

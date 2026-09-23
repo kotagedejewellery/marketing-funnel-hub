@@ -13,8 +13,9 @@ const displayFont = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Kotagede Jewellery | Pilihan Produk",
-  description: "Jelajahi pilihan produk dan hubungi cabang Kotagede Jewellery.",
+  title: "Kotagede Jewellery | Link Bio Cabang",
+  description:
+    "Pilih cabang Kotagede Jewellery, jelajahi produk, dan hubungi WhatsApp cabang terkait.",
 };
 
 export default function RootLayout({

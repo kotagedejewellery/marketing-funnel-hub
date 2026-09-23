@@ -5,7 +5,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
-import { uploadMedia } from "@/modules/admin/media/actions";
+import { clearMediaOverride, uploadMedia } from "@/modules/admin/media/actions";
 import { maxImageBytes } from "@/modules/admin/media/validation";
 
 type MediaType = "site" | "branch" | "campaign" | "product" | "assignment";
@@ -31,7 +31,9 @@ export function MediaUploadField({
   previewUrl: string | null;
 }) {
   const isLogo = entityType === "site" || entityType === "branch";
-  const recommendedSize = isLogo ? "800 × 800 px (1:1)" : "1200 × 900 px (4:3)";
+  const recommendedSize = isLogo
+    ? "800 × 800 px (1:1)"
+    : "1080 × 1350 px (4:5)";
 
   return (
     <section className="rounded-2xl bg-card p-6 sm:p-8" aria-label={label}>
@@ -43,10 +45,10 @@ export function MediaUploadField({
         <Image
           src={previewUrl}
           alt={`${label} saat ini`}
-          width={isLogo ? 800 : 1200}
-          height={isLogo ? 800 : 900}
+          width={isLogo ? 800 : 1080}
+          height={isLogo ? 800 : 1350}
           sizes="(max-width: 768px) 100vw, 640px"
-          className={`mt-5 w-full max-w-80 rounded-xl border border-border bg-secondary ${isLogo ? "aspect-square object-contain p-4" : "aspect-[4/3] object-cover"}`}
+          className={`mt-5 w-full max-w-80 rounded-xl border border-border bg-secondary ${isLogo ? "aspect-square object-contain p-4" : "aspect-[4/5] object-cover"}`}
           unoptimized={process.env.NEXT_PUBLIC_APP_ENV === "local"}
         />
       ) : (
@@ -54,7 +56,7 @@ export function MediaUploadField({
           Belum ada gambar.
         </p>
       )}
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap gap-3">
         <FormDialog
           title={`Unggah ${label.toLowerCase()}`}
           triggerLabel={
@@ -70,6 +72,18 @@ export function MediaUploadField({
             recommendedSize={recommendedSize}
           />
         </FormDialog>
+        {previewUrl &&
+        (entityType === "branch" || entityType === "assignment") ? (
+          <FormDialog
+            title="Gunakan gambar bawaan"
+            triggerLabel="Gunakan gambar bawaan"
+          >
+            <MediaOverrideResetForm
+              entityType={entityType}
+              entityId={entityId}
+            />
+          </FormDialog>
+        ) : null}
       </div>
     </section>
   );
@@ -96,8 +110,9 @@ function MediaUploadForm({
   const [dragging, setDragging] = useState(false);
   const previewUrl = selected?.url;
   const isLogo = entityType === "site" || entityType === "branch";
-  const recommendedWidth = isLogo ? 800 : 1200;
-  const recommendedHeight = isLogo ? 800 : 900;
+  const recommendedWidth = isLogo ? 800 : 1080;
+  const recommendedHeight = isLogo ? 800 : 1350;
+  const recommendedRatio = isLogo ? "1:1" : "4:5";
   const inputId = `media-${entityType}-${entityId}`;
   const guideId = `media-guide-${entityType}-${entityId}`;
 
@@ -222,7 +237,7 @@ function MediaUploadForm({
             width={recommendedWidth}
             height={recommendedHeight}
             unoptimized
-            className={`mx-auto w-full max-w-80 rounded-lg bg-secondary ${isLogo ? "aspect-square object-contain p-3" : "aspect-[4/3] object-cover"}`}
+            className={`mx-auto w-full max-w-80 rounded-lg bg-secondary ${isLogo ? "aspect-square object-contain p-3" : "aspect-[4/5] object-cover"}`}
             onLoad={(event) => {
               const { naturalWidth, naturalHeight } = event.currentTarget;
               setSelected((current) =>
@@ -263,7 +278,7 @@ function MediaUploadForm({
           </div>
           {ratioDiffers && (
             <p role="status" className="mt-3 text-sm text-[var(--kgj-accent)]">
-              Rasio berbeda dari {isLogo ? "1:1" : "4:3"}. Gambar{" "}
+              Rasio berbeda dari {recommendedRatio}. Gambar{" "}
               {isLogo
                 ? "akan menyesuaikan ruang logo"
                 : "dapat terpotong pada Link Bio"}
@@ -294,6 +309,40 @@ function MediaUploadForm({
         className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Mengunggah..." : "Unggah gambar"}
+      </button>
+    </form>
+  );
+}
+
+function MediaOverrideResetForm({
+  entityType,
+  entityId,
+}: {
+  entityType: "branch" | "assignment";
+  entityId: string;
+}) {
+  const [state, action, pending] = useActionState(clearMediaOverride, {
+    ok: false,
+    message: "",
+  });
+  const source =
+    entityType === "branch" ? "Pengaturan Bersama" : "Pustaka Produk";
+
+  return (
+    <form action={action} className="space-y-5">
+      <input type="hidden" name="entityType" value={entityType} />
+      <input type="hidden" name="entityId" value={entityId} />
+      <p className="text-sm leading-6 text-muted-foreground">
+        Gambar khusus tidak lagi dipakai. Halaman ini akan kembali mengikuti
+        gambar dari {source}.
+      </p>
+      <FormFeedback state={state} pending={pending} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50"
+      >
+        {pending ? "Menyimpan..." : "Ya, gunakan gambar bawaan"}
       </button>
     </form>
   );

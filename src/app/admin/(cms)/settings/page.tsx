@@ -1,4 +1,6 @@
 import { FormDialog } from "@/components/admin/form-dialog";
+import { FaqManager } from "@/components/admin/faq-manager";
+import { SectionList } from "@/components/admin/section-list";
 import { SiteSettingsForm } from "@/components/admin/site-settings-form";
 import { MediaUploadField } from "@/components/admin/media-upload-field";
 import { serverEnv } from "@/lib/env/server";
@@ -6,7 +8,7 @@ import { getContentSettings } from "@/modules/admin/content/data";
 import { publicAssetUrl } from "@/modules/public-content/links";
 
 export default async function SettingsPage() {
-  const { settings } = await getContentSettings();
+  const { settings, sections, faqs } = await getContentSettings();
 
   return (
     <div>
@@ -14,11 +16,11 @@ export default async function SettingsPage() {
         Identitas & pesan
       </p>
       <h1 className="mt-3 font-serif text-4xl sm:text-5xl">
-        Pengaturan situs &amp; default
+        Pengaturan Bersama
       </h1>
       <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
-        Identitas halaman gabungan dan nilai bawaan untuk cabang yang belum
-        mengatur identitas atau pesan WhatsApp sendiri.
+        Identitas KGJ, susunan bagian, FAQ, dan pesan WhatsApp bawaan untuk
+        cabang yang belum membuat pengaturan sendiri.
       </p>
       <div className="mt-8 grid gap-4 xl:grid-cols-2">
         <section
@@ -65,6 +67,10 @@ export default async function SettingsPage() {
           )}
         />
       </div>
+      <div className="mt-6 [&>section]:mt-0">
+        <SectionList sections={sections} />
+      </div>
+      <FaqManager faqs={faqs} />
     </div>
   );
 }

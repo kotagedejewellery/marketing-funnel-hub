@@ -104,7 +104,7 @@ export async function saveBranch(
   if (!savedId) return { message: "Cabang tidak ditemukan.", errors: {} };
 
   revalidatePath("/");
-  revalidatePath(`/b/${input.slug}`);
-  revalidatePath("/admin/branches");
-  redirect("/admin/branches?saved=1");
+  revalidatePath(`/${input.slug}`);
+  revalidatePath("/admin/link-bio");
+  redirect(`/admin/branches/${savedId}/link-bio?saved=1`);
 }

@@ -18,35 +18,20 @@ const items: {
     icon: "M3 3h8v8H3z M13 3h8v5h-8z M13 10h8v11h-8z M3 13h8v8H3z",
   },
   {
-    href: "/admin/branches",
-    label: "Link Bio cabang",
+    href: "/admin/link-bio",
+    label: "Halaman Link Bio",
     icon: "M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z M12 8a2 2 0 1 0 0 4a2 2 0 1 0 0-4",
   },
   {
     href: "/admin/products",
-    label: "Produk utama",
+    label: "Pustaka Produk",
     icon: "M3 9 8 3h8l5 6-9 12z M3 9h18 M8 3l4 18 4-18",
   },
   {
-    href: "/admin/content",
-    label: "Konten halaman gabungan",
-    icon: "M5 3h11l3 3v15H5z M8 10h8 M8 14h8 M8 18h5",
-    separatorBefore: true,
-  },
-  {
-    href: "/admin/campaigns",
-    label: "Kampanye halaman gabungan",
-    icon: "M3 10h4l10-5v14L7 14H3z M7 14l2 6h3",
-  },
-  {
-    href: "/admin/links",
-    label: "Tautan halaman gabungan",
-    icon: "M10 14l4-4 M8 16H6a4 4 0 0 1 0-8h4 M14 8h4a4 4 0 0 1 0 8h-4",
-  },
-  {
     href: "/admin/settings",
-    label: "Pengaturan",
+    label: "Pengaturan bersama",
     icon: "M4 6h16 M4 12h16 M4 18h16 M9 4v4 M15 10v4 M9 16v4",
+    separatorBefore: true,
   },
   {
     href: "/admin/tracking",
@@ -73,7 +58,7 @@ export function AdminNavigation({
   displayName: string;
 }) {
   const pathname = usePathname();
-  const visibleItems = role === "technical_admin" ? items : items.slice(0, 8);
+  const visibleItems = role === "technical_admin" ? items : items.slice(0, 5);
 
   return (
     <div className="kgj-admin-rail relative flex items-center gap-1 rounded-full bg-[var(--kgj-dark)] p-2 text-[var(--kgj-on-dark-muted)] shadow-[0_20px_45px_-32px_rgba(40,33,28,0.7)] lg:h-full lg:flex-col lg:rounded-none lg:py-10">
@@ -110,7 +95,10 @@ export function AdminNavigation({
         {visibleItems.map((item) => {
           const active =
             pathname === item.href ||
-            (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
+            (item.href !== "/admin" && pathname.startsWith(`${item.href}/`)) ||
+            (item.href === "/admin/link-bio" &&
+              pathname.startsWith("/admin/branches/") &&
+              pathname.endsWith("/link-bio"));
           return (
             <Fragment key={item.href}>
               {item.separatorBefore && (

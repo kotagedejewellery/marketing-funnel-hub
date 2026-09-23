@@ -22,6 +22,20 @@
       "when": 1790042506114,
       "tag": "0002_stormy_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790051137593,
+      "tag": "0003_silky_eternals",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790129080596,
+      "tag": "0004_normal_toad",
+      "breakpoints": true
     }
   ]
 }

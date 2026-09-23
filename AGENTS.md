@@ -49,7 +49,7 @@ Meta Ads / Instagram / Organic
 Locked business rules:
 
 1. One product can be available in many branches.
-2. Branch selection happens at the WhatsApp CTA level.
+2. Visitors choose a branch at `/`; each `/{slug}` Link Bio has direct product-scoped WhatsApp CTAs for that branch.
 3. Each branch uses its own WhatsApp number.
 4. Branch selection does not emit a separate `ViewContent`.
 5. WhatsApp uses a configurable prefilled message.
@@ -107,13 +107,19 @@ relevant source-of-truth document explicitly.
 
 Do not silently redefine requirements in code.
 
-Approved extension (22 September 2026): add independently editable Link Bio content
-for each active branch at `/b/{slug}` while preserving the existing combined `/`
-page. This is a post-P0 feature change documented in the three source-of-truth
-documents; it does not add CRM scope, new tracking events, or separate apps.
-The branch URL fixes the branch context for that page; the product-scoped
-WhatsApp CTA still triggers `Contact` directly to that branch. On `/`, visitors
-continue choosing the branch at each product's CTA.
+Approved extension (22 September 2026): each active branch has an independently
+editable Link Bio at `/{slug}`. `/` is only a branch directory, not a combined
+Link Bio. Existing `/b/{slug}` links permanently redirect to `/{slug}`. This
+post-P0 change is documented in the three source-of-truth documents; it adds
+no CRM scope, tracking events, or separate apps. The branch URL fixes the
+branch context; each product-scoped WhatsApp CTA goes directly to that branch.
+
+Approved FAQ extension (22 September 2026): the eight owner-supplied questions
+start as shared default content and appear on branch pages, not `/`. CMS can
+maintain shared FAQ or copy it into a branch-owned list for independent editing. The `faqs`
+table is an additive post-P0 content table; no new tracking event or WhatsApp
+step is introduced. Google review integration is a separate, not-yet-implemented
+feature.
 
 ---
 
@@ -202,6 +208,14 @@ Marketing must be able to manage routine content without developer deployment.
 Design the Admin CMS primarily for desktop dashboard workflows, while keeping it
 responsive and usable on smaller screens. The public Link Bio's mobile-first rule
 does not apply to the Admin CMS.
+
+The CMS page workflow begins with one Link Bio page list covering `/` and all
+branch URLs. Each page editor groups its own content and shows a saved-state
+preview. Branch preview requires active admin authorization and does not send
+tracking events; an inactive branch remains unavailable on its public URL.
+Saving an active page changes its public content immediately (no draft/publish
+layer). Clearly distinguish inherited defaults from branch-owned content and
+never overwrite existing branch content when copying a starter page.
 
 Admin capabilities include:
 

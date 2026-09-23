@@ -36,8 +36,8 @@ operations remain owner-managed.
 
 ## Link Bio per cabang — ekstensi disetujui 22 September 2026
 
-Kontrak fitur ada di tiga dokumen `docs/`; `/` tetap halaman gabungan. Kode
-B1–B6 telah disiapkan, tetapi checklist tetap terbuka sampai migrasi lokal dan
+Kontrak fitur ada di tiga dokumen `docs/`; `/` hanya direktori cabang dan setiap
+Link Bio ada di `/{slug}`. Kode B1–B6 telah disiapkan, tetapi checklist tetap terbuka sampai migrasi lokal dan
 pemeriksaan fokus disetujui serta selesai. Setiap pemeriksaan perlu konfirmasi
 cakupan dari pemilik lebih dahulu; Git dan migrasi live tetap dikerjakan pemilik.
 
@@ -46,15 +46,15 @@ cakupan dari pemilik lebih dahulu; Git dan migrasi live tetap dikerjakan pemilik
     FK/index/RLS tetap benar; tidak ada migrasi live otomatis.
   - Verifikasi yang akan dimintakan: tinjau SQL dan migrasi lokal.
   - Berkas: `src/lib/db/schema.ts`, `drizzle/`.
-- [ ] B2 — Tampilkan Link Bio `/b/[slug]` dari cabang/assignment aktif.
+- [ ] B2 — Tampilkan Link Bio `/[slug]` dari cabang/assignment aktif.
   - Terima: 404 untuk cabang nonaktif/tidak ada; hanya produk yang ditugaskan;
-    CTA langsung ke WhatsApp cabang; `/` tidak berubah.
+    CTA langsung ke WhatsApp cabang; `/` hanya direktori cabang aktif.
   - Verifikasi yang akan dimintakan: pembacaan lokal cabang aktif/nonaktif
     dan satu klik CTA; tanpa suite browser besar.
-  - Berkas: `src/modules/public-content/`, `src/app/b/[slug]/`,
+  - Berkas: `src/modules/public-content/`, `src/app/[slug]/`,
     `src/components/public/`.
 - [ ] B3 — Terima path cabang dalam sesi/UTM dan `/api/events`.
-  - Terima: hanya `/` atau `/b/{slug-aktif}` diterima; Contact harus cocok
+  - Terima: hanya `/{slug-aktif}` diterima sebagai halaman event; Contact harus cocok
     dengan cabang pada URL; ViewContent tetap product-only; query tidak disimpan.
   - Verifikasi yang akan dimintakan: tes fokus untuk path, Contact salah
     cabang, dan satu alur consented; WhatsApp tetap non-blocking.
@@ -67,17 +67,19 @@ cakupan dari pemilik lebih dahulu; Git dan migrasi live tetap dikerjakan pemilik
   - Berkas: `src/modules/admin/branches/`, `src/modules/admin/content/`,
     `src/app/admin/(cms)/branches/`, `src/components/admin/`.
 - [ ] B5 — Kelola kampanye dan tautan dalam scope halaman cabang.
-  - Terima: form/list dapat memilih konteks global atau cabang; satu kampanye
-    eligible per halaman; tautan cabang tidak muncul di `/`/cabang lain.
+  - Terima: form/list mengelola cabang terpilih; satu kampanye
+    eligible per cabang; tautan cabang tidak muncul di `/`/cabang lain.
   - Verifikasi yang akan dimintakan: satu edit kampanye/tautan per cabang.
   - Berkas: `src/modules/admin/campaigns/`, `src/modules/admin/links/`,
     `src/app/admin/(cms)/campaigns/`, `src/app/admin/(cms)/links/`.
-- [ ] B6 — Edit override tampilan produk pada assignment cabang.
-  - Terima: nama/deskripsi/gambar/urutan dapat berbeda per cabang; slug
-    kategori dan aturan nomor/CTA tetap kanonis; root tetap memakai data global.
+- [x] B6 — Kelola produk dan override tampilannya dari editor Link Bio cabang.
+  - Terima: Pustaka Produk hanya menyimpan data dasar; pemilihan,
+    nama/deskripsi/gambar/urutan/CTA khusus cabang dikelola dari Halaman Link
+    Bio; slug kategori dan aturan nomor/CTA tetap kanonis; root tidak
+    menampilkan produk.
   - Verifikasi yang akan dimintakan: satu produk di dua cabang berbeda.
-  - Berkas: `src/modules/admin/assignments/`,
-    `src/components/admin/branch-assignment-editor.tsx`,
+  - Berkas: `src/modules/admin/branches/product-actions.ts`,
+    `src/components/admin/branch-product-manager.tsx`,
     `src/modules/public-content/`.
 - [ ] B7 — Pemeriksaan fokus dan handoff live.
   - Terima: hanya cek yang disetujui pemilik dijalankan; hasil dicatat jujur;
@@ -570,22 +572,24 @@ reflects successful changes and validation errors are actionable.
 **Verification to propose at feature completion:** One local save-to-public
 walkthrough for settings, campaign, and link, plus focused validation/role checks.
 
-### FE-04 — CMS for products, branches, assignments, and WhatsApp (Sprints 3–4)
+### FE-04 — CMS for Link Bio branches, Product Library, and WhatsApp (Sprints 3–4)
 
 **Sub-slices / components:**
 
-- [ ] Build paginated `ProductList` and `ProductForm` for name, canonical slug,
-      description, image, active status, and simple order controls. A product is
-      a customer-facing need/category, not an inventory SKU.
-- [ ] Build paginated `BranchList` and `BranchForm` for name, slug, normalized
-      WhatsApp number, optional CTA label, status, and order.
-- [ ] Add a product-centric `BranchAssignmentEditor`: branch checkboxes/list,
-      active state, order, optional assignment CTA label and message override.
-      Do not create a matrix UI or a separate branch-selector page for P0.
-- [ ] Show the resolved CTA label/message fallback and a read-only WhatsApp
-      destination preview inside the editor; the server still generates the
-      final URL. Warn when an active product has no active assigned branch.
-- [ ] After a save/activate/deactivate, show actionable field or conflict
+- [x] Build `ProductList` and `ProductForm` as a reusable Product Library for
+      name, canonical slug, description, base image, active status, and order.
+      A product is a customer-facing need/category, not an inventory SKU; this
+      page does not manage branch assignments.
+- [x] Use the Halaman Link Bio list and `BranchForm` as the only UI for creating
+      and editing branch name, slug, normalized WhatsApp number, optional CTA
+      label, status, and order. Do not expose a separate Data Cabang menu.
+- [x] Manage product selection and branch-specific active state, order, image,
+      display copy, CTA label, and message override inside the selected Link Bio
+      editor. Do not create a matrix or product-centric assignment workflow.
+- [x] Show the resolved CTA/message context in the selected branch editor; the
+      server still generates the final URL. Product deactivation in the library
+      clearly warns that it affects all Link Bio pages.
+- [x] After a save/activate/deactivate, show actionable field or conflict
       errors and confirm the public product context reflects the change. Do
       not add destructive delete controls for routine Marketing actions.
 
@@ -593,7 +597,8 @@ walkthrough for settings, campaign, and link, plus focused validation/role check
 branch country-code digits, assignment UUID pair/uniqueness, active state/order,
 and the supported `{product}`/`{branch}` message variables. Reuse schemas for
 client feedback; never trust a browser-composed WhatsApp URL as authoritative.
-Use inline editors, not a modal for every assignment.
+Use focused disclosure/modal controls within the selected branch editor, not a
+second assignment page.
 
 **Backend prerequisite:** Authenticated product/branch/assignment mutations,
 active-state filtering, WhatsApp fallback/URL resolution, audit logs, and public

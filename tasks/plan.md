@@ -147,16 +147,17 @@ needed for this implementation closeout.
 
 This is a new feature after the local P0 closeout, not a reopening of the
 completed P0 checklist. The owner approved a customizable page for each branch
-and explicitly chose to keep `/` as the combined page. The feature contract is
-in the three source-of-truth docs; implementation has not started yet.
+and subsequently replaced the combined `/` with a branch directory. The feature
+contract is in the three source-of-truth docs; implementation is in progress.
 
 ### Objective and boundaries
 
-Marketing can publish `/b/{branch-slug}` using the same KGJ template with
+Marketing can publish `/{branch-slug}` using the same KGJ template with
 branch-specific text, logo, campaign, links, section order, and assigned-product
 display overrides. Products/categories, branch phone numbers, auth roles,
 consent, and the three event names remain shared/canonical. No page builder,
-per-branch app/database, redirect registry, new provider, or CRM scope.
+per-branch app/database, redirect registry, new provider, or CRM scope. Existing
+`/b/{branch-slug}` links redirect permanently to the direct URL.
 
 Assumptions made explicit: empty branch text/image overrides inherit global
 values; branch campaigns/links do not inherit global rows; branch section
@@ -170,7 +171,7 @@ separate without creating a new design system or additional tables.
   `pnpm db:generate`, then owner-approved local migration using
   `pnpm db:migrate:local`. Live migration is reviewed and run by the owner via
   `pnpm db:migrate:live` before deployment.
-- Public read/route: `src/modules/public-content/`, `src/app/b/[slug]/`, and
+- Public read/route: `src/modules/public-content/`, `src/app/[slug]/`, and
   existing `src/components/public/`. Tracking changes stay in
   `src/modules/tracking/`, `src/app/api/events/`, and `src/proxy.ts`.
 - CMS: existing `src/modules/admin/` actions/validation and
@@ -194,7 +195,8 @@ separate without creating a new design system or additional tables.
 
 Risk: changing a shared slug breaks a published URL; warn at edit time and keep
 slug stable operationally. Risk: branch content leaks to `/` or another branch;
-every read/write uses an explicit scope and root rows retain `branch_id = NULL`.
+every read/write uses an explicit branch scope. Legacy global rows retain
+`branch_id = NULL` but do not render on the public directory.
 Risk: event payloads could claim a different branch from their page URL; server
 resolves the active page branch and validates Contact against it. A tracking
 failure still cannot block the final WhatsApp anchor.

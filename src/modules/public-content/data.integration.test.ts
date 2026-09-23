@@ -2,22 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { loadPublicContent } from "./data";
+import { loadBranchDirectory } from "./data";
 
-describe("public content loader", () => {
-  it("reads local site settings and active sections with the application role", async () => {
-    const content = await loadPublicContent();
+describe("public branch directory loader", () => {
+  it("reads shared identity and active branch destinations", async () => {
+    const directory = await loadBranchDirectory();
 
-    expect(content.site.siteName).toBe("KGJ");
-    expect(content.sections.map((section) => section.sectionKey)).toEqual([
-      "brand_header",
-      "campaign_banner",
-      "products",
-      "secondary_links",
-      "social_links",
-      "footer",
-    ]);
-    expect(content.campaign).toBeNull();
-    expect(content.products).toEqual([]);
+    expect(directory.siteName).toBe("KGJ");
+    expect(Array.isArray(directory.branches)).toBe(true);
+    expect(directory.branches.every((branch) => branch.slug.length > 0)).toBe(
+      true,
+    );
   });
 });

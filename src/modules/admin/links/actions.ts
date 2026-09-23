@@ -10,7 +10,11 @@ import { requireAdmin } from "@/modules/admin/access";
 
 import { linkSchema } from "./validation";
 
-type ActionState = { message: string; errors: Record<string, string> };
+type ActionState = {
+  message: string;
+  errors: Record<string, string>;
+  ok?: boolean;
+};
 
 export async function saveLink(
   _previous: ActionState,
@@ -99,9 +103,12 @@ export async function saveLink(
   }
   if (!savedId) return { message: "Tautan tidak ditemukan.", errors: {} };
 
-  revalidatePath(branch ? `/b/${branch.slug}` : "/");
+  if (branch) revalidatePath(`/${branch.slug}`);
   if (branchId) revalidatePath(`/admin/branches/${branchId}/link-bio`);
   revalidatePath("/admin/links");
+  if (formData.get("stayOnPage") === "1") {
+    return { message: "Tautan berhasil disimpan.", errors: {}, ok: true };
+  }
   redirect(
     branchId
       ? `/admin/branches/${branchId}/link-bio?saved=1`

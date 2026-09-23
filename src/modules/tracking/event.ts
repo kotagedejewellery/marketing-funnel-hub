@@ -66,3 +66,8 @@ export const canonicalEventSchema = z.discriminatedUnion("eventName", [
 ]);
 
 export type CanonicalEvent = z.infer<typeof canonicalEventSchema>;
+
+export function branchSlugFromPagePath(pathname: string) {
+  const slug = pathname.match(/^\/([a-z0-9]+(?:-[a-z0-9]+)*)$/)?.[1];
+  return slug && slug.length <= 120 ? slug : null;
+}

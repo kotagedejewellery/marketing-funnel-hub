@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { imageExtension, mediaTargetSchema } from "./validation";
+import {
+  imageExtension,
+  mediaOverrideTargetSchema,
+  mediaTargetSchema,
+} from "./validation";
 
 describe("media target validation", () => {
   it("accepts only the fixed site settings ID for logo uploads", () => {
@@ -15,6 +19,29 @@ describe("media target validation", () => {
         entityType: "site",
         entityId: "11111111-1111-4111-8111-111111111111",
       }).success,
+    ).toBe(false);
+  });
+
+  it("allows only branch and assignment image overrides to be cleared", () => {
+    const entityId = "11111111-1111-4111-8111-111111111111";
+
+    expect(
+      mediaOverrideTargetSchema.safeParse({ entityType: "branch", entityId })
+        .success,
+    ).toBe(true);
+    expect(
+      mediaOverrideTargetSchema.safeParse({
+        entityType: "assignment",
+        entityId,
+      }).success,
+    ).toBe(true);
+    expect(
+      mediaOverrideTargetSchema.safeParse({ entityType: "site", entityId })
+        .success,
+    ).toBe(false);
+    expect(
+      mediaOverrideTargetSchema.safeParse({ entityType: "product", entityId })
+        .success,
     ).toBe(false);
   });
 });

@@ -18,5 +18,11 @@ describe("branch input", () => {
       branchSchema.safeParse({ ...input, whatsappNumber: "+62 8123456789" })
         .success,
     ).toBe(false);
+    expect(branchSchema.safeParse({ ...input, slug: "admin" }).success).toBe(
+      false,
+    );
+    expect(branchSchema.safeParse({ ...input, slug: "api" }).success).toBe(
+      false,
+    );
   });
 });

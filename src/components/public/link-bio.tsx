@@ -12,14 +12,29 @@ function bypassImageOptimization(url: string) {
   );
 }
 
+function WhatsAppIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-7 shrink-0"
+      fill="currentColor"
+    >
+      <path d="M12.04 2a9.83 9.83 0 0 0-8.5 14.75L2 22l5.39-1.41A9.95 9.95 0 1 0 12.04 2Zm0 17.98a8.1 8.1 0 0 1-4.13-1.13l-.3-.18-3.2.84.86-3.12-.2-.32a8.04 8.04 0 1 1 6.97 3.91Zm4.42-6.03c-.24-.12-1.43-.7-1.65-.79-.22-.08-.38-.12-.55.12-.16.25-.62.79-.76.95-.14.17-.28.19-.52.07-.24-.12-1.02-.38-1.94-1.2a7.2 7.2 0 0 1-1.34-1.67c-.14-.24-.01-.37.1-.49.1-.1.24-.28.36-.42.12-.14.16-.24.24-.4.08-.17.04-.31-.02-.43-.06-.12-.54-1.3-.75-1.79-.2-.47-.4-.4-.54-.41h-.47c-.16 0-.43.06-.65.3-.22.25-.85.83-.85 2.02 0 1.2.87 2.35.99 2.51.12.17 1.71 2.62 4.15 3.67.58.25 1.03.4 1.38.51.58.19 1.11.16 1.53.1.47-.07 1.43-.59 1.64-1.16.2-.58.2-1.07.14-1.17-.06-.1-.22-.16-.46-.28Z" />
+    </svg>
+  );
+}
+
 export function LinkBio({
   content,
   initialConsent = null,
   trackingContext = null,
+  preview = false,
 }: {
   content: PublicContent;
   initialConsent?: ConsentChoice | null;
   trackingContext?: TrackingContext | null;
+  preview?: boolean;
 }) {
   const secondaryLinks = content.links.filter(
     (link) => link.linkType === "secondary",
@@ -30,17 +45,17 @@ export function LinkBio({
   const hasProducts =
     content.products.length > 0 &&
     content.sections.some((section) => section.sectionKey === "products");
-  const hasBrandContent = Boolean(
-    content.site.headline || content.site.introduction || content.site.logoUrl,
-  );
+  const galleryProducts = content.products
+    .filter((product) => product.showImage && product.imageUrl)
+    .slice(0, 4);
   const logoFallback = (
-    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--kgj-dark)] font-serif text-xl font-bold text-[var(--kgj-accent-soft)]">
+    <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-dark)] font-serif text-3xl font-bold text-[var(--kgj-accent-soft)]">
       KJ
     </div>
   );
 
   return (
-    <main className="kgj-public mx-auto min-h-dvh w-full max-w-6xl px-4 pb-8 text-foreground sm:px-6 lg:px-8">
+    <main className="kgj-public mx-auto min-h-dvh w-full max-w-3xl px-4 pb-8 text-foreground sm:px-6">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:bg-background focus:p-3 focus:outline-2 focus:outline-offset-2"
@@ -48,38 +63,8 @@ export function LinkBio({
         Lewati ke konten
       </a>
 
-      <header className="flex items-center justify-between gap-4 py-5 sm:py-7">
-        <div className="flex min-w-0 items-center gap-3">
-          {content.site.logoUrl ? (
-            <PublicImage
-              src={content.site.logoUrl}
-              alt={`Logo ${content.site.siteName}`}
-              width={88}
-              height={88}
-              className="size-12 shrink-0 rounded-2xl object-contain"
-              unoptimized={bypassImageOptimization(content.site.logoUrl)}
-              fallback={logoFallback}
-            />
-          ) : (
-            logoFallback
-          )}
-          <p className="min-w-0 max-w-56 font-serif text-base font-bold leading-tight break-words sm:text-lg">
-            {content.site.siteName}
-          </p>
-        </div>
-        {hasProducts && (
-          <a
-            href="#products-title"
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-card px-4 text-xs font-bold shadow-[0_8px_24px_-18px_rgba(40,33,28,0.5)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none sm:text-sm"
-          >
-            Lihat produk
-          </a>
-        )}
-      </header>
-
-      <h1 className="sr-only">{content.site.siteName}</h1>
-      <ConsentControl initialChoice={initialConsent} />
-      {trackingContext && (
+      {!preview && <ConsentControl initialChoice={initialConsent} />}
+      {!preview && trackingContext && (
         <TrackingBehavior
           context={trackingContext}
           products={content.products.map((product) => ({
@@ -99,114 +84,96 @@ export function LinkBio({
               return (
                 <section
                   key={sectionKey}
-                  className={`grid overflow-hidden rounded-2xl bg-[var(--kgj-dark)] text-[var(--primary-foreground)] ${content.site.logoUrl ? "md:grid-cols-[minmax(0,1.25fr)_minmax(15rem,0.75fr)]" : ""}`}
+                  className="flex flex-col items-center px-3 pt-10 pb-8 text-center sm:pt-14 sm:pb-10"
                 >
-                  <div
-                    className={`flex flex-col justify-center px-6 sm:px-10 lg:px-14 ${hasBrandContent ? "py-10 sm:py-16" : "py-7 sm:py-10"}`}
-                  >
-                    <h2 className="max-w-2xl font-serif text-[clamp(2.4rem,6vw,5rem)] leading-[1.05] font-bold tracking-[-0.035em] text-balance break-words">
-                      {content.site.headline || content.site.siteName}
-                    </h2>
-                    {content.site.introduction && (
-                      <p className="mt-6 max-w-xl text-base leading-7 text-[var(--kgj-on-dark-muted)] sm:text-lg sm:leading-8">
-                        {content.site.introduction}
-                      </p>
-                    )}
-                    {hasProducts && (
-                      <a
-                        href="#products-title"
-                        className="mt-8 inline-flex min-h-12 w-fit items-center rounded-full bg-[var(--kgj-accent-soft)] px-6 text-sm font-bold text-[var(--kgj-dark)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kgj-accent-soft)] motion-reduce:transition-none"
-                      >
-                        Jelajahi produk
-                      </a>
-                    )}
-                  </div>
-                  {content.site.logoUrl && (
-                    <div className="flex min-h-56 items-center justify-center bg-[var(--kgj-accent-soft)] px-8 py-8 text-[var(--kgj-dark)] md:min-h-96">
-                      <PublicImage
-                        src={content.site.logoUrl}
-                        alt=""
-                        width={400}
-                        height={400}
-                        sizes="(min-width: 768px) 330px, 220px"
-                        className="max-h-72 w-full max-w-72 object-contain"
-                        unoptimized={bypassImageOptimization(
-                          content.site.logoUrl,
-                        )}
-                        fallback={
-                          <span
-                            aria-hidden="true"
-                            className="font-serif text-8xl font-bold"
-                          >
-                            KJ
-                          </span>
-                        }
-                      />
-                    </div>
+                  {content.site.logoUrl ? (
+                    <PublicImage
+                      src={content.site.logoUrl}
+                      alt={`Logo ${content.site.siteName}`}
+                      width={192}
+                      height={192}
+                      sizes="96px"
+                      className="size-24 rounded-full bg-card object-contain p-2 shadow-[0_12px_28px_-18px_rgba(40,33,28,0.55)]"
+                      unoptimized={bypassImageOptimization(
+                        content.site.logoUrl,
+                      )}
+                      fallback={logoFallback}
+                    />
+                  ) : (
+                    logoFallback
+                  )}
+                  <h1 className="mt-5 max-w-xl font-serif text-3xl leading-tight font-bold tracking-[-0.025em] text-balance break-words sm:text-4xl">
+                    {content.site.siteName}
+                  </h1>
+                  {content.site.headline && (
+                    <p className="mt-3 max-w-xl text-base leading-7 font-semibold text-balance">
+                      {content.site.headline}
+                    </p>
+                  )}
+                  {content.site.introduction && (
+                    <p className="mt-2 max-w-2xl text-sm leading-6 whitespace-pre-line text-muted-foreground sm:text-base sm:leading-7">
+                      {content.site.introduction}
+                    </p>
+                  )}
+                  {hasProducts && (
+                    <a
+                      href="#products-title"
+                      className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--kgj-dark)] px-5 text-sm font-bold text-[var(--primary-foreground)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
+                    >
+                      Lihat pilihan cincin
+                    </a>
                   )}
                 </section>
               );
 
-            case "campaign_banner":
-              return content.campaign ? (
+            case "campaign_banner": {
+              if (!content.campaign?.bannerUrl) return null;
+
+              const banner = (
+                <PublicImage
+                  src={content.campaign.bannerUrl}
+                  alt={content.campaign.title || "Banner kampanye KGJ"}
+                  width={1080}
+                  height={1350}
+                  sizes="(min-width: 768px) 720px, calc(100vw - 32px)"
+                  className="aspect-[4/5] w-full object-cover"
+                  unoptimized={bypassImageOptimization(
+                    content.campaign.bannerUrl,
+                  )}
+                />
+              );
+
+              return (
                 <section
                   key={sectionKey}
-                  className="mt-4 overflow-hidden rounded-2xl bg-card sm:mt-5"
+                  className="overflow-hidden rounded-2xl bg-card"
                 >
-                  <div
-                    className={
-                      content.campaign.bannerUrl
-                        ? "grid md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
-                        : ""
-                    }
-                  >
-                    {content.campaign.bannerUrl && (
-                      <PublicImage
-                        src={content.campaign.bannerUrl}
-                        alt={content.campaign.title || "Banner kampanye KGJ"}
-                        width={1200}
-                        height={600}
-                        sizes="(min-width: 768px) 520px, calc(100vw - 32px)"
-                        className="aspect-[4/3] h-full w-full object-cover"
-                        unoptimized={bypassImageOptimization(
-                          content.campaign.bannerUrl,
-                        )}
-                      />
-                    )}
-                    <div className="flex flex-col justify-center p-6 sm:p-10">
-                      <h2 className="font-serif text-3xl leading-tight font-bold break-words sm:text-4xl">
-                        {content.campaign.title || "Informasi terbaru"}
-                      </h2>
-                      {content.campaign.description && (
-                        <p className="mt-3 max-w-xl leading-7 text-muted-foreground">
-                          {content.campaign.description}
-                        </p>
-                      )}
-                      {content.campaign.targetUrl && (
-                        <a
-                          className="mt-6 inline-flex min-h-11 w-fit items-center gap-2 rounded-full bg-[var(--kgj-dark)] px-5 font-bold text-[var(--primary-foreground)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
-                          href={content.campaign.targetUrl}
-                        >
-                          Lihat detail
-                        </a>
-                      )}
-                    </div>
-                  </div>
+                  {content.campaign.targetUrl ? (
+                    <a
+                      href={content.campaign.targetUrl}
+                      className="block focus-visible:outline-2 focus-visible:outline-offset-2"
+                    >
+                      {banner}
+                    </a>
+                  ) : (
+                    banner
+                  )}
                 </section>
-              ) : null;
+              );
+            }
 
             case "products":
               return (
                 <section
                   key={sectionKey}
                   aria-labelledby="products-title"
-                  className="py-12 sm:py-16"
+                  className="py-10 sm:py-14"
                 >
                   <h2
                     id="products-title"
-                    className="scroll-mt-6 font-serif text-4xl leading-tight font-bold text-balance sm:text-5xl"
+                    className="scroll-mt-6 text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
                   >
-                    Temukan yang Anda cari
+                    Pilihan produk
                   </h2>
                   {content.products.length === 0 ? (
                     <p
@@ -216,108 +183,86 @@ export function LinkBio({
                       Pilihan produk belum tersedia. Silakan kembali lagi nanti.
                     </p>
                   ) : (
-                    <div className="mt-8 grid gap-4 md:grid-cols-2 sm:gap-5">
-                      {content.products.map((product, index) => (
-                        <article
-                          key={product.id}
-                          className={`grid min-w-0 gap-6 overflow-hidden rounded-2xl p-5 sm:p-7 ${index === 0 ? "bg-[var(--kgj-accent-soft)] md:col-span-2" : "bg-card"} ${index === 0 && product.imageUrl ? "md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-center" : ""}`}
+                    <>
+                      {galleryProducts.length > 0 && (
+                        <ul
+                          aria-label="Galeri produk"
+                          className="mt-7 grid grid-cols-2 gap-3 sm:gap-4"
                         >
-                          {product.imageUrl && (
-                            <div className="min-w-0 overflow-hidden rounded-xl bg-secondary">
+                          {galleryProducts.map((product) => (
+                            <li
+                              key={product.id}
+                              className="overflow-hidden rounded-2xl bg-card"
+                            >
                               <PublicImage
-                                src={product.imageUrl}
+                                src={product.imageUrl!}
                                 alt={product.name}
-                                width={720}
-                                height={540}
-                                sizes="(min-width: 768px) 500px, calc(100vw - 72px)"
-                                className="aspect-[4/3] w-full object-cover"
+                                width={1080}
+                                height={1350}
+                                sizes="(min-width: 768px) 344px, calc((100vw - 44px) / 2)"
+                                className="aspect-[4/5] h-full w-full object-cover"
                                 unoptimized={bypassImageOptimization(
-                                  product.imageUrl,
+                                  product.imageUrl!,
                                 )}
-                                fallback={
-                                  <p className="p-5 text-sm text-muted-foreground">
-                                    Gambar {product.name} belum tersedia.
-                                  </p>
-                                }
                               />
-                            </div>
-                          )}
-                          <div className="min-w-0 self-center">
-                            <h3 className="font-serif text-3xl leading-tight font-bold text-balance break-words sm:text-4xl">
-                              {product.name}
-                            </h3>
-                            {product.description && (
-                              <p className="mt-3 max-w-lg leading-7 text-muted-foreground">
-                                {product.description}
-                              </p>
-                            )}
-                            {product.branches.length === 0 ? (
-                              <p className="mt-6 border-t border-border pt-4 text-sm text-muted-foreground">
-                                Cabang untuk produk ini belum tersedia.
-                              </p>
-                            ) : (
-                              <details
-                                data-track-product-id={product.id}
-                                className="group mt-6 border-t border-border"
-                              >
-                                <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-4 py-3 font-bold text-foreground transition-colors hover:text-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2">
-                                  <span>
-                                    {content.pageBranch
-                                      ? "Lihat detail dan hubungi cabang"
-                                      : "Lihat cabang"}
-                                  </span>
-                                  <svg
-                                    aria-hidden="true"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
-                                    className="size-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <ul className="mt-7 space-y-3">
+                        {content.products.map((product) => {
+                          const destination = product.branches[0];
+                          return (
+                            <li key={product.id}>
+                              <article data-track-product-id={product.id}>
+                                {destination ? (
+                                  <a
+                                    href={destination.whatsappUrl}
+                                    data-track-branch-id={destination.id}
+                                    className="group flex min-h-20 w-full items-center gap-4 rounded-2xl bg-[var(--kgj-dark)] px-5 py-4 text-[var(--primary-foreground)] shadow-[0_12px_26px_-18px_rgba(40,33,28,0.65)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
+                                    aria-label={`${destination.ctaLabel}, WhatsApp ${content.pageBranch.name}`}
                                   >
-                                    <path d="m6 9 6 6 6-6" />
-                                  </svg>
-                                </summary>
-                                {content.pageBranch ? (
-                                  <div className="border-t border-border pt-4">
-                                    <a
-                                      href={product.branches[0].whatsappUrl}
-                                      data-track-branch-id={
-                                        product.branches[0].id
-                                      }
-                                      className="inline-flex min-h-12 min-w-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-center text-sm font-bold break-words text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
-                                      aria-label={`${product.branches[0].ctaLabel}, ${content.pageBranch.name}`}
+                                    <WhatsAppIcon />
+                                    <div className="min-w-0 flex-1 text-center">
+                                      <h3 className="font-serif text-base leading-snug font-bold break-words sm:text-lg">
+                                        {product.name}
+                                      </h3>
+                                      {product.description && (
+                                        <p className="mt-1 text-xs leading-5 whitespace-pre-line text-[var(--kgj-on-dark-muted)] sm:text-sm">
+                                          {product.description}
+                                        </p>
+                                      )}
+                                      <p className="mt-1 text-xs font-bold text-[var(--kgj-accent-soft)]">
+                                        {destination.ctaLabel}
+                                      </p>
+                                    </div>
+                                    <svg
+                                      aria-hidden="true"
+                                      viewBox="0 0 24 24"
+                                      className="size-5 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
                                     >
-                                      {product.branches[0].ctaLabel}
-                                    </a>
-                                  </div>
+                                      <path d="m9 18 6-6-6-6" />
+                                    </svg>
+                                  </a>
                                 ) : (
-                                  <ul className="border-t border-border">
-                                    {product.branches.map((branch) => (
-                                      <li
-                                        key={branch.id}
-                                        className="grid min-w-0 gap-3 border-b border-border py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                                      >
-                                        <span className="min-w-0 font-medium break-words">
-                                          {branch.name}
-                                        </span>
-                                        <a
-                                          href={branch.whatsappUrl}
-                                          data-track-branch-id={branch.id}
-                                          className="inline-flex min-h-12 min-w-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-center text-sm font-bold break-words text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
-                                          aria-label={`${branch.ctaLabel}, ${branch.name}`}
-                                        >
-                                          {branch.ctaLabel}
-                                        </a>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  <div className="rounded-2xl bg-card px-5 py-5">
+                                    <h3 className="font-serif text-lg font-bold">
+                                      {product.name}
+                                    </h3>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                      Kontak cabang belum tersedia.
+                                    </p>
+                                  </div>
                                 )}
-                              </details>
-                            )}
-                          </div>
-                        </article>
-                      ))}
-                    </div>
+                              </article>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
                   )}
                 </section>
               );
@@ -351,6 +296,40 @@ export function LinkBio({
                 </section>
               );
             }
+
+            case "faq":
+              return content.faqs.length ? (
+                <section
+                  key={sectionKey}
+                  aria-labelledby="faq-title"
+                  className="pb-12 sm:pb-16"
+                >
+                  <h2
+                    id="faq-title"
+                    className="font-serif text-3xl font-bold text-balance sm:text-4xl"
+                  >
+                    Pertanyaan yang sering ditanyakan
+                  </h2>
+                  <div className="mt-6 divide-y divide-border overflow-hidden rounded-2xl bg-card px-5 sm:px-8">
+                    {content.faqs.map((faq) => (
+                      <details key={faq.id} className="group py-2">
+                        <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-4 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2">
+                          <span>{faq.question}</span>
+                          <span
+                            aria-hidden="true"
+                            className="text-xl leading-none text-[var(--kgj-accent)] group-open:rotate-45"
+                          >
+                            +
+                          </span>
+                        </summary>
+                        <p className="max-w-3xl pb-5 leading-7 whitespace-pre-line text-muted-foreground">
+                          {faq.answer}
+                        </p>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              ) : null;
 
             case "footer":
               return (

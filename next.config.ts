@@ -28,6 +28,26 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   images: { remotePatterns },
   experimental: { serverActions: { bodySizeLimit: "6mb" } },
+  async redirects() {
+    return [
+      { source: "/b/:slug", destination: "/:slug", permanent: true },
+      {
+        source: "/admin/content",
+        destination: "/admin/settings",
+        permanent: false,
+      },
+      {
+        source: "/admin/campaigns/:path*",
+        destination: "/admin/link-bio",
+        permanent: false,
+      },
+      {
+        source: "/admin/links/:path*",
+        destination: "/admin/link-bio",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

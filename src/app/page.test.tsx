@@ -16,11 +16,13 @@ const emptyContent: PublicContent = {
   campaign: null,
   products: [],
   links: [],
+  faqs: [],
   sections: [
     { sectionKey: "brand_header" },
     { sectionKey: "products" },
     { sectionKey: "footer" },
   ],
+  pageBranch: { id: "branch-1", name: "Solo", slug: "solo" },
 };
 
 describe("public Link Bio", () => {
@@ -36,7 +38,7 @@ describe("public Link Bio", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows a product's active branch destination without requiring tracking", () => {
+  it("shows multiple branch products with direct WhatsApp links", () => {
     render(
       <LinkBio
         content={{
@@ -47,7 +49,8 @@ describe("public Link Bio", () => {
               name: "Wedding Ring",
               slug: "wedding-ring",
               description: "Cincin custom",
-              imageUrl: null,
+              showImage: false,
+              imageUrl: "/wedding-ring.jpg",
               branches: [
                 {
                   id: "branch-1",
@@ -58,15 +61,78 @@ describe("public Link Bio", () => {
                 },
               ],
             },
+            {
+              id: "product-2",
+              name: "Nusantara Series",
+              slug: "nusantara-series",
+              description: "Cincin motif Nusantara",
+              showImage: true,
+              imageUrl: "/nusantara-series.jpg",
+              branches: [
+                {
+                  id: "branch-1",
+                  name: "Solo",
+                  slug: "solo",
+                  ctaLabel: "Konsultasi Nusantara",
+                  whatsappUrl: "https://wa.me/628123456789?text=Nusantara",
+                },
+              ],
+            },
           ],
         }}
       />,
     );
 
-    fireEvent.click(screen.getByText("Lihat cabang"));
-    expect(screen.getByRole("link", { name: /whatsapp/i })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "Wedding Ring" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Nusantara Series" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("img", { name: "Wedding Ring" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Nusantara Series" }),
+    ).toHaveAttribute("src");
+    expect(
+      screen.getByRole("link", {
+        name: /Hubungi via WhatsApp, WhatsApp Solo/i,
+      }),
+    ).toHaveAttribute("href", "https://wa.me/628123456789?text=Halo");
+    expect(
+      screen.getByRole("link", {
+        name: /Konsultasi Nusantara, WhatsApp Solo/i,
+      }),
+    ).toHaveAttribute("href", "https://wa.me/628123456789?text=Nusantara");
+  });
+
+  it("shows campaign artwork without separate title or description text", () => {
+    render(
+      <LinkBio
+        content={{
+          ...emptyContent,
+          campaign: {
+            id: "campaign-1",
+            title: "Promo September",
+            description: "Penawaran khusus bulan ini",
+            bannerUrl: "/promo-september.jpg",
+            targetUrl: "https://example.com/promo",
+          },
+          sections: [{ sectionKey: "campaign_banner" }],
+        }}
+      />,
+    );
+
+    const banner = screen.getByRole("img", { name: "Promo September" });
+    expect(banner).toBeVisible();
+    expect(
+      screen.queryByRole("heading", { name: "Promo September" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Penawaran khusus bulan ini"),
+    ).not.toBeInTheDocument();
+    expect(banner.closest("a")).toHaveAttribute(
       "href",
-      "https://wa.me/628123456789?text=Halo",
+      "https://example.com/promo",
     );
   });
 });

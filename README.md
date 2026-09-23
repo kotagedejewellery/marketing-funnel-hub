@@ -47,7 +47,10 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000` for the branch directory. Each active branch has
+its own Link Bio at `http://localhost:3000/{branch-slug}`; old `/b/{branch-slug}`
+links redirect to the direct URL. The CMS manages branch pages at
+`/admin/link-bio` and shared defaults at `/admin/settings`.
 
 ## Commands
 

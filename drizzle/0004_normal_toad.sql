@@ -1,0 +1,1 @@
+ALTER TABLE "product_branches" ADD COLUMN "show_image" boolean DEFAULT true NOT NULL;

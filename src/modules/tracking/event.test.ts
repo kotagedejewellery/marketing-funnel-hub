@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalEventSchema } from "./event";
+import { branchSlugFromPagePath, canonicalEventSchema } from "./event";
 
 const base = {
   eventId: "a7cb942c-0e0d-465e-8d6a-04569990228b",
   eventTime: "2026-09-18T04:30:00.000Z",
   anonymousSessionId: "bdbe6f79-7725-414d-a105-169c9bb5c2fa",
-  pageUrl: "https://example.com/",
+  pageUrl: "https://example.com/surabaya",
   attribution: {
     source: null,
     campaign: null,
@@ -71,5 +71,14 @@ describe("canonical event contract", () => {
         cta: "whatsapp",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("branch page path", () => {
+  it("accepts direct branch URLs and rejects the old prefix and site root", () => {
+    expect(branchSlugFromPagePath("/surabaya")).toBe("surabaya");
+    expect(branchSlugFromPagePath("/solo-baru")).toBe("solo-baru");
+    expect(branchSlugFromPagePath("/b/surabaya")).toBeNull();
+    expect(branchSlugFromPagePath("/")).toBeNull();
   });
 });

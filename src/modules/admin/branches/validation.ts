@@ -1,5 +1,15 @@
 import * as z from "zod";
 
+const reservedSlugs = new Set([
+  "admin",
+  "api",
+  "b",
+  "favicon",
+  "icon",
+  "robots",
+  "sitemap",
+]);
+
 export const branchSchema = z.object({
   id: z.union([z.uuid(), z.literal("")]),
   name: z.string().trim().min(1, "Nama cabang wajib diisi.").max(120),
@@ -11,6 +21,10 @@ export const branchSchema = z.object({
     .regex(
       /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
       "Gunakan huruf kecil, angka, dan tanda hubung.",
+    )
+    .refine(
+      (value) => !reservedSlugs.has(value),
+      "Slug ini dipakai oleh sistem. Pilih nama lain.",
     ),
   whatsappNumber: z
     .string()

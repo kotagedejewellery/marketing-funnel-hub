@@ -15,10 +15,10 @@ THESIS: Link Bio tampil sebagai papan pilihan butik KGJ yang cepat dipindai, buk
 
 OWN-WORLD: Palet ivory hangat, charcoal, dan bronze KGJ. Modul bento dengan kartu berukuran berbeda, sudut lembut, bidang warna tenang, label kapsul, dan garis tipis; tanpa warna SaaS generik atau dekorasi yang mengalahkan produk.
 
-STORY: Identitas dan pesan situs muncul dahulu, kampanye aktif mendapat ruang jika ada, lalu setiap kategori produk memperlihatkan konteks dan cabang yang benar. Tautan sekunder menutup alur tanpa bersaing dengan WhatsApp.
+STORY: Profil cabang muncul dahulu, konten unggulan mendapat ruang jika ada, kemudian galeri produk memperkenalkan pilihan sebelum daftar CTA WhatsApp menyelesaikan tindakan. FAQ dan tautan opsional menutup alur tanpa bersaing dengan WhatsApp.
 
-FIRST VIEWPORT: Pada ponsel, identitas KGJ berada pada header ringkas, diikuti panel brand dengan headline CMS dan pengantar bila sudah diisi. Saat konten brand dan aset belum tersedia, panel tetap ringkas agar bagian produk segera terlihat tanpa CTA palsu. Pada desktop, logo yang tersedia mendapat panel aset berdampingan dengan pesan brand; produk mengambil grid yang lebih lebar.
+FIRST VIEWPORT: Pada ponsel, profil cabang terpusat menampilkan satu logo, nama cabang, judul/deskripsi opsional, lalu jalan pintas ke produk. Tidak ada header situs atau panel logo kedua. Konten unggulan tampil linear sesudah profil sebagai gambar banner 4:5 tanpa title/deskripsi publik terpisah; jika memiliki tujuan, gambar menjadi tautan. Lebar desktop tetap menyerupai Link Bio, bukan berubah menjadi landing page lebar.
 
-FORM: Papan sampel butik modular; kandidat grounded urutan 5, seed 5e9e7a90. Interaksi khasnya adalah kartu produk yang membuka daftar cabang di tempat, mempertahankan anchor WhatsApp langsung. Motion hanya transisi state ringan dengan reduced-motion fallback.
+FORM: Papan pilihan butik linear yang mengadaptasi pola Taplink tanpa drag-and-drop. Maksimal empat gambar produk eligible membentuk grid dua kolom; data produk yang sama membentuk daftar CTA gelap berisi ikon WhatsApp, nama, keterangan, dan label aksi. Mematikan visibilitas gambar hanya mengeluarkan produk dari galeri dan tidak menghilangkan CTA. Tidak ada koleksi galeri kedua, duplikasi entry CMS, atau carousel ulasan pada tahap ini. Motion hanya transisi state ringan dengan reduced-motion fallback.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

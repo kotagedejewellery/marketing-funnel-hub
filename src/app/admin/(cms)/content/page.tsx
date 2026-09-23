@@ -1,10 +1,11 @@
 import Link from "next/link";
 
+import { FaqManager } from "@/components/admin/faq-manager";
 import { SectionList } from "@/components/admin/section-list";
 import { getContentSettings } from "@/modules/admin/content/data";
 
 export default async function ContentPage() {
-  const { sections } = await getContentSettings();
+  const { sections, faqs } = await getContentSettings();
 
   return (
     <div>
@@ -32,6 +33,7 @@ export default async function ContentPage() {
         </Link>
       </div>
       <SectionList sections={sections} />
+      <FaqManager faqs={faqs} />
     </div>
   );
 }

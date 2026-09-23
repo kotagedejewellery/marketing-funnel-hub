@@ -17,9 +17,10 @@ export default async function ProductsPage({
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-4xl">Produk</h1>
+          <h1 className="font-serif text-4xl">Pustaka Produk</h1>
           <p className="mt-3 text-muted-foreground">
-            Kelola kategori kebutuhan pelanggan, bukan stok atau SKU.
+            Kelola data dasar produk yang dapat digunakan pada setiap Halaman
+            Link Bio. Produk bukan stok atau SKU.
           </p>
         </div>
         <FormDialog
@@ -58,7 +59,7 @@ export default async function ProductsPage({
                   href={`/admin/products/${product.id}`}
                   className="inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
-                  Gambar & cabang
+                  Kelola produk
                 </Link>
               </div>
             </li>

@@ -66,6 +66,7 @@ export async function saveSiteSettings(
 
   if (changed) {
     revalidatePath("/");
+    revalidatePath("/[slug]", "page");
     revalidatePath("/admin/settings");
   }
   return {
@@ -153,8 +154,8 @@ export async function changeContentSection(
   }
 
   if (changed) {
-    revalidatePath("/");
-    revalidatePath("/admin/content");
+    revalidatePath("/[slug]", "page");
+    revalidatePath("/admin/settings");
   }
   return {
     message: changed ? "Section diperbarui." : "Tidak ada perubahan.",

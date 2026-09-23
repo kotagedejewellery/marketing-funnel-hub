@@ -8,12 +8,14 @@ import {
   branches,
   campaigns,
   contentSections,
+  faqs,
   links,
   productBranches,
   products,
   siteSettings,
 } from "@/lib/db/schema";
 
+import { branchPageTitle } from "./branch-title";
 import { publicAssetUrl, publicHref, resolveWhatsappCta } from "./links";
 
 const assetUrl = (path: string | null) =>
@@ -31,11 +33,37 @@ type BranchScope = Pick<
   "id" | "name" | "slug" | "headline" | "introduction" | "logoPath"
 >;
 
-export async function loadPublicContent(now = new Date()) {
-  return loadScopedContent(now, null);
+export async function loadBranchDirectory() {
+  const db = getDatabase();
+  const [settings, activeBranches] = await Promise.all([
+    db
+      .select({
+        siteName: siteSettings.siteName,
+        logoPath: siteSettings.logoPath,
+        privacyUrl: siteSettings.privacyUrl,
+      })
+      .from(siteSettings)
+      .limit(1),
+    db
+      .select({ name: branches.name, slug: branches.slug })
+      .from(branches)
+      .where(eq(branches.isActive, true))
+      .orderBy(asc(branches.sortOrder), asc(branches.name), asc(branches.id)),
+  ]);
+  if (!settings[0]) throw new Error("Public site settings are missing.");
+  return {
+    siteName: settings[0].siteName,
+    logoUrl: assetUrl(settings[0].logoPath),
+    privacyUrl: safeHref(settings[0].privacyUrl),
+    branches: activeBranches,
+  };
 }
 
-export async function loadBranchPublicContent(slug: string, now = new Date()) {
+export async function loadBranchPublicContent(
+  slug: string,
+  now = new Date(),
+  includeInactive = false,
+) {
   const [branch] = await getDatabase()
     .select({
       id: branches.id,
@@ -46,17 +74,22 @@ export async function loadBranchPublicContent(slug: string, now = new Date()) {
       logoPath: branches.logoPath,
     })
     .from(branches)
-    .where(and(eq(branches.slug, slug), eq(branches.isActive, true)))
+    .where(
+      includeInactive
+        ? eq(branches.slug, slug)
+        : and(eq(branches.slug, slug), eq(branches.isActive, true)),
+    )
     .limit(1);
 
-  return branch ? loadScopedContent(now, branch) : null;
+  return branch ? loadScopedContent(now, branch, includeInactive) : null;
 }
 
-async function loadScopedContent(now: Date, branch: BranchScope | null) {
+async function loadScopedContent(
+  now: Date,
+  branch: BranchScope,
+  includeInactive = false,
+) {
   const db = getDatabase();
-  const scope = branch
-    ? eq(campaigns.branchId, branch.id)
-    : isNull(campaigns.branchId);
   const [site] = await db
     .select({
       siteName: siteSettings.siteName,
@@ -78,6 +111,7 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
     activeBranches,
     activeLinks,
     activeSections,
+    pageFaqs,
   ] = await Promise.all([
     db
       .select({
@@ -91,7 +125,7 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
       .where(
         and(
           eq(campaigns.isActive, true),
-          scope,
+          eq(campaigns.branchId, branch.id),
           or(isNull(campaigns.activeFrom), lte(campaigns.activeFrom, now)),
           or(isNull(campaigns.activeUntil), gte(campaigns.activeUntil, now)),
         ),
@@ -121,6 +155,7 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
         displayName: productBranches.displayName,
         displayDescription: productBranches.description,
         displayImagePath: productBranches.imagePath,
+        showImage: productBranches.showImage,
         id: branches.id,
         name: branches.name,
         slug: branches.slug,
@@ -136,8 +171,8 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
         and(
           eq(products.isActive, true),
           eq(productBranches.isActive, true),
-          eq(branches.isActive, true),
-          ...(branch ? [eq(branches.id, branch.id)] : []),
+          ...(includeInactive ? [] : [eq(branches.isActive, true)]),
+          eq(branches.id, branch.id),
         ),
       )
       .orderBy(
@@ -155,12 +190,7 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
         platform: links.platform,
       })
       .from(links)
-      .where(
-        and(
-          eq(links.isActive, true),
-          branch ? eq(links.branchId, branch.id) : isNull(links.branchId),
-        ),
-      )
+      .where(and(eq(links.isActive, true), eq(links.branchId, branch.id)))
       .orderBy(asc(links.sortOrder), asc(links.id)),
     db
       .select({
@@ -168,17 +198,24 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
         isActive: contentSections.isActive,
       })
       .from(contentSections)
-      .where(
-        branch
-          ? eq(contentSections.branchId, branch.id)
-          : isNull(contentSections.branchId),
-      )
+      .where(eq(contentSections.branchId, branch.id))
       .orderBy(asc(contentSections.sortOrder), asc(contentSections.id)),
+    db
+      .select({
+        id: faqs.id,
+        branchId: faqs.branchId,
+        question: faqs.question,
+        answer: faqs.answer,
+        isActive: faqs.isActive,
+      })
+      .from(faqs)
+      .where(or(isNull(faqs.branchId), eq(faqs.branchId, branch.id)))
+      .orderBy(asc(faqs.sortOrder), asc(faqs.id)),
   ]);
 
   const campaign = eligibleCampaigns[0];
   const sections =
-    branch && activeSections.length === 0
+    activeSections.length === 0
       ? await db
           .select({
             sectionKey: contentSections.sectionKey,
@@ -191,22 +228,24 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
   const branchAssignments = new Map(
     activeBranches.map((assignment) => [assignment.productId, assignment]),
   );
-  const visibleProducts = branch
-    ? activeProducts
-        .filter((product) => branchAssignments.has(product.id))
-        .sort((a, b) => {
-          const aOrder = branchAssignments.get(a.id)?.assignmentSortOrder ?? 0;
-          const bOrder = branchAssignments.get(b.id)?.assignmentSortOrder ?? 0;
-          return aOrder - bOrder || a.name.localeCompare(b.name);
-        })
-    : activeProducts;
+  const visibleProducts = activeProducts
+    .filter((product) => branchAssignments.has(product.id))
+    .sort((a, b) => {
+      const aOrder = branchAssignments.get(a.id)?.assignmentSortOrder ?? 0;
+      const bOrder = branchAssignments.get(b.id)?.assignmentSortOrder ?? 0;
+      return aOrder - bOrder || a.name.localeCompare(b.name);
+    });
+  const scopedFaqs = pageFaqs.filter((faq) => faq.branchId === branch.id);
+  const visibleFaqs = (scopedFaqs.length ? scopedFaqs : pageFaqs)
+    .filter((faq) => faq.isActive)
+    .map(({ id, question, answer }) => ({ id, question, answer }));
 
   return {
     site: {
-      siteName: branch ? `${site.siteName} ${branch.name}` : site.siteName,
-      headline: branch?.headline || site.headline,
-      introduction: branch?.introduction || site.introduction,
-      logoUrl: assetUrl(branch?.logoPath || site.logoPath),
+      siteName: branchPageTitle(site.siteName, branch.name),
+      headline: branch.headline || site.headline,
+      introduction: branch.introduction || site.introduction,
+      logoUrl: assetUrl(branch.logoPath || site.logoPath),
       privacyUrl: safeHref(site.privacyUrl),
     },
     campaign: campaign
@@ -219,14 +258,18 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
         }
       : null,
     products: visibleProducts.map((product) => {
-      const assignment = branch ? branchAssignments.get(product.id) : null;
+      const assignment = branchAssignments.get(product.id);
       const displayName = assignment?.displayName || product.name;
+      const showImage = assignment?.showImage ?? true;
       return {
         id: product.id,
         name: displayName,
         slug: product.slug,
         description: assignment?.displayDescription || product.description,
-        imageUrl: assetUrl(assignment?.displayImagePath || product.imagePath),
+        showImage,
+        imageUrl: showImage
+          ? assetUrl(assignment?.displayImagePath || product.imagePath)
+          : null,
         branches: activeBranches
           .filter((item) => item.productId === product.id)
           .map((item) => {
@@ -254,13 +297,12 @@ async function loadScopedContent(now: Date, branch: BranchScope | null) {
       const url = safeHref(link.url);
       return url ? [{ ...link, url }] : [];
     }),
+    faqs: visibleFaqs,
     sections: sections
       .filter((section) => section.isActive)
       .map(({ sectionKey }) => ({ sectionKey })),
-    ...(branch && {
-      pageBranch: { id: branch.id, name: branch.name, slug: branch.slug },
-    }),
+    pageBranch: { id: branch.id, name: branch.name, slug: branch.slug },
   };
 }
 
-export type PublicContent = Awaited<ReturnType<typeof loadPublicContent>>;
+export type PublicContent = Awaited<ReturnType<typeof loadScopedContent>>;

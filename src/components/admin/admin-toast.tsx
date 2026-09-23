@@ -16,7 +16,7 @@ import { useCloseFormDialog } from "@/components/admin/form-dialog";
 const ToastContext = createContext<(message: string) => void>(() => {});
 
 const savedMessages: Record<string, string> = {
-  branches: "Cabang berhasil disimpan.",
+  branches: "Informasi Halaman Link Bio berhasil disimpan.",
   campaigns: "Kampanye berhasil disimpan.",
   links: "Tautan berhasil disimpan.",
   products: "Produk berhasil disimpan.",
@@ -95,6 +95,7 @@ export function FormFeedback({
     if (!state.ok) return;
     closeDialog();
     showSuccess(state.message);
+    window.dispatchEvent(new Event("kgj:admin-saved"));
   }, [state, closeDialog, showSuccess]);
 
   if (!state.message || state.ok || pending || dismissedError === state) {

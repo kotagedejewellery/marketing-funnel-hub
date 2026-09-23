@@ -27,7 +27,8 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
   return (
     <form action={action} className="space-y-6">
       <p className="text-sm leading-6 text-muted-foreground">
-        Informasi utama yang dilihat pengunjung pada Link Bio.
+        Nilai bawaan ini dipakai oleh cabang yang belum memiliki pengaturan
+        khusus.
       </p>
       <div className="mt-7 grid gap-6 lg:grid-cols-2">
         <div>
@@ -46,7 +47,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         </div>
         <div>
           <label htmlFor="headline" className="font-medium">
-            Headline
+            Judul profil bawaan
           </label>
           <input
             id="headline"
@@ -61,7 +62,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
       <div className="mt-6 space-y-6">
         <div>
           <label htmlFor="introduction" className="font-medium">
-            Pengantar singkat
+            Deskripsi singkat bawaan
           </label>
           <textarea
             id="introduction"
@@ -92,14 +93,14 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
       <div className="mt-8 border-t border-border pt-8">
         <h3 className="font-serif text-2xl">Kontak WhatsApp</h3>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Nilai standar digunakan ketika produk atau cabang tidak memiliki
+          Nilai bawaan digunakan ketika produk atau cabang tidak memiliki
           pengaturan khusus.
         </p>
       </div>
       <div className="mt-6 space-y-6">
         <div>
           <label htmlFor="defaultWhatsappMessage" className="font-medium">
-            Pesan WhatsApp standar
+            Pesan WhatsApp bawaan
           </label>
           <textarea
             id="defaultWhatsappMessage"
@@ -117,7 +118,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         </div>
         <div>
           <label htmlFor="defaultCtaLabel" className="font-medium">
-            Label CTA standar
+            Label CTA bawaan
           </label>
           <input
             id="defaultCtaLabel"
