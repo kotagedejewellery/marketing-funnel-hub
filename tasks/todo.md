@@ -15,20 +15,21 @@ operations remain owner-managed.
 
 ## P0 implementation closeout (21 September 2026)
 
-- [x] Public Link Bio, CMS, product–branch WhatsApp, consent/canonical-event
+- [x] Public Link Bio, CMS, product–branch WhatsApp, canonical-event
       tracking, admin-profile management, and retention endpoint are present in
       code (inspection, not a claim of live verification).
 - [x] P0 schema applied locally; the owner reported successful live migration.
-- [x] Verify one local active product → branch → WhatsApp journey with consented
+- [x] Verify one local active product → branch → WhatsApp journey with
       `PageView`, `ViewContent`, and `Contact`, including the correct destination.
-      One focused browser flow passed on 21 September 2026.
+      One focused browser flow passed on 21 September 2026 under the retired
+      consent flow; the automatic-tracking policy still needs focused verification.
 - [x] Close the agent-owned P0 application implementation after the local flow
       check, as directed by the owner. This does not claim a verified live release.
 
 ## Live release (owner-managed; outside this P0 implementation closeout)
 
 - [ ] Resolve the Vercel Hobby/private-repository deployment block.
-- [ ] Approve live domain, product/branch content, consent/privacy copy, and
+- [ ] Approve live domain, product/branch content, privacy-policy copy, and
       Meta/GTM/GA4 configuration.
 - [ ] Confirm live Auth/Storage, environment variables, WAF rate limit, and
       retention schedule before production activation.
@@ -57,7 +58,7 @@ cakupan dari pemilik lebih dahulu; Git dan migrasi live tetap dikerjakan pemilik
   - Terima: hanya `/{slug-aktif}` diterima sebagai halaman event; Contact harus cocok
     dengan cabang pada URL; ViewContent tetap product-only; query tidak disimpan.
   - Verifikasi yang akan dimintakan: tes fokus untuk path, Contact salah
-    cabang, dan satu alur consented; WhatsApp tetap non-blocking.
+    cabang, dan satu alur tracking aktif; WhatsApp tetap non-blocking.
   - Berkas: `src/proxy.ts`, `src/app/api/events/route.ts`,
     `src/modules/tracking/`.
 - [ ] B4 — Edit identitas dan section halaman cabang di CMS.
@@ -445,15 +446,16 @@ product-centric assignment editors are coded. TypeScript, lint, and six focused
 slug/WhatsApp/fallback tests passed on 2026-09-18; the local assignment-to-public
 walkthrough remains pending account availability and separate approval. FE-05
 has a read-only Admin event list coded; TypeScript and lint passed on 2026-09-18.
-A first-party consent control is coded with draft copy, separate opt-in choices,
-and a 30-day cookie; its one focused unit test, TypeScript, and lint passed on
-2026-09-18. The production policy/copy approval remains pending. A shared
+A first-party consent control and its cookie were retired by owner decision on
+23 September 2026; tracking now runs automatically whenever the environment
+gate is active. The public privacy policy and current behavior still require
+focused release verification. A shared
 discriminated schema for the three canonical events is coded but not yet
-verified. The browser PageView/ViewContent/Contact adapter and consent-change
-hook are coded. The local-only backend now supplies an anonymous journey and
-signed UTM context and accepts consented canonical events at `/api/events` with
+verified. The browser PageView/ViewContent/Contact adapter is coded. The
+local-only backend supplies an anonymous journey and signed UTM context and
+accepts canonical events at `/api/events` with
 active-context validation and idempotent internal storage. These changes are
-implemented and the local PageView UTM/consent/idempotent-retry path, public
+implemented and the earlier local PageView UTM/idempotent-retry path, public
 mobile/desktop overflow baseline, and unauthenticated Admin protection passed
 Playwright on 2026-09-19; TypeScript and lint also passed. Product-scoped
 ViewContent/Contact still need active local product/branch data, and authenticated
@@ -614,15 +616,13 @@ message. Inactive links are hidden, and tracking cannot delay navigation.
 assignment → public WhatsApp walkthrough, including an inactive branch and a
 message-template fallback, if approved.
 
-### FE-05 — Consent, browser events, and Admin tracking validation (Sprints 5–7)
+### FE-05 — Browser events and Admin tracking validation (Sprints 5–7)
 
 **Sub-slices / components:**
 
-- [ ] Add a small accessible `ConsentControl` with a first-party saved choice
-      and a way to reopen preferences. A compact preferences dialog is allowed
-      only for changing consent; it must never be a required WhatsApp step.
-      Keep Meta, GTM/GA4, and internal anonymous events disabled until the
-      applicable consent state permits them.
+- [x] Remove the visitor-facing consent control by owner decision. Keep
+      production tracking behind `TRACKING_ENABLED`, require aligned public
+      privacy-policy copy before activation, and never add a WhatsApp step.
 - [ ] Add one focused client tracking adapter for `PageView` on page entry,
       `ViewContent` when product context is opened, and `Contact` on a product-
       scoped branch WhatsApp click. Branch choice alone emits no extra
@@ -632,8 +632,8 @@ message-template fallback, if approved.
       server event request. GTM owns GA4 dispatch; no direct duplicate `gtag`
       path. Browser code must not read signed attribution cookies as its own
       source of truth.
-- [ ] On Contact, push only consent-allowed browser events and issue a
-      best-effort `keepalive` request to `/api/events`. Keep the existing normal
+- [ ] On Contact, push configured browser events and issue a best-effort
+      `keepalive` request to `/api/events`. Keep the existing normal
       WhatsApp anchor; never `preventDefault`, await tracking, or add an
       interstitial. Failures stay invisible to the visitor.
 - [ ] Add a paginated, read-only `TrackingValidationList` in Admin with recent
@@ -643,21 +643,21 @@ message-template fallback, if approved.
 
 **Validation / policy:** Reuse the canonical discriminated event schema/type
 (`PageView`, `ViewContent`, `Contact`) and validate at `/api/events`; do not
-duplicate independent provider-specific schemas in components. Consent text,
-default behavior, and production activation require owner/business approval.
-No lead/contact PII is collected.
+duplicate independent provider-specific schemas in components. Production
+activation requires owner approval and aligned public privacy-policy copy. No
+lead/contact PII is collected.
 
 **Backend prerequisite:** Anonymous session and signed UTM attribution,
-consent-aware `/api/events`, idempotent event storage, internal Meta CAPI module,
+environment-gated `/api/events`, idempotent event storage, internal Meta CAPI module,
 and authorized read-only event listing. Provider configuration remains outside
 the CMS. This plan does not authorize live provider activation.
 
-**Acceptance:** With consent, the three canonical events share their correct
-context across allowed destinations; without consent, disallowed destinations
-stay off. WhatsApp opens even when JavaScript or analytics fails, and Admin
-shows only canonical internal events.
+**Acceptance:** When tracking is enabled, the three canonical events share their
+correct context across configured destinations. When the environment gate is
+disabled, production tracking stays off. WhatsApp opens even when JavaScript or
+analytics fails, and Admin shows only canonical internal events.
 
 **Verification to propose at feature completion:** One local paid-style UTM
-journey covering consent allowed/denied, event IDs, product/branch context, and
+journey covering automatic tracking, event IDs, product/branch context, and
 WhatsApp with blocked tracking; review the narrow provider checks separately
 before any live activation.

@@ -38,7 +38,7 @@ export function FaqManager({
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {inherits
               ? "Cabang ini masih menampilkan FAQ bawaan dari Pengaturan Bersama. Salin dahulu untuk mengubahnya khusus cabang."
-              : "Atur pertanyaan, jawaban, urutan, dan status tampil di halaman publik."}
+              : "Atur pertanyaan, jawaban, dan status tampil. Gunakan tombol Naik/Turun pada daftar untuk mengubah urutan."}
           </p>
         </div>
         {inherits && branchId ? (
@@ -71,25 +71,25 @@ export function FaqManager({
               key={faq.id}
               className="flex flex-wrap items-center justify-between gap-4 py-4"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold break-words">{faq.question}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {faq.isActive ? "Aktif" : "Nonaktif"}
                 </p>
               </div>
               {!inherits && (
-                <PageOrderControls
-                  kind="faq"
-                  id={faq.id}
-                  branchId={branchId}
-                  index={index}
-                  count={faqs.length}
-                />
-              )}
-              {!inherits && (
-                <FormDialog title="Edit FAQ" triggerLabel="Edit">
-                  <FaqForm faq={faq} branchId={branchId} />
-                </FormDialog>
+                <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <PageOrderControls
+                    kind="faq"
+                    id={faq.id}
+                    branchId={branchId}
+                    index={index}
+                    count={faqs.length}
+                  />
+                  <FormDialog title="Edit FAQ" triggerLabel="Edit">
+                    <FaqForm faq={faq} branchId={branchId} />
+                  </FormDialog>
+                </div>
               )}
             </li>
           ))}
@@ -116,6 +116,7 @@ function FaqForm({
     <form action={action} className="space-y-5">
       <input type="hidden" name="id" value={faq?.id ?? ""} />
       <input type="hidden" name="branchId" value={branchId ?? ""} />
+      <input type="hidden" name="sortOrder" value={faq?.sortOrder ?? 0} />
       <div>
         <label htmlFor={`${formId}-question`} className="font-medium">
           Pertanyaan
@@ -153,26 +154,6 @@ function FaqForm({
         {state.errors.answer && (
           <p role="alert" className="mt-2 text-sm text-destructive">
             {state.errors.answer}
-          </p>
-        )}
-      </div>
-      <div>
-        <label htmlFor={`${formId}-order`} className="font-medium">
-          Urutan tampil
-        </label>
-        <input
-          id={`${formId}-order`}
-          name="sortOrder"
-          type="number"
-          min={0}
-          max={2147483647}
-          defaultValue={faq?.sortOrder ?? 0}
-          required
-          className={inputClass}
-        />
-        {state.errors.sortOrder && (
-          <p role="alert" className="mt-2 text-sm text-destructive">
-            {state.errors.sortOrder}
           </p>
         )}
       </div>

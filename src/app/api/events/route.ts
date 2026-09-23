@@ -5,10 +5,6 @@ import { getDatabase } from "@/lib/db/client";
 import { branches, productBranches } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import {
-  consentCookieName,
-  parseConsentCookie,
-} from "@/modules/tracking/consent";
-import {
   branchSlugFromPagePath,
   canonicalEventSchema,
 } from "@/modules/tracking/event";
@@ -72,9 +68,6 @@ export async function POST(request: Request) {
     return error(413, "BODY_TOO_LARGE", "Event request is too large.");
 
   const cookieStore = await cookies();
-  const consent = parseConsentCookie(cookieStore.get(consentCookieName)?.value);
-  if (!consent?.analytics && !consent?.marketing)
-    return error(403, "CONSENT_REQUIRED", "Tracking consent is required.");
   const context = getTrackingContext(
     cookieStore.get(sessionCookieName)?.value,
     cookieStore.get(attributionCookieName)?.value,
@@ -193,7 +186,6 @@ export async function POST(request: Request) {
       );
     if (
       status === "created" &&
-      consent.marketing &&
       serverEnv.NEXT_PUBLIC_APP_ENV === "production"
     ) {
       await sendMetaCapi(canonicalEvent, resolved, request, {

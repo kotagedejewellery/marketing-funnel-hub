@@ -28,7 +28,8 @@ export function PageCampaigns({
             Konten unggulan
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Maksimal satu konten unggulan aktif tampil setelah profil.
+            Maksimal satu konten unggulan aktif tampil setelah profil. Jika
+            jadwal bertumpuk, item paling atas memiliki prioritas tertinggi.
           </p>
         </div>
         <FormDialog title="Tambah konten unggulan" triggerLabel="Tambah konten">
@@ -41,7 +42,7 @@ export function PageCampaigns({
         </p>
       ) : (
         <ul className="mt-5 divide-y divide-border border-t border-border">
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <li key={row.id} className="py-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -51,12 +52,21 @@ export function PageCampaigns({
                     {row.bannerPath ? "Ada banner" : "Tanpa banner"}
                   </p>
                 </div>
-                <FormDialog
-                  title={`Edit ${row.name}`}
-                  triggerLabel="Edit konten"
-                >
-                  <CampaignForm campaign={row} stayOnPage />
-                </FormDialog>
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                  <PageOrderControls
+                    kind="campaign"
+                    id={row.id}
+                    branchId={branchId}
+                    index={index}
+                    count={rows.length}
+                  />
+                  <FormDialog
+                    title={`Edit ${row.name}`}
+                    triggerLabel="Edit konten"
+                  >
+                    <CampaignForm campaign={row} stayOnPage />
+                  </FormDialog>
+                </div>
               </div>
               <details className="mt-3 group">
                 <summary className="cursor-pointer text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2">
@@ -135,7 +145,7 @@ export function PageLinks({
                       key={row.id}
                       className="flex flex-wrap items-center justify-between gap-3 py-4"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-semibold">{row.label}</p>
                         <p className="mt-1 text-sm text-muted-foreground">
                           {row.isActive ? "Aktif" : "Nonaktif"}
@@ -147,7 +157,7 @@ export function PageLinks({
                           {row.url}
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                         <PageOrderControls
                           kind="link"
                           id={row.id}

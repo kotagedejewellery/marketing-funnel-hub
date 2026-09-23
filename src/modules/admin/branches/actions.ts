@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, max, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -40,7 +40,6 @@ export async function saveBranch(
     whatsappNumber: input.whatsappNumber,
     ctaLabel: input.ctaLabel,
     isActive: input.isActive,
-    sortOrder: input.sortOrder,
   };
   const db = getDatabase();
   const [duplicate] = await db
@@ -64,14 +63,18 @@ export async function saveBranch(
     savedId = await db.transaction(async (tx) => {
       if (input.id) {
         const [current] = await tx
-          .select({ id: branches.id })
+          .select({ id: branches.id, sortOrder: branches.sortOrder })
           .from(branches)
           .where(eq(branches.id, input.id))
           .limit(1);
         if (!current) return "";
         await tx
           .update(branches)
-          .set({ ...values, updatedAt: new Date() })
+          .set({
+            ...values,
+            sortOrder: current.sortOrder,
+            updatedAt: new Date(),
+          })
           .where(eq(branches.id, input.id));
         await tx.insert(auditLogs).values({
           adminId: profile.id,
@@ -82,16 +85,23 @@ export async function saveBranch(
         });
         return input.id;
       }
+      const [lastOrder] = await tx
+        .select({ value: max(branches.sortOrder) })
+        .from(branches);
+      const createValues = {
+        ...values,
+        sortOrder: Number(lastOrder?.value ?? -1) + 1,
+      };
       const [created] = await tx
         .insert(branches)
-        .values(values)
+        .values(createValues)
         .returning({ id: branches.id });
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "create",
         entityType: "branches",
         entityId: created.id,
-        changes: { fields: Object.keys(values) },
+        changes: { fields: Object.keys(createValues) },
       });
       return created.id;
     });

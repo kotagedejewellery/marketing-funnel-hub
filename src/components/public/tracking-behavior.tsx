@@ -3,12 +3,6 @@
 import { useEffect, useRef } from "react";
 
 import { clientEnv } from "@/lib/env/client";
-import {
-  consentChangedEventName,
-  consentCookieName,
-  parseConsentCookie,
-  type ConsentChoice,
-} from "@/modules/tracking/consent";
 import type { CanonicalEvent } from "@/modules/tracking/event";
 
 export type TrackingContext = Pick<
@@ -44,13 +38,13 @@ function loadProviderScript(id: string, src: string) {
   document.head.append(script);
 }
 
-function activateProviders(consent: ConsentChoice) {
+function activateProviders() {
   if (clientEnv.NEXT_PUBLIC_APP_ENV !== "production") return;
   const browser = window as ProviderWindow;
   const metaPixelId = clientEnv.NEXT_PUBLIC_META_PIXEL_ID;
   const gtmContainerId = clientEnv.NEXT_PUBLIC_GTM_CONTAINER_ID;
 
-  if (consent.marketing && metaPixelId) {
+  if (metaPixelId) {
     if (!browser.fbq) {
       const pixel = ((...args: unknown[]) => {
         if (pixel.callMethod) pixel.callMethod(...args);
@@ -68,11 +62,9 @@ function activateProviders(consent: ConsentChoice) {
       );
     }
     browser.fbq("consent", "grant");
-  } else {
-    browser.fbq?.("consent", "revoke");
   }
 
-  if (consent.analytics && gtmContainerId) {
+  if (gtmContainerId) {
     browser.dataLayer ??= [];
     if (!document.getElementById("kgj-gtm")) {
       browser.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
@@ -84,20 +76,10 @@ function activateProviders(consent: ConsentChoice) {
   }
 }
 
-function currentConsent(): ConsentChoice | null {
-  const entry = document.cookie
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${consentCookieName}=`));
-  return parseConsentCookie(entry?.slice(consentCookieName.length + 1));
-}
-
-function sendEvent(event: CanonicalEvent, consent: ConsentChoice) {
-  if (!consent.analytics && !consent.marketing) return;
-
+function sendEvent(event: CanonicalEvent) {
   const browser = window as ProviderWindow;
 
-  if (consent.marketing && typeof browser.fbq === "function") {
+  if (typeof browser.fbq === "function") {
     try {
       browser.fbq(
         "track",
@@ -116,7 +98,7 @@ function sendEvent(event: CanonicalEvent, consent: ConsentChoice) {
     }
   }
 
-  if (consent.analytics && Array.isArray(browser.dataLayer)) {
+  if (Array.isArray(browser.dataLayer)) {
     try {
       browser.dataLayer.push({
         event: {
@@ -181,21 +163,16 @@ export function TrackingBehavior({
     }
 
     function pageView() {
-      const consent = currentConsent();
-      if (consent) activateProviders(consent);
-      if (!consent || (!consent.analytics && !consent.marketing)) return;
+      activateProviders();
       if (pageViewSent.current) return;
       pageViewSent.current = true;
-      sendEvent(
-        {
-          ...baseEvent(),
-          eventName: "PageView",
-          product: null,
-          branch: null,
-          cta: null,
-        },
-        consent,
-      );
+      sendEvent({
+        ...baseEvent(),
+        eventName: "PageView",
+        product: null,
+        branch: null,
+        cta: null,
+      });
     }
 
     function onClick(event: MouseEvent) {
@@ -211,41 +188,30 @@ export function TrackingBehavior({
       const branch = product?.branches.find(
         (item) => item.id === anchor.dataset.trackBranchId,
       );
-      const consent = currentConsent();
-      if (!product || !branch || !consent) return;
+      if (!product || !branch) return;
       if (!viewedProductIds.current.has(product.id)) {
-        sendEvent(
-          {
-            ...baseEvent(),
-            eventName: "ViewContent",
-            product: { id: product.id, category: product.slug },
-            branch: null,
-            cta: null,
-          },
-          consent,
-        );
-        if (consent.analytics || consent.marketing) {
-          viewedProductIds.current.add(product.id);
-        }
-      }
-      sendEvent(
-        {
+        sendEvent({
           ...baseEvent(),
-          eventName: "Contact",
+          eventName: "ViewContent",
           product: { id: product.id, category: product.slug },
-          branch: { id: branch.id, name: branch.name },
-          cta: "whatsapp",
-        },
-        consent,
-      );
+          branch: null,
+          cta: null,
+        });
+        viewedProductIds.current.add(product.id);
+      }
+      sendEvent({
+        ...baseEvent(),
+        eventName: "Contact",
+        product: { id: product.id, category: product.slug },
+        branch: { id: branch.id, name: branch.name },
+        cta: "whatsapp",
+      });
     }
 
     pageView();
-    window.addEventListener(consentChangedEventName, pageView);
     root.addEventListener("click", onClick);
 
     return () => {
-      window.removeEventListener(consentChangedEventName, pageView);
       root.removeEventListener("click", onClick);
     };
   }, [context, products]);

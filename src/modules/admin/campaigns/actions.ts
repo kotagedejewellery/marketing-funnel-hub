@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, isNull, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -60,7 +60,6 @@ export async function saveCampaign(
     activeFrom: input.activeFrom ? parseWibDate(input.activeFrom) : null,
     activeUntil: input.activeUntil ? parseWibDate(input.activeUntil) : null,
     isActive: input.isActive,
-    sortOrder: input.sortOrder,
   };
 
   let savedId: string;
@@ -68,14 +67,22 @@ export async function saveCampaign(
     savedId = await getDatabase().transaction(async (tx) => {
       if (input.id) {
         const [current] = await tx
-          .select({ id: campaigns.id, branchId: campaigns.branchId })
+          .select({
+            id: campaigns.id,
+            branchId: campaigns.branchId,
+            sortOrder: campaigns.sortOrder,
+          })
           .from(campaigns)
           .where(eq(campaigns.id, input.id))
           .limit(1);
         if (!current || current.branchId !== branchId) return "";
         await tx
           .update(campaigns)
-          .set({ ...values, updatedAt: new Date() })
+          .set({
+            ...values,
+            sortOrder: current.sortOrder,
+            updatedAt: new Date(),
+          })
           .where(eq(campaigns.id, input.id));
         await tx.insert(auditLogs).values({
           adminId: profile.id,
@@ -86,16 +93,28 @@ export async function saveCampaign(
         });
         return input.id;
       }
+      const [lastOrder] = await tx
+        .select({ value: max(campaigns.sortOrder) })
+        .from(campaigns)
+        .where(
+          branchId
+            ? eq(campaigns.branchId, branchId)
+            : isNull(campaigns.branchId),
+        );
+      const createValues = {
+        ...values,
+        sortOrder: Number(lastOrder?.value ?? -1) + 1,
+      };
       const [created] = await tx
         .insert(campaigns)
-        .values(values)
+        .values(createValues)
         .returning({ id: campaigns.id });
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "create",
         entityType: "campaigns",
         entityId: created.id,
-        changes: { fields: Object.keys(values) },
+        changes: { fields: Object.keys(createValues) },
       });
       return created.id;
     });

@@ -6,10 +6,6 @@ import { LinkBio } from "@/components/public/link-bio";
 import { serverEnv } from "@/lib/env/server";
 import { loadBranchPublicContent } from "@/modules/public-content/data";
 import {
-  consentCookieName,
-  parseConsentCookie,
-} from "@/modules/tracking/consent";
-import {
   attributionCookieName,
   getTrackingContext,
   parseTrackingContextHeader,
@@ -34,9 +30,6 @@ export default async function BranchPage({
   if (!content) notFound();
 
   const cookieStore = await cookies();
-  const initialConsent = parseConsentCookie(
-    cookieStore.get(consentCookieName)?.value,
-  );
   const trackingContext =
     serverEnv.NEXT_PUBLIC_APP_ENV === "local" ||
     serverEnv.TRACKING_ENABLED === "true"
@@ -49,11 +42,5 @@ export default async function BranchPage({
         ))
       : null;
 
-  return (
-    <LinkBio
-      content={content}
-      initialConsent={initialConsent}
-      trackingContext={trackingContext}
-    />
-  );
+  return <LinkBio content={content} trackingContext={trackingContext} />;
 }

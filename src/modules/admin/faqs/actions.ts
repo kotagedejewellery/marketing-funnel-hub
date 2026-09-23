@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq, isNull } from "drizzle-orm";
+import { asc, eq, isNull, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
@@ -36,7 +36,7 @@ export async function saveFaq(
     };
   }
 
-  const { id, branchId, question, answer, sortOrder, isActive } = parsed.data;
+  const { id, branchId, question, answer, isActive } = parsed.data;
   const db = getDatabase();
   const [branch] = branchId
     ? await db
@@ -54,28 +54,49 @@ export async function saveFaq(
     savedId = await db.transaction(async (tx) => {
       if (id) {
         const [current] = await tx
-          .select({ id: faqs.id, branchId: faqs.branchId })
+          .select({
+            id: faqs.id,
+            branchId: faqs.branchId,
+            sortOrder: faqs.sortOrder,
+          })
           .from(faqs)
           .where(eq(faqs.id, id))
           .limit(1);
         if (!current || current.branchId !== branchId) return "";
         await tx
           .update(faqs)
-          .set({ question, answer, sortOrder, isActive, updatedAt: new Date() })
+          .set({
+            question,
+            answer,
+            sortOrder: current.sortOrder,
+            isActive,
+            updatedAt: new Date(),
+          })
           .where(eq(faqs.id, id));
         await tx.insert(auditLogs).values({
           adminId: profile.id,
           action: "update",
           entityType: "faqs",
           entityId: id,
-          changes: { fields: ["question", "answer", "sortOrder", "isActive"] },
+          changes: { fields: ["question", "answer", "isActive"] },
         });
         return id;
       }
 
+      const [lastOrder] = await tx
+        .select({ value: max(faqs.sortOrder) })
+        .from(faqs)
+        .where(branchId ? eq(faqs.branchId, branchId) : isNull(faqs.branchId));
+      const nextSortOrder = Number(lastOrder?.value ?? -1) + 1;
       const [created] = await tx
         .insert(faqs)
-        .values({ branchId, question, answer, sortOrder, isActive })
+        .values({
+          branchId,
+          question,
+          answer,
+          sortOrder: nextSortOrder,
+          isActive,
+        })
         .returning({ id: faqs.id });
       await tx.insert(auditLogs).values({
         adminId: profile.id,

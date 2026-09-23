@@ -45,6 +45,7 @@ export function CampaignForm({
         name="branchId"
         value={campaign?.branchId ?? branchId ?? ""}
       />
+      <input type="hidden" name="sortOrder" value={campaign?.sortOrder ?? 0} />
       <div>
         <p className="text-sm leading-6 text-muted-foreground">
           Nama internal membantu pengelolaan; judul, deskripsi, dan gambar
@@ -134,26 +135,6 @@ export function CampaignForm({
           />
           <FieldError message={state.errors.activeUntil} />
         </div>
-      </div>
-      <div>
-        <label htmlFor="sortOrder" className="font-medium">
-          Urutan prioritas
-        </label>
-        <input
-          id="sortOrder"
-          name="sortOrder"
-          type="number"
-          min={0}
-          max={2147483647}
-          defaultValue={campaign?.sortOrder ?? 0}
-          className={inputClass}
-          required
-        />
-        <p className="mt-2 text-sm text-muted-foreground">
-          Angka lebih kecil tampil lebih dahulu jika beberapa konten memenuhi
-          jadwal.
-        </p>
-        <FieldError message={state.errors.sortOrder} />
       </div>
       <label className="flex min-h-11 items-center gap-3 border-t border-border pt-6 font-medium">
         <input

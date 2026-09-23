@@ -27,9 +27,11 @@ status; the summary below records the earlier foundation milestones only.
 - Sprint 1 database schema: applied and verified locally; live migration was
   reported successful by the owner but has not been independently checked here
 - Public Link Bio and desktop-oriented responsive CMS: implemented locally; owner review remains
-- P0 application implementation: complete locally. The consented public funnel
+- P0 application implementation: complete locally. The public funnel
   (product → branch → WhatsApp, `PageView`/`ViewContent`/`Contact`) passed one
-  focused browser check on 21 September 2026; `pnpm typecheck` passed.
+  focused browser check on 21 September 2026 under the earlier consent flow;
+  the current automatic-tracking policy remains unverified. `pnpm typecheck`
+  passed before this policy change.
 - Production deployment, provider activation, WAF, retention scheduling, and
   live verification remain owner-managed and have not been verified here.
 

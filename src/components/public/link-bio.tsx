@@ -1,7 +1,5 @@
 import type { PublicContent } from "@/modules/public-content/data";
-import type { ConsentChoice } from "@/modules/tracking/consent";
 
-import { ConsentControl } from "./consent-control";
 import { PublicImage } from "./public-image";
 import { TrackingBehavior, type TrackingContext } from "./tracking-behavior";
 
@@ -27,12 +25,10 @@ function WhatsAppIcon() {
 
 export function LinkBio({
   content,
-  initialConsent = null,
   trackingContext = null,
   preview = false,
 }: {
   content: PublicContent;
-  initialConsent?: ConsentChoice | null;
   trackingContext?: TrackingContext | null;
   preview?: boolean;
 }) {
@@ -60,7 +56,6 @@ export function LinkBio({
         Lewati ke konten
       </a>
 
-      {!preview && <ConsentControl initialChoice={initialConsent} />}
       {!preview && trackingContext && (
         <TrackingBehavior
           context={trackingContext}
@@ -163,20 +158,41 @@ export function LinkBio({
               if (content.gallery.length === 0) return null;
               const visibleGallery = content.gallery.slice(0, 6);
               const remainingGallery = content.gallery.slice(6);
-              const galleryClass =
-                content.gallery.length === 1
-                  ? "mx-auto grid max-w-sm grid-cols-1 gap-3 sm:gap-4"
-                  : "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4";
+              const galleryClass = (itemCount: number) => {
+                if (itemCount === 1) {
+                  return "mx-auto grid max-w-sm grid-cols-1 gap-3 sm:gap-4";
+                }
+                if (itemCount === 2) {
+                  return "grid grid-cols-2 gap-3 sm:gap-4";
+                }
+                return "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0";
+              };
+              const galleryImageSizes = (itemCount: number) => {
+                if (itemCount === 1) {
+                  return "(min-width: 640px) 384px, calc(100vw - 32px)";
+                }
+                if (itemCount === 2) {
+                  return "(min-width: 768px) 352px, calc((100vw - 44px) / 2)";
+                }
+                return "(min-width: 640px) 224px, 82vw";
+              };
               const renderGalleryItems = (items: typeof content.gallery) =>
                 items.map((item) => (
-                  <li key={item.id}>
-                    <figure className="overflow-hidden rounded-2xl bg-card">
+                  <li
+                    key={item.id}
+                    className={
+                      items.length >= 3
+                        ? "w-[82%] shrink-0 snap-start sm:w-auto"
+                        : undefined
+                    }
+                  >
+                    <figure className="h-full overflow-hidden rounded-2xl bg-card">
                       <PublicImage
                         src={item.imageUrl}
                         alt={item.altText}
                         width={1080}
                         height={1350}
-                        sizes="(min-width: 640px) 224px, calc((100vw - 44px) / 2)"
+                        sizes={galleryImageSizes(items.length)}
                         className="aspect-[4/5] w-full object-cover"
                         unoptimized={bypassImageOptimization(item.imageUrl)}
                       />
@@ -210,9 +226,23 @@ export function LinkBio({
                   >
                     Galeri produk
                   </h2>
+                  {visibleGallery.length >= 3 && (
+                    <p
+                      id="gallery-swipe-hint"
+                      className="mt-2 text-center text-xs text-muted-foreground sm:hidden"
+                    >
+                      Geser untuk melihat koleksi lainnya.
+                    </p>
+                  )}
                   <ul
                     aria-label="Galeri produk"
-                    className={`mt-7 ${galleryClass}`}
+                    aria-describedby={
+                      visibleGallery.length >= 3
+                        ? "gallery-swipe-hint"
+                        : undefined
+                    }
+                    tabIndex={visibleGallery.length >= 3 ? 0 : undefined}
+                    className={`${visibleGallery.length >= 3 ? "mt-5 focus-visible:outline-2 focus-visible:outline-offset-2" : "mt-7"} ${galleryClass(visibleGallery.length)}`}
                   >
                     {renderGalleryItems(visibleGallery)}
                   </ul>
@@ -228,7 +258,8 @@ export function LinkBio({
                       </summary>
                       <ul
                         aria-label="Galeri produk tambahan"
-                        className={`mt-5 ${galleryClass}`}
+                        tabIndex={remainingGallery.length >= 3 ? 0 : undefined}
+                        className={`mt-5 ${remainingGallery.length >= 3 ? "focus-visible:outline-2 focus-visible:outline-offset-2" : ""} ${galleryClass(remainingGallery.length)}`}
                       >
                         {renderGalleryItems(remainingGallery)}
                       </ul>

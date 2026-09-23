@@ -42,7 +42,6 @@ export async function saveProduct(
     slug: input.slug,
     description: input.description,
     isActive: input.isActive,
-    sortOrder: input.sortOrder,
   };
   const db = getDatabase();
   const [duplicate] = await db
@@ -61,14 +60,18 @@ export async function saveProduct(
   try {
     saved = await db.transaction(async (tx) => {
       const [current] = await tx
-        .select({ id: products.id })
+        .select({ id: products.id, sortOrder: products.sortOrder })
         .from(products)
         .where(eq(products.id, input.id))
         .limit(1);
       if (!current) return false;
       await tx
         .update(products)
-        .set({ ...values, updatedAt: new Date() })
+        .set({
+          ...values,
+          sortOrder: current.sortOrder,
+          updatedAt: new Date(),
+        })
         .where(eq(products.id, input.id));
       await tx.insert(auditLogs).values({
         adminId: profile.id,

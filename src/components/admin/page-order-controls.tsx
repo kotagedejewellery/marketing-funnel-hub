@@ -12,12 +12,14 @@ export function PageOrderControls({
   index,
   count,
 }: {
-  kind: "link" | "faq" | "gallery";
+  kind: "link" | "faq" | "gallery" | "campaign" | "branch";
   id: string;
   branchId?: string | null;
   index: number;
   count: number;
 }) {
+  const upLabel = kind === "campaign" ? "Naikkan prioritas" : "Naik";
+  const downLabel = kind === "campaign" ? "Turunkan prioritas" : "Turun";
   const [state, action, pending] = useActionState(movePageItem, {
     message: "",
     ok: false,
@@ -34,7 +36,7 @@ export function PageOrderControls({
         disabled={pending || index === 0}
         className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
       >
-        Naik
+        {upLabel}
       </button>
       <button
         type="submit"
@@ -43,7 +45,7 @@ export function PageOrderControls({
         disabled={pending || index === count - 1}
         className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
       >
-        Turun
+        {downLabel}
       </button>
       <FormFeedback state={state} pending={pending} />
     </form>

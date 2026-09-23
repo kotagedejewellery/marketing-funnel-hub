@@ -171,6 +171,7 @@ Marketing Automation Platform
 ```
 
 If a task expands into excluded scope:
+
 1. do not implement it automatically,
 2. flag it as a scope change,
 3. recommend P1/P2 backlog placement.
@@ -180,6 +181,7 @@ If a task expands into excluded scope:
 ## 6. Public UX Rules
 
 The public Link Bio must remain:
+
 - mobile-first,
 - fast,
 - simple,
@@ -204,8 +206,10 @@ Do not turn P0 into a large marketing website.
 
 Do not add mandatory forms, confirmation pages, or extra screens before WhatsApp solely for tracking.
 
-Primary WhatsApp CTA P0 is product-scoped. Consent controls must be accessible but
-must never become a mandatory confirmation step before WhatsApp.
+Primary WhatsApp CTA P0 is product-scoped. Per owner decision on 23 September
+2026, tracking has no visitor-facing consent control and is automatically allowed
+whenever the environment tracking gate is active. WhatsApp must remain independent
+from tracking success.
 
 ---
 
@@ -323,11 +327,11 @@ ViewContent
 Contact
 ```
 
-| Event | Meaning |
-|---|---|
-| PageView | Visitor opens the Link Bio |
+| Event       | Meaning                        |
+| ----------- | ------------------------------ |
+| PageView    | Visitor opens the Link Bio     |
 | ViewContent | Visitor shows product interest |
-| Contact | Visitor clicks a WhatsApp CTA |
+| Contact     | Visitor clicks a WhatsApp CTA  |
 
 Do not create event names per button, branch, or product.
 
@@ -502,10 +506,12 @@ in a signed first-party session cookie. Do not implement cross-device identity.
 
 P0 internal tracking is anonymous/pseudonymous.
 
-Meta Pixel, Meta CAPI, GTM, GA4, and internal anonymous events follow approved
-consent state. Without applicable consent they remain disabled and WhatsApp still
-works. `_fbp`, `_fbc`, IP, and user-agent may be forwarded to Meta only when allowed;
-they are transport-only and must not be stored in events or ordinary logs.
+Meta Pixel, Meta CAPI, GTM, GA4, and internal anonymous events are automatically
+active when `TRACKING_ENABLED=true` in production; local internal tracking remains
+available for development. There is no visitor-facing consent choice. The owner
+must keep the public privacy notice aligned before production activation, and
+WhatsApp still works if tracking fails. `_fbp`, `_fbc`, IP, and user-agent are
+transport-only for Meta and must not be stored in events or ordinary logs.
 
 Allowed:
 
@@ -594,6 +600,7 @@ Use migrations for schema changes.
 Never silently modify production schema outside the migration workflow.
 
 Normalized P0 data rules:
+
 - `products` represents customer-facing product categories/needs, not SKUs,
 - `products.slug` is the canonical `product_category`,
 - `site_settings` uses fixed ID `00000000-0000-0000-0000-000000000001`,
@@ -748,6 +755,7 @@ technical_admin
 Do not build enterprise RBAC unless explicitly requested.
 
 Capabilities:
+
 - `admin`: content, campaign, product, branch, assignment, link, settings, media,
   and internal tracking validation.
 - `technical_admin`: all admin capabilities plus admin-profile provisioning/
@@ -817,6 +825,7 @@ Do not store binary images in relational tables.
 Public page has higher performance priority than Admin CMS.
 
 Prefer:
+
 - Server Components by default,
 - minimal client JavaScript,
 - optimized images,
@@ -914,6 +923,7 @@ Use strict TypeScript.
 Avoid `any` unless there is a documented integration reason.
 
 Prefer inferred types from:
+
 - Drizzle,
 - Zod,
 - domain types.
@@ -953,6 +963,7 @@ sanitized route/context
 ```
 
 Do not log:
+
 - secrets,
 - access tokens,
 - unnecessary user data.
@@ -973,6 +984,7 @@ Use Vitest for unit/module tests, Testing Library for React interaction, Playwri
 for browser/E2E, and clean local Supabase/PostgreSQL migrations for DB integration.
 
 ### Domain
+
 - Product ↔ Branch resolution
 - active/inactive filtering
 - CTA fallback logic
@@ -980,6 +992,7 @@ for browser/E2E, and clean local Supabase/PostgreSQL migrations for DB integrati
 - campaign active period logic
 
 ### Tracking
+
 - UTM persistence
 - PageView payload
 - ViewContent payload
@@ -987,10 +1000,11 @@ for browser/E2E, and clean local Supabase/PostgreSQL migrations for DB integrati
 - event_id idempotency
 - Meta browser/server same event ID
 - equivalent and conflicting duplicate event IDs
-- consent-allowed and consent-denied behavior
+- tracking-enabled and tracking-disabled environment behavior
 - WhatsApp navigation with blocked/failed tracking
 
 ### Admin
+
 - auth protection
 - role capability enforcement
 - RLS/direct domain-access denial
@@ -998,6 +1012,7 @@ for browser/E2E, and clean local Supabase/PostgreSQL migrations for DB integrati
 - CRUD behavior
 
 ### Public
+
 - active product display
 - branch CTA display
 - WhatsApp URL generation
@@ -1068,6 +1083,7 @@ Do not begin P1/P2 while P0 launch gate is failing.
 ## 40. Agent Working Procedure
 
 Before coding:
+
 1. Read `AGENTS.md`.
 2. Read the three source-of-truth documents in `docs/` relevant to the task.
 3. Identify the relevant source-of-truth document.
@@ -1076,6 +1092,7 @@ Before coding:
 6. Identify affected module(s), schema, API, tracking, and tests.
 
 During coding:
+
 1. Make the smallest coherent change.
 2. Follow existing conventions.
 3. Preserve module boundaries.
@@ -1084,6 +1101,7 @@ During coding:
 6. Avoid unrelated refactors.
 
 After coding:
+
 1. State the proposed verification scope (specific tests/checks and reason) and
    obtain owner confirmation before running any tests.
 2. Run only the approved, relevant checks; defer feature-level testing until the
@@ -1097,6 +1115,7 @@ After coding:
 ## 41. Change Discipline
 
 Do not:
+
 - rename canonical events casually,
 - change event semantics casually,
 - change DB schema without migration,
@@ -1113,6 +1132,7 @@ If a required change conflicts with a locked document, flag the conflict before 
 ## 42. Dependency Discipline
 
 Before adding a dependency:
+
 1. verify the existing stack cannot solve the problem cleanly,
 2. prefer native Next.js/React/Supabase/Drizzle/Zod capabilities,
 3. avoid dependencies for trivial helpers,

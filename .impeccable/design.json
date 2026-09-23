@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-23T12:00:00+07:00",
+  "generatedAt": "2026-09-23T17:01:56+07:00",
   "title": "Design System: Kotagede Jewellery Link Bio and Admin CMS",
   "extensions": {
     "colorMeta": {
@@ -241,7 +241,7 @@
       "name": "Gallery Card",
       "kind": "card",
       "refersTo": "surface-card",
-      "description": "Independent 4:5 branch-gallery image with optional editorial caption.",
+      "description": "Independent 4:5 branch-gallery image with optional editorial caption, used in a static grid or native mobile scroll-snap rail.",
       "html": "<figure class=\"ds-gallery-card\"><div class=\"ds-gallery-media\" role=\"img\" aria-label=\"Contoh koleksi cincin\"></div><figcaption class=\"ds-gallery-caption\"><strong>Koleksi cincin</strong><span>Detail visual cabang</span></figcaption></figure>",
       "css": ".ds-gallery-card { overflow:hidden; margin:0; border-radius:1rem; background:#fffdf9; color:#28211c; font-family:var(--font-body, Manrope),ui-sans-serif,system-ui,sans-serif; } .ds-gallery-media { aspect-ratio:4/5; background:linear-gradient(145deg,#eee5d8,#ded2c1); } .ds-gallery-caption { display:flex; flex-direction:column; gap:0.25rem; padding:1rem; } .ds-gallery-caption strong { font-family:var(--font-display, 'Bricolage Grotesque'),ui-sans-serif,system-ui,sans-serif; font-weight:700; } .ds-gallery-caption span { color:#675c51; font-size:0.875rem; line-height:1.5; }"
     },
@@ -268,6 +268,13 @@
       "css": ".ds-quick-link { display:flex; min-height:2.75rem; align-items:center; justify-content:space-between; border-bottom:1px solid #ded2c1; color:#28211c; font-family:var(--font-body, Manrope),ui-sans-serif,system-ui,sans-serif; font-size:0.875rem; font-weight:500; text-decoration:none; } .ds-quick-link:hover { color:#845422; } .ds-quick-link:focus-visible { outline:2px solid #845422; outline-offset:2px; }"
     },
     {
+      "name": "Admin Order Controls",
+      "kind": "control",
+      "description": "Compact list actions replace numeric order inputs; new items append automatically and campaigns use explicit priority wording.",
+      "html": "<div class=\"ds-order-controls\"><button type=\"button\" disabled>Naik</button><button type=\"button\">Turun</button></div>",
+      "css": ".ds-order-controls { display:flex; align-items:center; justify-content:flex-end; gap:0.5rem; } .ds-order-controls button { min-height:2.75rem; border:1px solid #ded2c1; border-radius:9999px; background:transparent; padding:0 0.75rem; color:#28211c; font-family:var(--font-body, Manrope),ui-sans-serif,system-ui,sans-serif; font-size:0.875rem; } .ds-order-controls button:hover:not(:disabled) { background:#f3dfb9; } .ds-order-controls button:focus-visible { outline:2px solid #845422; outline-offset:2px; } .ds-order-controls button:disabled { opacity:0.4; }"
+    },
+    {
       "name": "Admin Navigation Rail",
       "kind": "nav",
       "description": "Full-height dark icon rail with concave viewport-edge cuts and a contained ivory active state.",
@@ -282,7 +289,10 @@
       "Shared warm palette across public and admin surfaces.",
       "Unequal bento panels, softly rounded cards, and pill-shaped actions.",
       "Branch gallery imagery is independent from product WhatsApp actions.",
+      "Three or more gallery images use a dependency-free mobile scroll-snap rail and return to a grid at the sm breakpoint.",
       "Shared product types are managed contextually inside each branch's WhatsApp-button panel.",
+      "List ordering uses explicit move controls rather than numeric fields; new items append automatically.",
+      "The public flow renders no consent panel; the footer privacy link remains the disclosure route.",
       "State motion is light, with reduced-motion fallbacks."
     ],
     "rules": [],

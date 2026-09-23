@@ -45,9 +45,11 @@ export function LinkForm({
       />
       <input type="hidden" name="platform" value={link?.platform ?? ""} />
       <input type="hidden" name="iconKey" value={link?.iconKey ?? ""} />
+      <input type="hidden" name="sortOrder" value={link?.sortOrder ?? 0} />
       <div>
         <p className="text-sm leading-6 text-muted-foreground">
-          Tentukan label, tujuan, dan posisi tautan pada halaman publik.
+          Tentukan label, tujuan, dan jenis tautan. Posisi diatur dari daftar
+          setelah tautan disimpan.
         </p>
       </div>
       <div>
@@ -94,22 +96,6 @@ export function LinkForm({
           <option value="social">Sosial</option>
         </select>
         <FieldError message={state.errors.linkType} />
-      </div>
-      <div>
-        <label htmlFor="sortOrder" className="font-medium">
-          Urutan tampil
-        </label>
-        <input
-          id="sortOrder"
-          name="sortOrder"
-          type="number"
-          min={0}
-          max={2147483647}
-          defaultValue={link?.sortOrder ?? 0}
-          className={inputClass}
-          required
-        />
-        <FieldError message={state.errors.sortOrder} />
       </div>
       <label className="flex min-h-11 items-center gap-3 border-t border-border pt-6 font-medium">
         <input

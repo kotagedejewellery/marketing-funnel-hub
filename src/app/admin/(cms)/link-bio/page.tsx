@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BranchForm } from "@/components/admin/branch-form";
 import { BranchPublicUrl } from "@/components/admin/branch-public-url";
 import { FormDialog } from "@/components/admin/form-dialog";
+import { PageOrderControls } from "@/components/admin/page-order-controls";
 import { serverEnv } from "@/lib/env/server";
 import { getAllBranches } from "@/modules/admin/branches/data";
 
@@ -21,7 +22,8 @@ export default async function LinkBioPagesPage({
           <h1 className="font-serif text-4xl">Halaman Link Bio</h1>
           <p className="mt-3 text-muted-foreground">
             Satu Link Bio untuk setiap cabang. Pilih cabang untuk mengatur
-            konten dan melihat pratinjaunya.
+            konten dan melihat pratinjaunya. Gunakan Naik/Turun untuk mengatur
+            urutan cabang di halaman publik.
           </p>
         </div>
         <FormDialog
@@ -35,7 +37,7 @@ export default async function LinkBioPagesPage({
         </FormDialog>
       </div>
       <ul className="mt-8 grid gap-4 xl:grid-cols-2">
-        {branches.map((branch) => (
+        {branches.map((branch, index) => (
           <li key={branch.id} className="rounded-2xl bg-card p-6 sm:p-8">
             <p className="text-sm font-semibold text-muted-foreground">
               Halaman cabang · {branch.isActive ? "Aktif" : "Nonaktif"}
@@ -51,19 +53,29 @@ export default async function LinkBioPagesPage({
               ).toString()}
               isActive={branch.isActive}
             />
-            <Link
-              href={`/admin/branches/${branch.id}/link-bio`}
-              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              Kelola halaman
-            </Link>
-            <Link
-              href={`/admin/preview/link-bio/${branch.id}`}
-              target="_blank"
-              className="ml-4 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4"
-            >
-              Pratinjau
-            </Link>
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-4">
+                <Link
+                  href={`/admin/branches/${branch.id}/link-bio`}
+                  className="inline-flex min-h-11 items-center rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  Kelola halaman
+                </Link>
+                <Link
+                  href={`/admin/preview/link-bio/${branch.id}`}
+                  target="_blank"
+                  className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4"
+                >
+                  Pratinjau
+                </Link>
+              </div>
+              <PageOrderControls
+                kind="branch"
+                id={branch.id}
+                index={index}
+                count={branches.length}
+              />
+            </div>
           </li>
         ))}
       </ul>

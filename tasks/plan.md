@@ -130,11 +130,12 @@ The public Link Bio, CMS, product–branch WhatsApp flow, canonical tracking,
 admin-profile management, and bounded event-retention endpoint are implemented.
 The owner designated the local funnel check as the final agent-owned P0 step.
 It passed on 21 September 2026: the active product → branch → WhatsApp CTA
-and consented `PageView`/`ViewContent`/`Contact` were checked in one browser
-flow. P0 application implementation is therefore closed locally.
+and `PageView`/`ViewContent`/`Contact` were checked in one browser flow under
+the consent implementation used at that time. The automatic-tracking policy
+approved on 23 September 2026 still needs focused verification.
 
 Live release remains a separate owner-managed activity: resolve the Vercel
-Hobby/private-repository deploy block, approve domain/content/consent and
+Hobby/private-repository deploy block, approve domain/content/privacy policy and
 provider setup, configure live Auth/Storage/environment/WAF/retention, then
 deploy and verify the live funnel. None of those live actions or checks are
 claimed complete by the local P0 implementation closeout.
@@ -155,7 +156,7 @@ contract is in the three source-of-truth docs; implementation is in progress.
 Marketing can publish `/{branch-slug}` using the same KGJ template with
 branch-specific text, logo, campaign, links, section order, and assigned-product
 display overrides. Products/categories, branch phone numbers, auth roles,
-consent, and the three event names remain shared/canonical. No page builder,
+environment tracking gate, and the three event names remain shared/canonical. No page builder,
 per-branch app/database, redirect registry, new provider, or CRM scope. Existing
 `/b/{branch-slug}` links redirect permanently to the direct URL.
 

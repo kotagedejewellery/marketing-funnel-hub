@@ -8,6 +8,7 @@ import { getDatabase } from "@/lib/db/client";
 import {
   auditLogs,
   branches,
+  campaigns,
   faqs,
   galleryItems,
   links,
@@ -16,12 +17,29 @@ import { requireAdmin } from "@/modules/admin/access";
 
 type ActionState = { message: string; ok?: boolean };
 
-const moveSchema = z.object({
-  kind: z.enum(["link", "faq", "gallery"]),
-  id: z.uuid(),
-  branchId: z.union([z.uuid(), z.literal("")]),
-  direction: z.enum(["up", "down"]),
-});
+const moveSchema = z
+  .object({
+    kind: z.enum(["link", "faq", "gallery", "campaign", "branch"]),
+    id: z.uuid(),
+    branchId: z.union([z.uuid(), z.literal("")]),
+    direction: z.enum(["up", "down"]),
+  })
+  .superRefine(({ kind, branchId }, context) => {
+    if (kind === "branch" && branchId) {
+      context.addIssue({
+        code: "custom",
+        path: ["branchId"],
+        message: "Pengurutan cabang tidak memakai scope cabang.",
+      });
+    }
+    if (kind === "gallery" && !branchId) {
+      context.addIssue({
+        code: "custom",
+        path: ["branchId"],
+        message: "Galeri wajib memiliki scope cabang.",
+      });
+    }
+  });
 
 export async function movePageItem(
   _previous: ActionState,
@@ -73,7 +91,7 @@ export async function movePageItem(
           .from(faqs)
           .where(branchId ? eq(faqs.branchId, branchId) : isNull(faqs.branchId))
           .orderBy(asc(faqs.sortOrder), asc(faqs.id));
-      } else {
+      } else if (kind === "gallery") {
         rows = branchId
           ? await tx
               .select({ id: galleryItems.id })
@@ -81,6 +99,25 @@ export async function movePageItem(
               .where(eq(galleryItems.branchId, branchId))
               .orderBy(asc(galleryItems.sortOrder), asc(galleryItems.id))
           : [];
+      } else if (kind === "campaign") {
+        rows = await tx
+          .select({ id: campaigns.id })
+          .from(campaigns)
+          .where(
+            branchId
+              ? eq(campaigns.branchId, branchId)
+              : isNull(campaigns.branchId),
+          )
+          .orderBy(asc(campaigns.sortOrder), asc(campaigns.id));
+      } else {
+        rows = await tx
+          .select({ id: branches.id })
+          .from(branches)
+          .orderBy(
+            asc(branches.sortOrder),
+            asc(branches.name),
+            asc(branches.id),
+          );
       }
       const index = rows.findIndex((row) => row.id === id);
       const other = direction === "up" ? index - 1 : index + 1;
@@ -97,18 +134,36 @@ export async function movePageItem(
             .update(faqs)
             .set({ sortOrder: position, updatedAt: new Date() })
             .where(eq(faqs.id, row.id));
-        } else {
+        } else if (kind === "gallery") {
           await tx
             .update(galleryItems)
             .set({ sortOrder: position, updatedAt: new Date() })
             .where(eq(galleryItems.id, row.id));
+        } else if (kind === "campaign") {
+          await tx
+            .update(campaigns)
+            .set({ sortOrder: position, updatedAt: new Date() })
+            .where(eq(campaigns.id, row.id));
+        } else {
+          await tx
+            .update(branches)
+            .set({ sortOrder: position, updatedAt: new Date() })
+            .where(eq(branches.id, row.id));
         }
       }
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "update",
         entityType:
-          kind === "link" ? "links" : kind === "faq" ? "faqs" : "gallery_items",
+          kind === "link"
+            ? "links"
+            : kind === "faq"
+              ? "faqs"
+              : kind === "gallery"
+                ? "gallery_items"
+                : kind === "campaign"
+                  ? "campaigns"
+                  : "branches",
         entityId: id,
         changes: { field: "sortOrder", branchId: branchId || null },
       });
@@ -119,12 +174,19 @@ export async function movePageItem(
     return { message: "Urutan gagal disimpan. Coba lagi." };
   }
 
-  if (branch) {
+  if (kind === "branch") {
+    revalidatePath("/");
+    revalidatePath("/admin/link-bio");
+  } else if (branch) {
     revalidatePath(`/${branch.slug}`);
     revalidatePath(`/admin/branches/${branchId}/link-bio`);
   } else {
-    revalidatePath("/admin/settings");
-    if (kind === "faq") revalidatePath("/[slug]", "page");
+    if (kind === "faq") {
+      revalidatePath("/admin/settings");
+      revalidatePath("/[slug]", "page");
+    }
+    if (kind === "link") revalidatePath("/admin/links");
+    if (kind === "campaign") revalidatePath("/admin/campaigns");
   }
   return { message: "Urutan diperbarui.", ok: true };
 }

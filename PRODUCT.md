@@ -16,7 +16,7 @@ web
 
 ## Product Purpose
 
-Replace Taplink with an owned KGJ Link Bio that connects product interest to the correct branch WhatsApp while preserving consent-aware, anonymous campaign attribution. P0 succeeds when visitors can move from the public page to a relevant product and direct WhatsApp contact without tracking adding friction.
+Replace Taplink with an owned KGJ Link Bio that connects product interest to the correct branch WhatsApp while preserving pseudonymous campaign attribution. P0 succeeds when visitors can move from the public page to a relevant product and direct WhatsApp contact without tracking adding friction.
 
 ## Positioning
 
@@ -30,9 +30,9 @@ The product combines a KGJ-owned public destination, branch-specific product con
 
 ## Capabilities and Constraints
 
-- P0 covers the Link Bio, CMS, product–branch mapping, branch WhatsApp CTA and message, consent-aware PageView/ViewContent/Contact tracking, UTM persistence, and audit logs.
+- P0 covers the Link Bio, CMS, product–branch mapping, branch WhatsApp CTA and message, automatically enabled PageView/ViewContent/Contact tracking when the environment gate is active, UTM persistence, and audit logs.
 - One product may belong to several branches; branch selection occurs at the WhatsApp CTA, not as another ViewContent event.
-- Public contact remains product-scoped and direct. Tracking or consent controls must not become a mandatory step before WhatsApp.
+- Public contact remains product-scoped and direct. No visitor-facing consent control is rendered; tracking remains best-effort and must not become a step before WhatsApp.
 - The redesign may change presentation and interactions but must preserve P0 behavior, admin permissions, event semantics, and existing business copy unless separately approved.
 - CRM, leads, appointments, purchases, revenue, and advanced attribution are outside P0.
 
@@ -51,7 +51,7 @@ The product combines a KGJ-owned public destination, branch-specific product con
 1. Keep the visitor's path from interest to WhatsApp short and reliable.
 2. Make routine Marketing edits understandable without exposing technical secrets.
 3. Show only truthful content and data already available in P0.
-4. Preserve consent, accessibility, and tracking semantics as presentation changes.
+4. Preserve privacy disclosure, accessibility, and tracking semantics as presentation changes.
 
 ## Accessibility & Inclusion
 

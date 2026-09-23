@@ -27,6 +27,7 @@ export function ProductForm({ product }: { product: Product }) {
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="id" value={product.id} />
+      <input type="hidden" name="sortOrder" value={product.sortOrder} />
       <div>
         <label htmlFor="name" className="font-medium">
           Nama produk / kebutuhan
@@ -70,22 +71,6 @@ export function ProductForm({ product }: { product: Product }) {
           maxLength={2000}
         />
         <FieldError message={state.errors.description} />
-      </div>
-      <div>
-        <label htmlFor="sortOrder" className="font-medium">
-          Urutan tampil
-        </label>
-        <input
-          id="sortOrder"
-          name="sortOrder"
-          type="number"
-          min={0}
-          max={2147483647}
-          defaultValue={product.sortOrder}
-          className={inputClass}
-          required
-        />
-        <FieldError message={state.errors.sortOrder} />
       </div>
       <label className="flex min-h-11 items-center gap-3 font-medium">
         <input

@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -59,7 +59,6 @@ export async function saveLink(
     platform: input.platform,
     iconKey: input.iconKey,
     isActive: input.isActive,
-    sortOrder: input.sortOrder,
   };
 
   let savedId: string;
@@ -67,14 +66,22 @@ export async function saveLink(
     savedId = await getDatabase().transaction(async (tx) => {
       if (input.id) {
         const [current] = await tx
-          .select({ id: links.id, branchId: links.branchId })
+          .select({
+            id: links.id,
+            branchId: links.branchId,
+            sortOrder: links.sortOrder,
+          })
           .from(links)
           .where(eq(links.id, input.id))
           .limit(1);
         if (!current || current.branchId !== branchId) return "";
         await tx
           .update(links)
-          .set({ ...values, updatedAt: new Date() })
+          .set({
+            ...values,
+            sortOrder: current.sortOrder,
+            updatedAt: new Date(),
+          })
           .where(eq(links.id, input.id));
         await tx.insert(auditLogs).values({
           adminId: profile.id,
@@ -85,16 +92,27 @@ export async function saveLink(
         });
         return input.id;
       }
+      const scope = branchId
+        ? eq(links.branchId, branchId)
+        : isNull(links.branchId);
+      const [lastOrder] = await tx
+        .select({ value: max(links.sortOrder) })
+        .from(links)
+        .where(and(scope, eq(links.linkType, input.linkType)));
+      const createValues = {
+        ...values,
+        sortOrder: Number(lastOrder?.value ?? -1) + 1,
+      };
       const [created] = await tx
         .insert(links)
-        .values(values)
+        .values(createValues)
         .returning({ id: links.id });
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "create",
         entityType: "links",
         entityId: created.id,
-        changes: { fields: Object.keys(values) },
+        changes: { fields: Object.keys(createValues) },
       });
       return created.id;
     });

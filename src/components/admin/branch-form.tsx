@@ -27,6 +27,7 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="id" value={branch?.id ?? ""} />
+      <input type="hidden" name="sortOrder" value={branch?.sortOrder ?? 0} />
       <div>
         <label htmlFor="name" className="font-medium">
           Nama cabang
@@ -102,22 +103,6 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
           untuk mengikuti Pengaturan Bersama.
         </p>
         <FieldError message={state.errors.ctaLabel} />
-      </div>
-      <div>
-        <label htmlFor="sortOrder" className="font-medium">
-          Urutan di daftar cabang
-        </label>
-        <input
-          id="sortOrder"
-          name="sortOrder"
-          type="number"
-          min={0}
-          max={2147483647}
-          defaultValue={branch?.sortOrder ?? 0}
-          className={inputClass}
-          required
-        />
-        <FieldError message={state.errors.sortOrder} />
       </div>
       <label className="flex min-h-11 items-center gap-3 font-medium">
         <input
