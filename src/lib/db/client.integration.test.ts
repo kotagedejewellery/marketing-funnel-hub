@@ -28,7 +28,7 @@ describe("Drizzle database client", () => {
     }
   });
 
-  it("has the ten approved P0 tables in the local public schema", async () => {
+  it("has the ten approved P0 tables and the FAQ extension table", async () => {
     const connection = createDatabaseClient(process.env.DATABASE_URL);
 
     try {
@@ -38,10 +38,11 @@ describe("Drizzle database client", () => {
         where schemaname = 'public'
           and tablename in (
             'admin_profiles', 'site_settings', 'content_sections', 'campaigns',
-            'products', 'branches', 'product_branches', 'links', 'events', 'audit_logs'
+            'products', 'branches', 'product_branches', 'links', 'faqs',
+            'events', 'audit_logs'
           )
       `);
-      expect(rows[0]?.table_count).toBe(10);
+      expect(rows[0]?.table_count).toBe(11);
     } finally {
       await connection.close();
     }
@@ -61,7 +62,7 @@ describe("Drizzle database client", () => {
           and not has_table_privilege('anon', table_info.oid, 'SELECT')
           and not has_table_privilege('authenticated', table_info.oid, 'SELECT')
       `);
-      expect(rows[0]?.protected_tables).toBe(10);
+      expect(rows[0]?.protected_tables).toBe(11);
     } finally {
       await connection.close();
     }
