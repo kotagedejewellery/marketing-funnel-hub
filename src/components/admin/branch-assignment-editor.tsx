@@ -4,7 +4,6 @@ import { useActionState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
-import { MediaUploadField } from "@/components/admin/media-upload-field";
 import { saveProductAssignments } from "@/modules/admin/assignments/actions";
 
 type Assignment = {
@@ -17,7 +16,6 @@ type Assignment = {
   ctaLabel: string;
   displayName: string;
   description: string;
-  imageUrl: string | null;
   whatsappMessageTemplate: string;
   resolvedLabel: string;
   resolvedMessage: string;
@@ -271,27 +269,6 @@ export function BranchAssignmentEditor({
               </button>
             </form>
           </FormDialog>
-          {assignments.some((row) => row.assignmentId) && (
-            <div className="mt-8">
-              <p className="mb-4 text-sm text-muted-foreground">
-                Tanpa gambar khusus, halaman cabang memakai gambar produk utama.
-                Simpan penugasan baru dahulu sebelum mengunggah gambarnya.
-              </p>
-              <div className="grid gap-4 lg:grid-cols-2">
-                {assignments.map((row) =>
-                  row.assignmentId ? (
-                    <MediaUploadField
-                      key={row.assignmentId}
-                      entityType="assignment"
-                      entityId={row.assignmentId}
-                      label={`Gambar khusus ${row.name}`}
-                      previewUrl={row.imageUrl}
-                    />
-                  ) : null,
-                )}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </section>
