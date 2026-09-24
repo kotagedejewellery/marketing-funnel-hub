@@ -5,6 +5,8 @@ import { asc, desc, eq, isNull } from "drizzle-orm";
 import { getDatabase } from "@/lib/db/client";
 import {
   campaigns,
+  branchGoogleReviews,
+  branchReviewSources,
   contentSections,
   faqs,
   galleryItems,
@@ -48,6 +50,8 @@ export async function getBranchPageSettings(id: string) {
     branchLinks,
     branchFaqs,
     branchGallery,
+    reviewSourceRows,
+    branchReviews,
     productRows,
     assignmentRows,
   ] = await Promise.all([
@@ -71,6 +75,16 @@ export async function getBranchPageSettings(id: string) {
       .from(galleryItems)
       .where(eq(galleryItems.branchId, branch.id))
       .orderBy(asc(galleryItems.sortOrder), asc(galleryItems.id)),
+    db
+      .select()
+      .from(branchReviewSources)
+      .where(eq(branchReviewSources.branchId, branch.id))
+      .limit(1),
+    db
+      .select()
+      .from(branchGoogleReviews)
+      .where(eq(branchGoogleReviews.branchId, branch.id))
+      .orderBy(asc(branchGoogleReviews.sortOrder), asc(branchGoogleReviews.id)),
     db
       .select({
         id: products.id,
@@ -113,6 +127,8 @@ export async function getBranchPageSettings(id: string) {
     campaigns: branchCampaigns,
     links: branchLinks,
     gallery: branchGallery,
+    reviewSource: reviewSourceRows[0] ?? null,
+    reviews: branchReviews,
     faqs: branchFaqs.length ? branchFaqs : inheritedFaqs,
     inheritsFaqs: branchFaqs.length === 0,
     products: productRows

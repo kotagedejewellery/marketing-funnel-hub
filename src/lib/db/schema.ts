@@ -72,6 +72,7 @@ export const contentSections = pgTable(
     }),
     sectionKey: text("section_key").notNull(),
     label: text("label").notNull(),
+    publicTitle: text("public_title"),
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -270,6 +271,94 @@ export const galleryItems = pgTable(
     index("gallery_items_branch_visibility_idx").on(
       table.branchId,
       table.isActive,
+      table.sortOrder,
+    ),
+  ],
+).enableRLS();
+
+export const branchReviewSources = pgTable(
+  "branch_review_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" })
+      .unique(),
+    sourceUrl: text("source_url").notNull(),
+    isEnabled: boolean("is_enabled").notNull().default(false),
+    minimumRating: integer("minimum_rating").notNull().default(1),
+    maximumReviews: integer("maximum_reviews").notNull().default(6),
+    displayMode: text("display_mode").notNull().default("automatic"),
+    lastScrapedAt: timestamp("last_scraped_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "branch_review_sources_minimum_rating_check",
+      sql`${table.minimumRating} between 1 and 5`,
+    ),
+    check(
+      "branch_review_sources_maximum_reviews_check",
+      sql`${table.maximumReviews} between 1 and 12`,
+    ),
+    check(
+      "branch_review_sources_display_mode_check",
+      sql`${table.displayMode} in ('automatic', 'manual')`,
+    ),
+  ],
+).enableRLS();
+
+export const branchGoogleReviews = pgTable(
+  "branch_google_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    sourceHash: text("source_hash").notNull(),
+    reviewerName: text("reviewer_name").notNull(),
+    reviewerPhotoUrl: text("reviewer_photo_url"),
+    reviewerReviewCount: integer("reviewer_review_count"),
+    rating: integer("rating").notNull(),
+    relativeTime: text("relative_time").notNull(),
+    reviewText: text("review_text").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    isSelected: boolean("is_selected").notNull().default(false),
+    isHidden: boolean("is_hidden").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("branch_google_reviews_branch_source_hash_unique").on(
+      table.branchId,
+      table.sourceHash,
+    ),
+    check(
+      "branch_google_reviews_rating_check",
+      sql`${table.rating} between 1 and 5`,
+    ),
+    check(
+      "branch_google_reviews_reviewer_count_check",
+      sql`${table.reviewerReviewCount} is null or ${table.reviewerReviewCount} >= 0`,
+    ),
+    index("branch_google_reviews_visibility_idx").on(
+      table.branchId,
+      table.isHidden,
+      table.rating,
       table.sortOrder,
     ),
   ],

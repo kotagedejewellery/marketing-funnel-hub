@@ -1,10 +1,12 @@
 import * as z from "zod";
 
 export const branchSectionKeys = [
+  "profile_logo",
   "brand_header",
   "campaign_banner",
   "gallery",
   "products",
+  "google_reviews",
   "faq",
   "secondary_links",
   "social_links",
@@ -15,10 +17,12 @@ export const branchSectionLabels: Record<
   (typeof branchSectionKeys)[number],
   string
 > = {
+  profile_logo: "Logo profil",
   brand_header: "Profil",
   campaign_banner: "Konten unggulan",
   gallery: "Galeri Produk",
   products: "Tombol WhatsApp",
+  google_reviews: "Ulasan Google",
   faq: "FAQ",
   secondary_links: "Tautan tambahan",
   social_links: "Media sosial",
@@ -41,6 +45,11 @@ export const branchPageSchema = z.object({
     .array(
       z.object({
         sectionKey: z.enum(branchSectionKeys),
+      publicTitle: z
+        .string()
+        .trim()
+        .max(160)
+        .transform((value) => value || null),
         sortOrder: z
           .string()
           .regex(/^\d+$/)

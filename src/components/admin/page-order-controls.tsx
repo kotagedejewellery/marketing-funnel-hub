@@ -12,7 +12,7 @@ export function PageOrderControls({
   index,
   count,
 }: {
-  kind: "link" | "faq" | "gallery" | "campaign" | "branch";
+  kind: "link" | "faq" | "gallery" | "review" | "campaign" | "branch";
   id: string;
   branchId?: string | null;
   index: number;

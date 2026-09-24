@@ -330,7 +330,7 @@ function MediaOverrideResetForm({
       <input type="hidden" name="entityId" value={entityId} />
       <p className="text-sm leading-6 text-muted-foreground">
         Gambar khusus tidak lagi dipakai. Halaman ini akan kembali mengikuti
-        gambar dari Pengaturan Bersama.
+        gambar dari Standar &amp; Template KGJ.
       </p>
       <FormFeedback state={state} pending={pending} />
       <button

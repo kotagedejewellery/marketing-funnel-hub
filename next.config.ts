@@ -5,6 +5,17 @@ const publicAssetBucket = process.env.SUPABASE_PUBLIC_ASSET_BUCKET;
 
 let remotePatterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [];
 
+const reviewerPhotoPatterns: NonNullable<
+  NextConfig["images"]
+>["remotePatterns"] = [
+  {
+    protocol: "https",
+    hostname: "**.googleusercontent.com",
+    pathname: "/**",
+  },
+  { protocol: "https", hostname: "**.gstatic.com", pathname: "/**" },
+];
+
 if (supabaseUrl && publicAssetBucket) {
   try {
     const url = new URL(supabaseUrl);
@@ -17,12 +28,15 @@ if (supabaseUrl && publicAssetBucket) {
           pathname: `${url.pathname.replace(/\/$/, "")}/storage/v1/object/public/${encodeURIComponent(publicAssetBucket)}/**`,
           search: "",
         },
+        ...reviewerPhotoPatterns,
       ];
     }
   } catch {
     // Invalid environment values are reported by the application validator.
   }
 }
+
+if (remotePatterns.length === 0) remotePatterns = reviewerPhotoPatterns;
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],

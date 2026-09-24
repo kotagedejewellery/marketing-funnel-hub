@@ -191,6 +191,6 @@ export async function clearMediaOverride(
   revalidatePath(`/admin/branches/${entityId}/link-bio`);
   return {
     ok: true,
-    message: "Logo kembali mengikuti Pengaturan Bersama.",
+    message: "Logo kembali mengikuti Standar & Template KGJ.",
   };
 }

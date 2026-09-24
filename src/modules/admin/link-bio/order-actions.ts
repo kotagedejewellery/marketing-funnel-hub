@@ -9,6 +9,7 @@ import {
   auditLogs,
   branches,
   campaigns,
+  branchGoogleReviews,
   faqs,
   galleryItems,
   links,
@@ -19,7 +20,7 @@ type ActionState = { message: string; ok?: boolean };
 
 const moveSchema = z
   .object({
-    kind: z.enum(["link", "faq", "gallery", "campaign", "branch"]),
+    kind: z.enum(["link", "faq", "gallery", "review", "campaign", "branch"]),
     id: z.uuid(),
     branchId: z.union([z.uuid(), z.literal("")]),
     direction: z.enum(["up", "down"]),
@@ -32,11 +33,11 @@ const moveSchema = z
         message: "Pengurutan cabang tidak memakai scope cabang.",
       });
     }
-    if (kind === "gallery" && !branchId) {
+    if ((kind === "gallery" || kind === "review") && !branchId) {
       context.addIssue({
         code: "custom",
         path: ["branchId"],
-        message: "Galeri wajib memiliki scope cabang.",
+        message: "Item cabang wajib memiliki scope cabang.",
       });
     }
   });
@@ -99,6 +100,17 @@ export async function movePageItem(
               .where(eq(galleryItems.branchId, branchId))
               .orderBy(asc(galleryItems.sortOrder), asc(galleryItems.id))
           : [];
+      } else if (kind === "review") {
+        rows = branchId
+          ? await tx
+              .select({ id: branchGoogleReviews.id })
+              .from(branchGoogleReviews)
+              .where(eq(branchGoogleReviews.branchId, branchId))
+              .orderBy(
+                asc(branchGoogleReviews.sortOrder),
+                asc(branchGoogleReviews.id),
+              )
+          : [];
       } else if (kind === "campaign") {
         rows = await tx
           .select({ id: campaigns.id })
@@ -139,6 +151,11 @@ export async function movePageItem(
             .update(galleryItems)
             .set({ sortOrder: position, updatedAt: new Date() })
             .where(eq(galleryItems.id, row.id));
+        } else if (kind === "review") {
+          await tx
+            .update(branchGoogleReviews)
+            .set({ sortOrder: position, updatedAt: new Date() })
+            .where(eq(branchGoogleReviews.id, row.id));
         } else if (kind === "campaign") {
           await tx
             .update(campaigns)
@@ -161,6 +178,8 @@ export async function movePageItem(
               ? "faqs"
               : kind === "gallery"
                 ? "gallery_items"
+                : kind === "review"
+                  ? "branch_google_reviews"
                 : kind === "campaign"
                   ? "campaigns"
                   : "branches",

@@ -15,13 +15,14 @@ const emptyContent: PublicContent = {
   },
   campaign: null,
   gallery: [],
+  reviews: null,
   products: [],
   links: [],
   faqs: [],
   sections: [
-    { sectionKey: "brand_header" },
-    { sectionKey: "products" },
-    { sectionKey: "footer" },
+    { sectionKey: "brand_header", publicTitle: null },
+    { sectionKey: "products", publicTitle: null },
+    { sectionKey: "footer", publicTitle: null },
   ],
   pageBranch: { id: "branch-1", name: "Solo", slug: "solo" },
 };
@@ -110,7 +111,7 @@ describe("public Link Bio", () => {
               imageUrl: "/favorite.jpg",
             },
           ],
-          sections: [{ sectionKey: "gallery" }],
+          sections: [{ sectionKey: "gallery", publicTitle: null }],
         }}
       />,
     );
@@ -124,7 +125,7 @@ describe("public Link Bio", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows campaign artwork without separate title or description text", () => {
+  it("shows campaign artwork with its own title and description", () => {
     render(
       <LinkBio
         content={{
@@ -136,7 +137,7 @@ describe("public Link Bio", () => {
             bannerUrl: "/promo-september.jpg",
             targetUrl: "https://example.com/promo",
           },
-          sections: [{ sectionKey: "campaign_banner" }],
+          sections: [{ sectionKey: "campaign_banner", publicTitle: null }],
         }}
       />,
     );
@@ -144,14 +145,45 @@ describe("public Link Bio", () => {
     const banner = screen.getByRole("img", { name: "Promo September" });
     expect(banner).toBeVisible();
     expect(
-      screen.queryByRole("heading", { name: "Promo September" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Penawaran khusus bulan ini"),
-    ).not.toBeInTheDocument();
+      screen.getByRole("heading", { name: "Promo September" }),
+    ).toBeVisible();
+    expect(screen.getByText("Penawaran khusus bulan ini")).toBeVisible();
     expect(banner.closest("a")).toHaveAttribute(
       "href",
       "https://example.com/promo",
+    );
+  });
+
+  it("shows only selected Google reviews supplied by the public loader", () => {
+    render(
+      <LinkBio
+        content={{
+          ...emptyContent,
+          reviews: {
+            sourceUrl: "https://maps.google.com/maps/place/KGJ",
+            items: [
+              {
+                id: "review-1",
+                reviewerName: "Maria Prasasti",
+                reviewerPhotoUrl: null,
+                reviewerReviewCount: 1,
+                rating: 5,
+                relativeTime: "6 hari lalu",
+                reviewText: "Pelayanan sangat memuaskan.",
+              },
+            ],
+          },
+          sections: [{ sectionKey: "google_reviews", publicTitle: "Review kami" }],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Review kami" })).toBeVisible();
+    expect(screen.getByText("Maria Prasasti")).toBeVisible();
+    expect(screen.getByText("Pelayanan sangat memuaskan.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Lihat di Google Maps" })).toHaveAttribute(
+      "href",
+      "https://maps.google.com/maps/place/KGJ",
     );
   });
 });

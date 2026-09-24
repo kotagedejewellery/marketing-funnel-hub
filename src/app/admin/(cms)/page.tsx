@@ -59,9 +59,9 @@ export default async function AdminDashboardPage() {
       >
         <Summary
           href="/admin/settings"
-          label="Identitas situs"
+          label="Standar & Template KGJ"
           value={dashboard.siteName ?? "Belum diatur"}
-          action="Kelola pengaturan"
+          action="Kelola standar KGJ"
           className="bg-[var(--kgj-dark)] text-[var(--primary-foreground)] md:col-span-6"
           dark
         />
@@ -142,7 +142,7 @@ export default async function AdminDashboardPage() {
           </p>
           <div className="mt-5 grid gap-1">
             <QuickLink href="/admin/link-bio" label="Pilih halaman Link Bio" />
-            <QuickLink href="/admin/settings" label="Pengaturan Bersama" />
+            <QuickLink href="/admin/settings" label="Standar & Template KGJ" />
             <QuickLink href="/admin/tracking" label="Validasi tracking" />
           </div>
         </aside>

@@ -8,9 +8,15 @@ import { saveBranchPage } from "@/modules/admin/branches/page-actions";
 type Section = {
   sectionKey: string;
   label: string;
+  publicTitle: string | null;
   sortOrder: number;
   isActive: boolean;
 };
+
+const sectionSupportsPublicTitle = (sectionKey: string) =>
+  !["profile_logo", "brand_header", "campaign_banner", "footer"].includes(
+    sectionKey,
+  );
 
 const inputClass =
   "mt-2 min-h-11 w-full border border-border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -36,6 +42,11 @@ export function BranchPageForm({
   function moveSection(index: number, direction: -1 | 1) {
     const other = index + direction;
     if (other < 0 || other >= orderedSections.length) return;
+    if (
+      orderedSections[index].sectionKey === "profile_logo" ||
+      orderedSections[other].sectionKey === "profile_logo"
+    )
+      return;
     setOrderedSections((current) => {
       const next = [...current];
       [next[index], next[other]] = [next[other], next[index]];
@@ -49,8 +60,8 @@ export function BranchPageForm({
       <input type="hidden" name="mode" value={mode} />
       {mode === "identity" ? (
         <p className="text-sm text-muted-foreground">
-          Kosongkan judul atau deskripsi untuk memakai nilai bawaan dari
-          Pengaturan Bersama.
+          Isi nilai untuk menjadikannya khusus cabang. Kosongkan judul atau
+          deskripsi agar tetap mengikuti Standar &amp; Template KGJ.
         </p>
       ) : null}
       {mode === "identity" ? (
@@ -102,10 +113,10 @@ export function BranchPageForm({
       )}
       {mode === "sections" ? (
         <fieldset className="space-y-3">
-          <legend className="font-serif text-xl">Bagian halaman</legend>
+          <legend className="font-serif text-xl">Susunan section</legend>
           <p className="text-sm text-muted-foreground">
             {inheritsSections
-              ? "Saat disimpan pertama kali, susunan bawaan disalin lalu menjadi khusus cabang ini."
+              ? "Simpan untuk menyalin template KGJ, lalu atur susunan ini khusus untuk cabang."
               : "Urutan dan visibilitas ini hanya berlaku untuk cabang ini."}
           </p>
           {orderedSections.map((section, index) => (
@@ -131,10 +142,31 @@ export function BranchPageForm({
                 />
                 {section.label}
               </label>
+              {sectionSupportsPublicTitle(section.sectionKey) ? (
+                <label className="w-full text-sm font-medium sm:max-w-xs">
+                  Judul publik (opsional)
+                  <input
+                    name={`title_${section.sectionKey}`}
+                    defaultValue={section.publicTitle ?? ""}
+                    maxLength={160}
+                    className={inputClass}
+                  />
+                </label>
+              ) : (
+                <input
+                  type="hidden"
+                  name={`title_${section.sectionKey}`}
+                  value=""
+                />
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={index === 0}
+                  disabled={
+                    section.sectionKey === "profile_logo" ||
+                    index === 0 ||
+                    orderedSections[index - 1]?.sectionKey === "profile_logo"
+                  }
                   onClick={() => moveSection(index, -1)}
                   className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
                 >
@@ -142,7 +174,11 @@ export function BranchPageForm({
                 </button>
                 <button
                   type="button"
-                  disabled={index === orderedSections.length - 1}
+                  disabled={
+                    section.sectionKey === "profile_logo" ||
+                    index === orderedSections.length - 1 ||
+                    orderedSections[index + 1]?.sectionKey === "profile_logo"
+                  }
                   onClick={() => moveSection(index, 1)}
                   className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
                 >
@@ -165,6 +201,11 @@ export function BranchPageForm({
               name={`order_${section.sectionKey}`}
               value={section.sortOrder}
             />
+            <input
+              type="hidden"
+              name={`title_${section.sectionKey}`}
+              value={section.publicTitle ?? ""}
+            />
             {section.isActive && (
               <input
                 type="hidden"
@@ -184,8 +225,8 @@ export function BranchPageForm({
         {pending
           ? "Menyimpan..."
           : mode === "identity"
-            ? "Simpan profil"
-            : "Simpan susunan"}
+            ? "Simpan profil cabang"
+            : "Simpan susunan section"}
       </button>
     </form>
   );

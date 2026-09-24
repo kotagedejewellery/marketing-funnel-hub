@@ -25,7 +25,7 @@ const items: {
   },
   {
     href: "/admin/settings",
-    label: "Pengaturan bersama",
+    label: "Standar & Template KGJ",
     icon: "M4 6h16 M4 12h16 M4 18h16 M9 4v4 M15 10v4 M9 16v4",
     separatorBefore: true,
   },

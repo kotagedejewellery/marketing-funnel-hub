@@ -20,10 +20,12 @@ export function FaqManager({
   faqs,
   branchId = null,
   inherits = false,
+  sharedTemplate = false,
 }: {
   faqs: FaqRecord[];
   branchId?: string | null;
   inherits?: boolean;
+  sharedTemplate?: boolean;
 }) {
   const [copyState, copyAction, copying] = useActionState(startBranchFaqs, {
     message: "",
@@ -34,11 +36,15 @@ export function FaqManager({
     <section className="mt-6 rounded-2xl bg-card p-6 sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="font-serif text-2xl">FAQ</h2>
+          <h2 className="font-serif text-2xl">
+            {sharedTemplate ? "Template FAQ bawaan" : "FAQ"}
+          </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {inherits
-              ? "Cabang ini masih menampilkan FAQ bawaan dari Pengaturan Bersama. Salin dahulu untuk mengubahnya khusus cabang."
-              : "Atur pertanyaan, jawaban, dan status tampil. Gunakan tombol Naik/Turun pada daftar untuk mengubah urutan."}
+            {sharedTemplate
+              ? "Dipakai cabang hingga cabang menyalinnya menjadi FAQ khusus. Gunakan tombol Naik/Turun pada daftar untuk mengubah urutan template."
+              : inherits
+                ? "Cabang ini masih mengikuti template FAQ KGJ. Salin dahulu untuk mengubahnya khusus cabang."
+                : "Atur pertanyaan, jawaban, dan status tampil. Gunakan tombol Naik/Turun pada daftar untuk mengubah urutan."}
           </p>
         </div>
         {inherits && branchId ? (

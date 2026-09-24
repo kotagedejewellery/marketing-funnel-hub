@@ -6,6 +6,8 @@ import { getDatabase } from "@/lib/db/client";
 import { serverEnv } from "@/lib/env/server";
 import {
   branches,
+  branchGoogleReviews,
+  branchReviewSources,
   campaigns,
   contentSections,
   faqs,
@@ -111,6 +113,8 @@ async function loadScopedContent(
     activeProducts,
     activeBranches,
     activeGalleryItems,
+    reviewSourceRows,
+    branchReviews,
     activeLinks,
     activeSections,
     pageFaqs,
@@ -198,6 +202,33 @@ async function loadScopedContent(
       .orderBy(asc(galleryItems.sortOrder), asc(galleryItems.id)),
     db
       .select({
+        sourceUrl: branchReviewSources.sourceUrl,
+        isEnabled: branchReviewSources.isEnabled,
+        minimumRating: branchReviewSources.minimumRating,
+        maximumReviews: branchReviewSources.maximumReviews,
+        displayMode: branchReviewSources.displayMode,
+      })
+      .from(branchReviewSources)
+      .where(eq(branchReviewSources.branchId, branch.id))
+      .limit(1),
+    db
+      .select({
+        id: branchGoogleReviews.id,
+        reviewerName: branchGoogleReviews.reviewerName,
+        reviewerPhotoUrl: branchGoogleReviews.reviewerPhotoUrl,
+        reviewerReviewCount: branchGoogleReviews.reviewerReviewCount,
+        rating: branchGoogleReviews.rating,
+        relativeTime: branchGoogleReviews.relativeTime,
+        reviewText: branchGoogleReviews.reviewText,
+        isSelected: branchGoogleReviews.isSelected,
+        isHidden: branchGoogleReviews.isHidden,
+        sortOrder: branchGoogleReviews.sortOrder,
+      })
+      .from(branchGoogleReviews)
+      .where(eq(branchGoogleReviews.branchId, branch.id))
+      .orderBy(asc(branchGoogleReviews.sortOrder), asc(branchGoogleReviews.id)),
+    db
+      .select({
         id: links.id,
         label: links.label,
         url: links.url,
@@ -210,6 +241,7 @@ async function loadScopedContent(
     db
       .select({
         sectionKey: contentSections.sectionKey,
+        publicTitle: contentSections.publicTitle,
         isActive: contentSections.isActive,
       })
       .from(contentSections)
@@ -234,6 +266,7 @@ async function loadScopedContent(
       ? await db
           .select({
             sectionKey: contentSections.sectionKey,
+            publicTitle: contentSections.publicTitle,
             isActive: contentSections.isActive,
           })
           .from(contentSections)
@@ -254,6 +287,36 @@ async function loadScopedContent(
   const visibleFaqs = (scopedFaqs.length ? scopedFaqs : pageFaqs)
     .filter((faq) => faq.isActive)
     .map(({ id, question, answer }) => ({ id, question, answer }));
+  const reviewSource = reviewSourceRows[0];
+  const visibleReviews = reviewSource?.isEnabled
+    ? branchReviews
+        .filter(
+          (review) =>
+            !review.isHidden &&
+            review.rating >= reviewSource.minimumRating &&
+            (reviewSource.displayMode === "automatic" || review.isSelected),
+        )
+        .slice(0, reviewSource.maximumReviews)
+        .map(
+          ({
+            id,
+            reviewerName,
+            reviewerPhotoUrl,
+            reviewerReviewCount,
+            rating,
+            relativeTime,
+            reviewText,
+          }) => ({
+            id,
+            reviewerName,
+            reviewerPhotoUrl,
+            reviewerReviewCount,
+            rating,
+            relativeTime,
+            reviewText,
+          }),
+        )
+    : [];
 
   return {
     site: {
@@ -286,6 +349,9 @@ async function loadScopedContent(
           ]
         : [];
     }),
+    reviews: reviewSource?.isEnabled
+      ? { sourceUrl: reviewSource.sourceUrl, items: visibleReviews }
+      : null,
     products: visibleProducts.map((product) => {
       const assignment = branchAssignments.get(product.id);
       const displayName = assignment?.displayName || product.name;
@@ -324,7 +390,7 @@ async function loadScopedContent(
     faqs: visibleFaqs,
     sections: sections
       .filter((section) => section.isActive)
-      .map(({ sectionKey }) => ({ sectionKey })),
+      .map(({ sectionKey, publicTitle }) => ({ sectionKey, publicTitle })),
     pageBranch: { id: branch.id, name: branch.name, slug: branch.slug },
   };
 }

@@ -1,5 +1,6 @@
 import type { PublicContent } from "@/modules/public-content/data";
 
+import { GalleryCarousel } from "./gallery-carousel";
 import { PublicImage } from "./public-image";
 import { TrackingBehavior, type TrackingContext } from "./tracking-behavior";
 
@@ -23,6 +24,16 @@ function WhatsAppIcon() {
   );
 }
 
+function ReviewStars({ rating }: { rating: number }) {
+  return (
+    <span className="flex text-base leading-none text-amber-500" aria-hidden="true">
+      {Array.from({ length: 5 }, (_, index) => (
+        <span key={index}>{index < rating ? "★" : "☆"}</span>
+      ))}
+    </span>
+  );
+}
+
 export function LinkBio({
   content,
   trackingContext = null,
@@ -38,9 +49,12 @@ export function LinkBio({
   const socialLinks = content.links.filter(
     (link) => link.linkType === "social",
   );
-  const hasProducts =
-    content.products.length > 0 &&
-    content.sections.some((section) => section.sectionKey === "products");
+  const logoSection = content.sections.find(
+    (section) => section.sectionKey === "profile_logo",
+  );
+  const sections = content.sections.filter(
+    (section) => section.sectionKey !== "profile_logo",
+  );
   const logoFallback = (
     <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-dark)] font-serif text-3xl font-bold text-[var(--kgj-accent-soft)]">
       KJ
@@ -48,7 +62,7 @@ export function LinkBio({
   );
 
   return (
-    <main className="kgj-public mx-auto min-h-dvh w-full max-w-3xl px-4 pb-8 text-foreground sm:px-6">
+    <main className="kgj-public mx-auto min-h-dvh w-full max-w-3xl px-4 pt-6 pb-10 text-foreground sm:px-6 sm:pt-8 sm:pb-12">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:bg-background focus:p-3 focus:outline-2 focus:outline-offset-2"
@@ -69,32 +83,34 @@ export function LinkBio({
           }))}
         />
       )}
-      <div id="main-content">
-        {content.sections.map(({ sectionKey }) => {
+      {logoSection && (
+        <section className="flex justify-center px-3" aria-label="Logo profil">
+          {content.site.logoUrl ? (
+            <PublicImage
+              src={content.site.logoUrl}
+              alt={`Logo ${content.site.siteName}`}
+              width={192}
+              height={192}
+              sizes="96px"
+              className="size-24 rounded-full bg-card object-contain p-2 shadow-[0_12px_28px_-18px_rgba(40,33,28,0.55)]"
+              unoptimized={bypassImageOptimization(content.site.logoUrl)}
+              fallback={logoFallback}
+            />
+          ) : (
+            logoFallback
+          )}
+        </section>
+      )}
+      <div id="main-content" className="space-y-10 sm:space-y-14">
+        {sections.map(({ sectionKey, publicTitle }) => {
           switch (sectionKey) {
             case "brand_header":
               return (
                 <section
                   key={sectionKey}
-                  className="flex flex-col items-center px-3 pt-10 pb-8 text-center sm:pt-14 sm:pb-10"
+                  className="flex flex-col items-center px-3 text-center"
                 >
-                  {content.site.logoUrl ? (
-                    <PublicImage
-                      src={content.site.logoUrl}
-                      alt={`Logo ${content.site.siteName}`}
-                      width={192}
-                      height={192}
-                      sizes="96px"
-                      className="size-24 rounded-full bg-card object-contain p-2 shadow-[0_12px_28px_-18px_rgba(40,33,28,0.55)]"
-                      unoptimized={bypassImageOptimization(
-                        content.site.logoUrl,
-                      )}
-                      fallback={logoFallback}
-                    />
-                  ) : (
-                    logoFallback
-                  )}
-                  <h1 className="mt-5 max-w-xl font-serif text-3xl leading-tight font-bold tracking-[-0.025em] text-balance break-words sm:text-4xl">
+                  <h1 className="max-w-xl font-serif text-3xl leading-tight font-bold tracking-[-0.025em] text-balance break-words sm:text-4xl">
                     {content.site.siteName}
                   </h1>
                   {content.site.headline && (
@@ -106,14 +122,6 @@ export function LinkBio({
                     <p className="mt-2 max-w-2xl text-sm leading-6 whitespace-pre-line text-muted-foreground sm:text-base sm:leading-7">
                       {content.site.introduction}
                     </p>
-                  )}
-                  {hasProducts && (
-                    <a
-                      href="#products-title"
-                      className="mt-6 inline-flex min-h-11 items-center rounded-full bg-[var(--kgj-dark)] px-5 text-sm font-bold text-[var(--primary-foreground)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
-                    >
-                      Lihat pilihan cincin
-                    </a>
                   )}
                 </section>
               );
@@ -150,6 +158,20 @@ export function LinkBio({
                   ) : (
                     banner
                   )}
+                  {(content.campaign.title || content.campaign.description) && (
+                    <div className="px-5 py-5 sm:px-6 sm:py-6">
+                      {content.campaign.title && (
+                        <h2 className="font-serif text-2xl leading-tight font-bold text-balance sm:text-3xl">
+                          {content.campaign.title}
+                        </h2>
+                      )}
+                      {content.campaign.description && (
+                        <p className="mt-2 leading-7 whitespace-pre-line text-muted-foreground">
+                          {content.campaign.description}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </section>
               );
             }
@@ -163,7 +185,7 @@ export function LinkBio({
                   return "mx-auto grid max-w-sm grid-cols-1 gap-3 sm:gap-4";
                 }
                 if (itemCount === 2) {
-                  return "grid grid-cols-2 gap-3 sm:gap-4";
+                  return "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0";
                 }
                 return "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0";
               };
@@ -183,6 +205,8 @@ export function LinkBio({
                     className={
                       items.length >= 3
                         ? "w-[82%] shrink-0 snap-start sm:w-auto"
+                        : items.length === 2
+                          ? "w-[82%] shrink-0 snap-start sm:w-auto"
                         : undefined
                     }
                   >
@@ -217,35 +241,38 @@ export function LinkBio({
               return (
                 <section
                   key={sectionKey}
-                  aria-labelledby="gallery-title"
-                  className="py-10 sm:py-14"
+                  aria-labelledby={publicTitle ? "gallery-title" : undefined}
+                  className="scroll-mt-6"
                 >
-                  <h2
-                    id="gallery-title"
-                    className="text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
-                  >
-                    Galeri produk
-                  </h2>
-                  {visibleGallery.length >= 3 && (
+                  {publicTitle && (
+                    <h2
+                      id="gallery-title"
+                      className="text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
+                    >
+                      {publicTitle}
+                    </h2>
+                  )}
+                  {visibleGallery.length >= 2 && (
                     <p
                       id="gallery-swipe-hint"
                       className="mt-2 text-center text-xs text-muted-foreground sm:hidden"
                     >
-                      Geser untuk melihat koleksi lainnya.
+                      Geser untuk melihat koleksi lainnya atau tunggu koleksi berikutnya.
                     </p>
                   )}
-                  <ul
+                  <GalleryCarousel
                     aria-label="Galeri produk"
                     aria-describedby={
-                      visibleGallery.length >= 3
+                      visibleGallery.length >= 2
                         ? "gallery-swipe-hint"
                         : undefined
                     }
-                    tabIndex={visibleGallery.length >= 3 ? 0 : undefined}
-                    className={`${visibleGallery.length >= 3 ? "mt-5 focus-visible:outline-2 focus-visible:outline-offset-2" : "mt-7"} ${galleryClass(visibleGallery.length)}`}
+                    tabIndex={visibleGallery.length >= 2 ? 0 : undefined}
+                    itemCount={visibleGallery.length}
+                    className={`${publicTitle || visibleGallery.length >= 2 ? "mt-5" : "mt-0"} ${visibleGallery.length >= 2 ? "focus-visible:outline-2 focus-visible:outline-offset-2" : ""} ${galleryClass(visibleGallery.length)}`}
                   >
                     {renderGalleryItems(visibleGallery)}
-                  </ul>
+                  </GalleryCarousel>
                   {remainingGallery.length > 0 && (
                     <details className="group mt-5">
                       <summary className="mx-auto flex min-h-11 w-fit cursor-pointer list-none items-center rounded-full border border-border bg-card px-5 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
@@ -256,13 +283,14 @@ export function LinkBio({
                           Sembunyikan koleksi tambahan
                         </span>
                       </summary>
-                      <ul
+                      <GalleryCarousel
                         aria-label="Galeri produk tambahan"
-                        tabIndex={remainingGallery.length >= 3 ? 0 : undefined}
-                        className={`mt-5 ${remainingGallery.length >= 3 ? "focus-visible:outline-2 focus-visible:outline-offset-2" : ""} ${galleryClass(remainingGallery.length)}`}
+                        tabIndex={remainingGallery.length >= 2 ? 0 : undefined}
+                        itemCount={remainingGallery.length}
+                        className={`mt-5 ${remainingGallery.length >= 2 ? "focus-visible:outline-2 focus-visible:outline-offset-2" : ""} ${galleryClass(remainingGallery.length)}`}
                       >
                         {renderGalleryItems(remainingGallery)}
-                      </ul>
+                      </GalleryCarousel>
                     </details>
                   )}
                 </section>
@@ -273,25 +301,27 @@ export function LinkBio({
               return (
                 <section
                   key={sectionKey}
-                  aria-labelledby="products-title"
-                  className="py-10 sm:py-14"
+                  aria-labelledby={publicTitle ? "products-title" : undefined}
+                  className="scroll-mt-6"
                 >
-                  <h2
-                    id="products-title"
-                    className="scroll-mt-6 text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
-                  >
-                    Pilihan produk
-                  </h2>
+                  {publicTitle && (
+                    <h2
+                      id="products-title"
+                      className="text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
+                    >
+                      {publicTitle}
+                    </h2>
+                  )}
                   {content.products.length === 0 ? (
                     <p
                       role="status"
-                      className="mt-8 rounded-2xl bg-card px-6 py-10 leading-7 text-muted-foreground"
+                      className={`${publicTitle ? "mt-6" : ""} rounded-2xl bg-card px-6 py-10 leading-7 text-muted-foreground`}
                     >
                       Pilihan produk belum tersedia. Silakan kembali lagi nanti.
                     </p>
                   ) : (
                     <>
-                      <ul className="mt-7 space-y-3">
+                      <ul className={`${publicTitle ? "mt-6" : ""} space-y-3`}>
                         {content.products.map((product) => {
                           const destination = product.branches[0];
                           return (
@@ -355,13 +385,21 @@ export function LinkBio({
                 sectionKey === "social_links" ? socialLinks : secondaryLinks;
               if (sectionLinks.length === 0) return null;
               return (
-                <section key={sectionKey} className="pb-10 sm:pb-12">
-                  <h2 className="mb-5 font-serif text-3xl font-bold">
-                    {sectionKey === "social_links"
-                      ? "Temukan kami"
-                      : "Tautan lainnya"}
-                  </h2>
-                  <ul className="grid gap-3 sm:grid-cols-2">
+                <section
+                  key={sectionKey}
+                  aria-labelledby={publicTitle ? `${sectionKey}-title` : undefined}
+                >
+                  {publicTitle && (
+                    <h2
+                      id={`${sectionKey}-title`}
+                      className="font-serif text-3xl font-bold text-balance sm:text-4xl"
+                    >
+                      {publicTitle}
+                    </h2>
+                  )}
+                  <ul
+                    className={`${publicTitle ? "mt-5" : ""} grid gap-3 sm:grid-cols-2`}
+                  >
                     {sectionLinks.map((link) => (
                       <li key={link.id}>
                         <a
@@ -379,20 +417,104 @@ export function LinkBio({
               );
             }
 
+            case "google_reviews":
+              return content.reviews?.items.length ? (
+                <section
+                  key={sectionKey}
+                  aria-labelledby={publicTitle ? "google-reviews-title" : undefined}
+                >
+                  {publicTitle && (
+                    <h2
+                      id="google-reviews-title"
+                      className="font-serif text-3xl font-bold text-balance sm:text-4xl"
+                    >
+                      {publicTitle}
+                    </h2>
+                  )}
+                  <ul className={`${publicTitle ? "mt-5" : ""} space-y-3`}>
+                    {content.reviews.items.map((review) => {
+                      const avatarFallback = (
+                        <span
+                          aria-hidden="true"
+                          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-accent-soft)] font-serif font-bold text-[var(--kgj-dark)]"
+                        >
+                          {review.reviewerName.slice(0, 1).toUpperCase()}
+                        </span>
+                      );
+                      return (
+                        <li key={review.id}>
+                          <article className="rounded-2xl bg-card px-5 py-5 shadow-[0_12px_28px_-22px_rgba(40,33,28,0.45)] sm:px-6">
+                            <div className="flex items-start gap-3">
+                              {review.reviewerPhotoUrl ? (
+                                <PublicImage
+                                  src={review.reviewerPhotoUrl}
+                                  alt=""
+                                  width={88}
+                                  height={88}
+                                  sizes="44px"
+                                  className="size-11 shrink-0 rounded-full bg-secondary object-cover"
+                                  unoptimized
+                                  fallback={avatarFallback}
+                                />
+                              ) : (
+                                avatarFallback
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-semibold break-words">
+                                  {review.reviewerName}
+                                </p>
+                                {review.reviewerReviewCount !== null && (
+                                  <p className="mt-0.5 text-xs text-muted-foreground">
+                                    {review.reviewerReviewCount} ulasan
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span
+                                className="sr-only"
+                              >{`Rating ${review.rating} dari 5`}</span>
+                              <ReviewStars rating={review.rating} />
+                              <span className="text-xs text-muted-foreground">
+                                {review.relativeTime}
+                              </span>
+                            </div>
+                            <p className="mt-2 leading-7 whitespace-pre-line">
+                              {review.reviewText}
+                            </p>
+                          </article>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <a
+                    href={content.reviews.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--kgj-accent)] underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
+                  >
+                    Lihat di Google Maps
+                  </a>
+                </section>
+              ) : null;
+
             case "faq":
               return content.faqs.length ? (
                 <section
                   key={sectionKey}
-                  aria-labelledby="faq-title"
-                  className="pb-12 sm:pb-16"
+                  aria-labelledby={publicTitle ? "faq-title" : undefined}
                 >
-                  <h2
-                    id="faq-title"
-                    className="font-serif text-3xl font-bold text-balance sm:text-4xl"
+                  {publicTitle && (
+                    <h2
+                      id="faq-title"
+                      className="font-serif text-3xl font-bold text-balance sm:text-4xl"
+                    >
+                      {publicTitle}
+                    </h2>
+                  )}
+                  <div
+                    className={`${publicTitle ? "mt-5" : ""} divide-y divide-border overflow-hidden rounded-2xl bg-card px-5 sm:px-8`}
                   >
-                    Pertanyaan yang sering ditanyakan
-                  </h2>
-                  <div className="mt-6 divide-y divide-border overflow-hidden rounded-2xl bg-card px-5 sm:px-8">
                     {content.faqs.map((faq) => (
                       <details key={faq.id} className="group py-2">
                         <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-4 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2">
@@ -417,7 +539,7 @@ export function LinkBio({
               return (
                 <footer
                   key={sectionKey}
-                  className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-8 text-sm text-muted-foreground"
+                  className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-8 text-sm text-muted-foreground"
                 >
                   <span>{content.site.siteName}</span>
                   {content.site.privacyUrl && (

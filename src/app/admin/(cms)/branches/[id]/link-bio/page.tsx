@@ -7,6 +7,7 @@ import { BranchPublicUrl } from "@/components/admin/branch-public-url";
 import { FaqManager } from "@/components/admin/faq-manager";
 import { FormDialog } from "@/components/admin/form-dialog";
 import { GalleryManager } from "@/components/admin/gallery-manager";
+import { GoogleReviewManager } from "@/components/admin/google-review-manager";
 import { MediaUploadField } from "@/components/admin/media-upload-field";
 import {
   PageCampaigns,
@@ -15,6 +16,7 @@ import {
 import { PagePreview } from "@/components/admin/page-preview";
 import { serverEnv } from "@/lib/env/server";
 import { getBranchPageSettings } from "@/modules/admin/branches/page-data";
+import { requireAdmin } from "@/modules/admin/access";
 import { publicAssetUrl } from "@/modules/public-content/links";
 
 export default async function BranchLinkBioPage({
@@ -22,12 +24,15 @@ export default async function BranchLinkBioPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const profile = await requireAdmin();
   const {
     branch,
     sections,
     inheritsSections,
     campaigns,
     gallery,
+    reviewSource,
+    reviews,
     links,
     faqs,
     inheritsFaqs,
@@ -101,17 +106,19 @@ export default async function BranchLinkBioPage({
           <section className="rounded-2xl bg-card p-6 sm:p-8">
             <h2 className="font-serif text-2xl">Profil merek</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {branch.headline || "Judul mengikuti Pengaturan Bersama."}
+              {branch.headline
+                ? "Headline khusus cabang sudah diisi."
+                : "Headline mengikuti Standar & Template KGJ."}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               {branch.introduction
                 ? "Deskripsi singkat khusus cabang sudah diisi."
-                : "Deskripsi singkat mengikuti Pengaturan Bersama."}
+                : "Deskripsi singkat mengikuti Standar & Template KGJ."}
             </p>
             <div className="mt-5">
               <FormDialog
                 title={`Edit profil ${branch.name}`}
-                triggerLabel="Edit profil"
+                triggerLabel="Atur profil cabang"
                 primary
               >
                 <BranchPageForm
@@ -132,7 +139,7 @@ export default async function BranchLinkBioPage({
           {!branch.logoPath && (
             <p className="-mt-4 text-sm text-muted-foreground">
               Belum ada logo khusus; halaman ini mengikuti logo dari Pengaturan
-              Bersama.
+              &amp; Template KGJ.
             </p>
           )}
           <section className="rounded-2xl bg-card p-6 sm:p-8">
@@ -141,13 +148,17 @@ export default async function BranchLinkBioPage({
                 <h2 className="font-serif text-2xl">Susunan bagian</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {inheritsSections
-                    ? "Saat ini mengikuti Pengaturan Bersama. Simpan untuk membuat susunan khusus cabang."
+                  ? "Mengikuti template susunan KGJ. Simpan perubahan untuk menjadikannya khusus cabang."
                     : "Susunan dan bagian yang tampil khusus untuk cabang ini."}
                 </p>
               </div>
               <FormDialog
                 title={`Susunan ${branch.name}`}
-                triggerLabel="Atur bagian"
+                triggerLabel={
+                  inheritsSections
+                    ? "Kustomisasi section cabang"
+                    : "Atur section"
+                }
               >
                 <BranchPageForm
                   branch={branch}
@@ -180,6 +191,12 @@ export default async function BranchLinkBioPage({
             })}
           />
           <BranchProductManager branchId={branch.id} products={products} />
+          <GoogleReviewManager
+            branchId={branch.id}
+            source={reviewSource}
+            reviews={reviews}
+            canScrape={profile.role === "technical_admin"}
+          />
           <FaqManager
             faqs={faqs}
             branchId={branch.id}

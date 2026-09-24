@@ -19,6 +19,7 @@ export async function getContentSettings() {
       .select({
         id: contentSections.id,
         label: contentSections.label,
+        publicTitle: contentSections.publicTitle,
         sectionKey: contentSections.sectionKey,
         sortOrder: contentSections.sortOrder,
         isActive: contentSections.isActive,

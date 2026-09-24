@@ -84,6 +84,7 @@ export async function changeContentSection(
   const parsed = sectionActionSchema.safeParse({
     id: formData.get("id"),
     operation: formData.get("operation"),
+    publicTitle: formData.get("publicTitle") ?? undefined,
   });
   if (!parsed.success) {
     return { message: "Perubahan section tidak valid.", errors: {} };
@@ -97,6 +98,7 @@ export async function changeContentSection(
       const sections = await tx
         .select({
           id: contentSections.id,
+          sectionKey: contentSections.sectionKey,
           sortOrder: contentSections.sortOrder,
           isActive: contentSections.isActive,
         })
@@ -105,6 +107,24 @@ export async function changeContentSection(
         .orderBy(asc(contentSections.sortOrder), asc(contentSections.id));
       const index = sections.findIndex((section) => section.id === id);
       if (index < 0) return false;
+
+      if (operation === "title") {
+        const publicTitle = parsed.data.publicTitle ?? null;
+        await tx
+          .update(contentSections)
+          .set({ publicTitle, updatedAt: new Date() })
+          .where(
+            and(eq(contentSections.id, id), isNull(contentSections.branchId)),
+          );
+        await tx.insert(auditLogs).values({
+          adminId: profile.id,
+          action: "update",
+          entityType: "content_sections",
+          entityId: id,
+          changes: { fields: ["public_title"] },
+        });
+        return true;
+      }
 
       if (operation === "activate" || operation === "deactivate") {
         const isActive = operation === "activate";
@@ -127,6 +147,11 @@ export async function changeContentSection(
 
       const destination = index + (operation === "up" ? -1 : 1);
       if (destination < 0 || destination >= sections.length) return false;
+      if (
+        sections[index].sectionKey === "profile_logo" ||
+        sections[destination].sectionKey === "profile_logo"
+      )
+        return false;
       const [moved] = sections.splice(index, 1);
       sections.splice(destination, 0, moved);
       for (const [position, section] of sections.entries()) {

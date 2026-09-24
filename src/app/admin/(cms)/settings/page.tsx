@@ -12,15 +12,13 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <p className="text-xs font-semibold tracking-[0.18em] text-[var(--kgj-accent)] uppercase">
-        Identitas & pesan
-      </p>
-      <h1 className="mt-3 font-serif text-4xl sm:text-5xl">
-        Pengaturan Bersama
+      <h1 className="font-serif text-4xl sm:text-5xl">
+        Standar &amp; Template KGJ
       </h1>
       <p className="mt-3 max-w-2xl leading-7 text-muted-foreground">
-        Identitas KGJ, susunan bagian, FAQ, dan pesan WhatsApp bawaan untuk
-        cabang yang belum membuat pengaturan sendiri.
+        Nilai pusat yang dipakai cabang sampai cabang tersebut membuat
+        pengaturan khusus. Perubahan di sini tidak menimpa konten cabang yang
+        sudah dikustomisasi.
       </p>
       <div className="mt-8 grid gap-4 xl:grid-cols-2">
         <section
@@ -28,16 +26,16 @@ export default async function SettingsPage() {
           aria-labelledby="settings-summary"
         >
           <h2 id="settings-summary" className="font-serif text-2xl font-bold">
-            Identitas halaman
+            Identitas &amp; standar KGJ
           </h2>
           <p className="mt-4 text-sm font-semibold text-muted-foreground">
-            Nama situs
+            Nama merek
           </p>
           <p className="mt-1 break-words text-xl font-bold">
             {settings.siteName}
           </p>
           <p className="mt-5 text-sm font-semibold text-muted-foreground">
-            Headline
+            Headline standar
           </p>
           <p className="mt-1 break-words">
             {settings.headline || "Belum diisi"}
@@ -48,8 +46,8 @@ export default async function SettingsPage() {
           <p className="mt-1 break-words">{settings.defaultCtaLabel}</p>
           <div className="mt-8">
             <FormDialog
-              title="Edit pengaturan"
-              triggerLabel="Edit pengaturan"
+              title="Edit standar KGJ"
+              triggerLabel="Edit standar KGJ"
               primary
             >
               <SiteSettingsForm settings={settings} />
@@ -70,7 +68,7 @@ export default async function SettingsPage() {
       <div className="mt-6 [&>section]:mt-0">
         <SectionList sections={sections} />
       </div>
-      <FaqManager faqs={faqs} />
+      <FaqManager faqs={faqs} sharedTemplate />
     </div>
   );
 }

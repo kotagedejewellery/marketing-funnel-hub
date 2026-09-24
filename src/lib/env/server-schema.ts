@@ -23,6 +23,7 @@ const serverEnvironmentSchema = z
     SUPABASE_PUBLIC_ASSET_BUCKET: nonEmptyString,
     META_CAPI_DATASET_ID: optionalEnvironmentString(z.string().regex(/^\d+$/)),
     META_CAPI_ACCESS_TOKEN: optionalEnvironmentString(z.string().min(16)),
+    FIRECRAWL_API_KEY: optionalEnvironmentString(nonEmptyString),
     TRACKING_ENABLED: z.enum(["true", "false"]).default("false"),
     CRON_SECRET: z.string().min(16),
   })

@@ -40,5 +40,11 @@ export const settingsSchema = z.object({
 
 export const sectionActionSchema = z.object({
   id: z.uuid(),
-  operation: z.enum(["up", "down", "activate", "deactivate"]),
+  operation: z.enum(["up", "down", "activate", "deactivate", "title"]),
+  publicTitle: z
+    .string()
+    .trim()
+    .max(160)
+    .transform((value) => value || null)
+    .optional(),
 });

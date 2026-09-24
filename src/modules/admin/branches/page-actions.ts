@@ -30,6 +30,7 @@ export async function saveBranchPage(
     introduction: formData.get("introduction"),
     sections: branchSectionKeys.map((sectionKey) => ({
       sectionKey,
+      publicTitle: formData.get(`title_${sectionKey}`),
       sortOrder: formData.get(`order_${sectionKey}`),
       isActive: formData.get(`active_${sectionKey}`) === "on",
     })),
@@ -65,6 +66,7 @@ export async function saveBranchPage(
                 .select({
                   sectionKey: contentSections.sectionKey,
                   label: contentSections.label,
+                  publicTitle: contentSections.publicTitle,
                 })
                 .from(contentSections)
                 .where(isNull(contentSections.branchId)),
@@ -72,6 +74,7 @@ export async function saveBranchPage(
                 .select({
                   id: contentSections.id,
                   sectionKey: contentSections.sectionKey,
+                  publicTitle: contentSections.publicTitle,
                 })
                 .from(contentSections)
                 .where(eq(contentSections.branchId, branchId)),
@@ -92,6 +95,7 @@ export async function saveBranchPage(
           await tx
             .update(contentSections)
             .set({
+              publicTitle: section.publicTitle,
               sortOrder: section.sortOrder,
               isActive: section.isActive,
               updatedAt: new Date(),
@@ -111,6 +115,7 @@ export async function saveBranchPage(
             branchId,
             sectionKey: section.sectionKey,
             label,
+            publicTitle: section.publicTitle,
             sortOrder: section.sortOrder,
             isActive: section.isActive,
           });

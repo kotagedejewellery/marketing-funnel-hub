@@ -5,7 +5,18 @@ import { useActionState, type ReactNode } from "react";
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { changeContentSection } from "@/modules/admin/content/actions";
 
-type Section = { id: string; label: string; isActive: boolean };
+type Section = {
+  id: string;
+  sectionKey: string;
+  label: string;
+  publicTitle: string | null;
+  isActive: boolean;
+};
+
+const sectionSupportsPublicTitle = (sectionKey: string) =>
+  !["profile_logo", "brand_header", "campaign_banner", "footer"].includes(
+    sectionKey,
+  );
 
 export function SectionList({ sections }: { sections: Section[] }) {
   const [state, action, pending] = useActionState(changeContentSection, {
@@ -21,10 +32,10 @@ export function SectionList({ sections }: { sections: Section[] }) {
     >
       <div className="border-b border-border px-5 py-5 sm:px-6">
         <h2 id="section-order-heading" className="font-serif text-2xl">
-          Susunan bagian
+          Template susunan section
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Susunan bawaan untuk cabang yang belum mengatur bagiannya sendiri.
+          Dipakai cabang hingga cabang menyimpan susunan sectionnya sendiri.
         </p>
       </div>
       <FormFeedback state={state} pending={pending} />
@@ -55,12 +66,40 @@ export function SectionList({ sections }: { sections: Section[] }) {
               </div>
               <form action={action} className="flex flex-wrap gap-2">
                 <input type="hidden" name="id" value={section.id} />
-                <ActionButton operation="up" disabled={pending || index === 0}>
+                {sectionSupportsPublicTitle(section.sectionKey) && (
+                  <label className="flex min-h-11 items-center gap-2 text-sm">
+                    <span className="sr-only">Judul publik {section.label}</span>
+                    <input
+                      name="publicTitle"
+                      defaultValue={section.publicTitle ?? ""}
+                      maxLength={160}
+                      placeholder="Judul publik (opsional)"
+                      className="min-h-11 min-w-48 border border-border bg-background px-3"
+                    />
+                    <ActionButton operation="title" disabled={pending}>
+                      Simpan judul
+                    </ActionButton>
+                  </label>
+                )}
+                <ActionButton
+                  operation="up"
+                  disabled={
+                    pending ||
+                    section.sectionKey === "profile_logo" ||
+                    index === 0 ||
+                    sections[index - 1]?.sectionKey === "profile_logo"
+                  }
+                >
                   Naik
                 </ActionButton>
                 <ActionButton
                   operation="down"
-                  disabled={pending || index === sections.length - 1}
+                  disabled={
+                    pending ||
+                    section.sectionKey === "profile_logo" ||
+                    index === sections.length - 1 ||
+                    sections[index + 1]?.sectionKey === "profile_logo"
+                  }
                 >
                   Turun
                 </ActionButton>
@@ -84,7 +123,7 @@ function ActionButton({
   disabled,
   children,
 }: {
-  operation: "up" | "down" | "activate" | "deactivate";
+  operation: "up" | "down" | "activate" | "deactivate" | "title";
   disabled: boolean;
   children: ReactNode;
 }) {

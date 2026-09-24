@@ -100,7 +100,7 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
         />
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Dipakai oleh produk cabang yang tidak memiliki label khusus. Kosongkan
-          untuk mengikuti Pengaturan Bersama.
+          untuk mengikuti Standar &amp; Template KGJ.
         </p>
         <FieldError message={state.errors.ctaLabel} />
       </div>
