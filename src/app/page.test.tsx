@@ -173,7 +173,9 @@ describe("public Link Bio", () => {
               },
             ],
           },
-          sections: [{ sectionKey: "google_reviews", publicTitle: "Review kami" }],
+          sections: [
+            { sectionKey: "google_reviews", publicTitle: "Review kami" },
+          ],
         }}
       />,
     );
@@ -181,10 +183,9 @@ describe("public Link Bio", () => {
     expect(screen.getByRole("heading", { name: "Review kami" })).toBeVisible();
     expect(screen.getByText("Maria Prasasti")).toBeVisible();
     expect(screen.getByText("Pelayanan sangat memuaskan.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Lihat di Google Maps" })).toHaveAttribute(
-      "href",
-      "https://maps.google.com/maps/place/KGJ",
-    );
+    expect(
+      screen.getByRole("link", { name: "Lihat di Google Maps" }),
+    ).toHaveAttribute("href", "https://maps.google.com/maps/place/KGJ");
   });
 });
 

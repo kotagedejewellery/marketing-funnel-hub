@@ -45,11 +45,11 @@ export const branchPageSchema = z.object({
     .array(
       z.object({
         sectionKey: z.enum(branchSectionKeys),
-      publicTitle: z
-        .string()
-        .trim()
-        .max(160)
-        .transform((value) => value || null),
+        publicTitle: z
+          .string()
+          .trim()
+          .max(160)
+          .transform((value) => value || null),
         sortOrder: z
           .string()
           .regex(/^\d+$/)

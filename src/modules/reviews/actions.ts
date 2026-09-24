@@ -10,10 +10,7 @@ import {
   branchGoogleReviews,
   branchReviewSources,
 } from "@/lib/db/schema";
-import {
-  requireAdmin,
-  requireTechnicalAdmin,
-} from "@/modules/admin/access";
+import { requireAdmin, requireTechnicalAdmin } from "@/modules/admin/access";
 
 import {
   FirecrawlReviewError,
@@ -91,12 +88,14 @@ export async function saveBranchReviewSource(
         displayMode: input.displayMode,
         updatedAt: new Date(),
       };
-      const id = current?.id ?? (
-        await tx
-          .insert(branchReviewSources)
-          .values({ branchId: input.branchId, ...values })
-          .returning({ id: branchReviewSources.id })
-      )[0]?.id;
+      const id =
+        current?.id ??
+        (
+          await tx
+            .insert(branchReviewSources)
+            .values({ branchId: input.branchId, ...values })
+            .returning({ id: branchReviewSources.id })
+        )[0]?.id;
       if (current) {
         await tx
           .update(branchReviewSources)
@@ -173,7 +172,9 @@ export async function scrapeBranchGoogleReviews(
   }
 
   const uniqueReviews = Array.from(
-    new Map(scraped.map((review) => [reviewSourceHash(review), review])).entries(),
+    new Map(
+      scraped.map((review) => [reviewSourceHash(review), review]),
+    ).entries(),
   );
   try {
     await getDatabase().transaction(async (tx) => {
@@ -224,7 +225,11 @@ export async function scrapeBranchGoogleReviews(
       }
       await tx
         .update(branchReviewSources)
-        .set({ lastScrapedAt: fetchedAt, lastError: null, updatedAt: fetchedAt })
+        .set({
+          lastScrapedAt: fetchedAt,
+          lastError: null,
+          updatedAt: fetchedAt,
+        })
         .where(eq(branchReviewSources.id, source.id));
       await tx.insert(auditLogs).values({
         adminId: profile.id,
@@ -235,7 +240,10 @@ export async function scrapeBranchGoogleReviews(
       });
     });
   } catch {
-    return { message: "Review berhasil diambil, tetapi belum tersimpan.", errors: {} };
+    return {
+      message: "Review berhasil diambil, tetapi belum tersimpan.",
+      errors: {},
+    };
   }
 
   revalidateReviewPages(branchId, branch);
@@ -257,7 +265,8 @@ export async function saveReviewDisplayState(
     isSelected: formData.get("isSelected") === "on",
     isHidden: formData.get("isHidden") === "on",
   });
-  if (!parsed.success) return { message: "Status review tidak valid.", errors: {} };
+  if (!parsed.success)
+    return { message: "Status review tidak valid.", errors: {} };
 
   const input = parsed.data;
   const slug = await branchSlug(input.branchId);
@@ -311,4 +320,3 @@ export async function saveReviewDisplayState(
   revalidateReviewPages(input.branchId, slug);
   return { message: "Tampilan review diperbarui.", errors: {}, ok: true };
 }
-

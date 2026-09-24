@@ -180,9 +180,9 @@ export async function movePageItem(
                 ? "gallery_items"
                 : kind === "review"
                   ? "branch_google_reviews"
-                : kind === "campaign"
-                  ? "campaigns"
-                  : "branches",
+                  : kind === "campaign"
+                    ? "campaigns"
+                    : "branches",
         entityId: id,
         changes: { field: "sortOrder", branchId: branchId || null },
       });

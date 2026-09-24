@@ -26,7 +26,10 @@ function WhatsAppIcon() {
 
 function ReviewStars({ rating }: { rating: number }) {
   return (
-    <span className="flex text-base leading-none text-amber-500" aria-hidden="true">
+    <span
+      className="flex text-base leading-none text-amber-500"
+      aria-hidden="true"
+    >
       {Array.from({ length: 5 }, (_, index) => (
         <span key={index}>{index < rating ? "★" : "☆"}</span>
       ))}
@@ -207,7 +210,7 @@ export function LinkBio({
                         ? "w-[82%] shrink-0 snap-start sm:w-auto"
                         : items.length === 2
                           ? "w-[82%] shrink-0 snap-start sm:w-auto"
-                        : undefined
+                          : undefined
                     }
                   >
                     <figure className="h-full overflow-hidden rounded-2xl bg-card">
@@ -257,7 +260,8 @@ export function LinkBio({
                       id="gallery-swipe-hint"
                       className="mt-2 text-center text-xs text-muted-foreground sm:hidden"
                     >
-                      Geser untuk melihat koleksi lainnya atau tunggu koleksi berikutnya.
+                      Geser untuk melihat koleksi lainnya atau tunggu koleksi
+                      berikutnya.
                     </p>
                   )}
                   <GalleryCarousel
@@ -387,7 +391,9 @@ export function LinkBio({
               return (
                 <section
                   key={sectionKey}
-                  aria-labelledby={publicTitle ? `${sectionKey}-title` : undefined}
+                  aria-labelledby={
+                    publicTitle ? `${sectionKey}-title` : undefined
+                  }
                 >
                   {publicTitle && (
                     <h2
@@ -421,7 +427,9 @@ export function LinkBio({
               return content.reviews?.items.length ? (
                 <section
                   key={sectionKey}
-                  aria-labelledby={publicTitle ? "google-reviews-title" : undefined}
+                  aria-labelledby={
+                    publicTitle ? "google-reviews-title" : undefined
+                  }
                 >
                   {publicTitle && (
                     <h2
@@ -471,9 +479,7 @@ export function LinkBio({
                               </div>
                             </div>
                             <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span
-                                className="sr-only"
-                              >{`Rating ${review.rating} dari 5`}</span>
+                              <span className="sr-only">{`Rating ${review.rating} dari 5`}</span>
                               <ReviewStars rating={review.rating} />
                               <span className="text-xs text-muted-foreground">
                                 {review.relativeTime}

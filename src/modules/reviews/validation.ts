@@ -55,7 +55,13 @@ export const branchReviewSchema = z.object({ branchId: z.uuid() });
 const extractedReviewSchema = z.object({
   reviewerName: z.string().trim().min(1).max(160),
   reviewerPhotoUrl: z.string().url().max(2048).nullable().optional(),
-  reviewerReviewCount: z.number().int().min(0).max(1_000_000).nullable().optional(),
+  reviewerReviewCount: z
+    .number()
+    .int()
+    .min(0)
+    .max(1_000_000)
+    .nullable()
+    .optional(),
   rating: z.number().int().min(1).max(5),
   relativeTime: z.string().trim().min(1).max(120),
   reviewText: z.string().trim().min(1).max(4_000),
@@ -66,4 +72,3 @@ export const extractedGoogleReviewsSchema = z.object({
 });
 
 export type ExtractedGoogleReview = z.infer<typeof extractedReviewSchema>;
-

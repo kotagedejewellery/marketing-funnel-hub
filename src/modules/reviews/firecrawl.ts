@@ -59,7 +59,9 @@ function parsedExtractionPayload(value: unknown) {
     try {
       return JSON.parse(value) as unknown;
     } catch {
-      throw new FirecrawlReviewError("Firecrawl mengembalikan data review tidak valid.");
+      throw new FirecrawlReviewError(
+        "Firecrawl mengembalikan data review tidak valid.",
+      );
     }
   }
   return value;
@@ -105,7 +107,9 @@ export async function scrapeGoogleMapsReviews(sourceUrl: string) {
   try {
     body = await response.json();
   } catch {
-    throw new FirecrawlReviewError("Firecrawl mengembalikan respons tidak valid.");
+    throw new FirecrawlReviewError(
+      "Firecrawl mengembalikan respons tidak valid.",
+    );
   }
 
   const parsed = firecrawlResponseSchema.safeParse(body);
@@ -125,4 +129,3 @@ export async function scrapeGoogleMapsReviews(sourceUrl: string) {
 
   return extracted.data.reviews;
 }
-

@@ -5,9 +5,7 @@ import { reviewSourceSchema, isGoogleMapsUrl } from "./validation";
 describe("Google Maps review source", () => {
   it("accepts official Google Maps URLs and rejects unrelated URLs", () => {
     expect(isGoogleMapsUrl("https://maps.app.goo.gl/example")).toBe(true);
-    expect(isGoogleMapsUrl("https://www.google.com/maps/place/KGJ")).toBe(
-      true,
-    );
+    expect(isGoogleMapsUrl("https://www.google.com/maps/place/KGJ")).toBe(true);
     expect(
       isGoogleMapsUrl("https://www.google.com/search?q=KGJ#lrd=example"),
     ).toBe(true);

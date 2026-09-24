@@ -68,7 +68,9 @@ export function SectionList({ sections }: { sections: Section[] }) {
                 <input type="hidden" name="id" value={section.id} />
                 {sectionSupportsPublicTitle(section.sectionKey) && (
                   <label className="flex min-h-11 items-center gap-2 text-sm">
-                    <span className="sr-only">Judul publik {section.label}</span>
+                    <span className="sr-only">
+                      Judul publik {section.label}
+                    </span>
                     <input
                       name="publicTitle"
                       defaultValue={section.publicTitle ?? ""}

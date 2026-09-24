@@ -148,7 +148,7 @@ export default async function BranchLinkBioPage({
                 <h2 className="font-serif text-2xl">Susunan bagian</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {inheritsSections
-                  ? "Mengikuti template susunan KGJ. Simpan perubahan untuk menjadikannya khusus cabang."
+                    ? "Mengikuti template susunan KGJ. Simpan perubahan untuk menjadikannya khusus cabang."
                     : "Susunan dan bagian yang tampil khusus untuk cabang ini."}
                 </p>
               </div>

@@ -4,10 +4,7 @@ import { useActionState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { PageOrderControls } from "@/components/admin/page-order-controls";
-import type {
-  branchGoogleReviews,
-  branchReviewSources,
-} from "@/lib/db/schema";
+import type { branchGoogleReviews, branchReviewSources } from "@/lib/db/schema";
 import {
   saveBranchReviewSource,
   saveReviewDisplayState,
@@ -59,12 +56,15 @@ export function GoogleReviewManager({
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Simpan URL Google Maps resmi, lalu ambil review secara manual. Review
-          asli tidak dapat diedit; Anda dapat memfilter, memilih, menyembunyikan,
-          dan mengurutkannya untuk halaman ini.
+          asli tidak dapat diedit; Anda dapat memfilter, memilih,
+          menyembunyikan, dan mengurutkannya untuk halaman ini.
         </p>
       </div>
 
-      <form action={sourceAction} className="mt-6 grid gap-5 border-t border-border pt-6">
+      <form
+        action={sourceAction}
+        className="mt-6 grid gap-5 border-t border-border pt-6"
+      >
         <input type="hidden" name="branchId" value={branchId} />
         <div>
           <label htmlFor="google-maps-url" className="font-medium">
@@ -167,7 +167,9 @@ export function GoogleReviewManager({
               disabled={scrapePending || !source}
               className="min-h-11 rounded-full border border-border bg-card px-5 text-sm font-bold hover:bg-[var(--kgj-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
             >
-              {scrapePending ? "Mengambil review..." : "Ambil review dari Firecrawl"}
+              {scrapePending
+                ? "Mengambil review..."
+                : "Ambil review dari Firecrawl"}
             </button>
             <FormFeedback state={scrapeState} pending={scrapePending} />
           </form>
@@ -189,7 +191,9 @@ export function GoogleReviewManager({
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <p className="font-semibold break-words">{review.reviewerName}</p>
+                    <p className="font-semibold break-words">
+                      {review.reviewerName}
+                    </p>
                     <span className="text-sm text-amber-600">
                       {"★".repeat(review.rating)} {review.rating}/5
                     </span>
@@ -235,7 +239,10 @@ function ReviewDisplayControls({
     errors: {},
   });
   return (
-    <form action={action} className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+    <form
+      action={action}
+      className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3"
+    >
       <input type="hidden" name="id" value={review.id} />
       <input type="hidden" name="branchId" value={branchId} />
       <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
@@ -267,4 +274,3 @@ function ReviewDisplayControls({
     </form>
   );
 }
-

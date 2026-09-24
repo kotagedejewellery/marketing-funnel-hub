@@ -27,8 +27,8 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
   return (
     <form action={action} className="space-y-6">
       <p className="text-sm leading-6 text-muted-foreground">
-        Nilai ini menjadi standar KGJ bagi cabang yang belum membuat
-        pengaturan khusus.
+        Nilai ini menjadi standar KGJ bagi cabang yang belum membuat pengaturan
+        khusus.
       </p>
       <div className="mt-7 grid gap-6 lg:grid-cols-2">
         <div>
@@ -93,8 +93,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
       <div className="mt-8 border-t border-border pt-8">
         <h3 className="font-serif text-2xl">Standar WhatsApp</h3>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Digunakan ketika produk atau cabang belum memiliki pengaturan
-          khusus.
+          Digunakan ketika produk atau cabang belum memiliki pengaturan khusus.
         </p>
       </div>
       <div className="mt-6 space-y-6">

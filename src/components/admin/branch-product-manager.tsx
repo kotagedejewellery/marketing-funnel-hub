@@ -349,8 +349,8 @@ function BranchProductForm({
       </p>
       <p className="text-sm leading-6 text-muted-foreground">
         Nama dan deskripsi kosong mengikuti jenis produk bersama. Label kosong
-        mengikuti pengaturan cabang lalu Standar &amp; Template KGJ; pesan kosong
-        mengikuti Standar &amp; Template KGJ.
+        mengikuti pengaturan cabang lalu Standar &amp; Template KGJ; pesan
+        kosong mengikuti Standar &amp; Template KGJ.
       </p>
       <div>
         <label htmlFor={`display-name-${product.id}`} className="font-medium">
