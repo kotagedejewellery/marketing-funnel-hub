@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
+import { DestructiveConfirmDialog } from "@/components/admin/destructive-confirm-dialog";
 import { PageOrderControls } from "@/components/admin/page-order-controls";
 import type { branchGoogleReviews, branchReviewSources } from "@/lib/db/schema";
 import {
@@ -76,6 +77,9 @@ export function GoogleReviewManager({
     reviewDisplayValues(reviews),
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteFormRef = useRef<HTMLFormElement>(null);
+  const confirmedDelete = useRef(false);
   const [sourceState, sourceAction, sourcePending] = useActionState(
     saveBranchReviewSource,
     { message: "", errors: {} },
@@ -260,6 +264,7 @@ export function GoogleReviewManager({
           <button
             type="submit"
             disabled={sourcePending}
+            aria-busy={sourcePending || undefined}
             className="min-h-11 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
           >
             {sourcePending ? "Menyimpan..." : "Simpan pengaturan review"}
@@ -285,6 +290,7 @@ export function GoogleReviewManager({
             <button
               type="submit"
               disabled={scrapePending || !source}
+              aria-busy={scrapePending || undefined}
               className="min-h-11 rounded-full border border-border bg-card px-5 text-sm font-bold hover:bg-[var(--kgj-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
             >
               {scrapePending
@@ -339,6 +345,7 @@ export function GoogleReviewManager({
                 type="submit"
                 form="review-display-form"
                 disabled={displayPending || changes.length === 0}
+                aria-busy={displayPending || undefined}
                 className="min-h-11 rounded-full border border-border bg-card px-4 text-sm font-semibold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
               >
                 {displayPending
@@ -346,15 +353,15 @@ export function GoogleReviewManager({
                   : `Simpan tampilan${changes.length ? ` (${changes.length})` : ""}`}
               </button>
               <form
+                ref={deleteFormRef}
                 action={deleteAction}
                 onSubmit={(event) => {
-                  if (
-                    !window.confirm(
-                      `Hapus permanen ${selectedIds.length} review yang dipilih?`,
-                    )
-                  ) {
+                  if (!confirmedDelete.current) {
                     event.preventDefault();
+                    setDeleteDialogOpen(true);
+                    return;
                   }
+                  confirmedDelete.current = false;
                 }}
               >
                 <input type="hidden" name="branchId" value={branchId} />
@@ -366,6 +373,7 @@ export function GoogleReviewManager({
                 <button
                   type="submit"
                   disabled={deletePending || selectedIds.length === 0}
+                  aria-busy={deletePending || undefined}
                   className="min-h-11 rounded-full border border-destructive/40 px-4 text-sm font-semibold text-destructive hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
                 >
                   {deletePending
@@ -373,6 +381,16 @@ export function GoogleReviewManager({
                     : `Hapus terpilih${selectedIds.length ? ` (${selectedIds.length})` : ""}`}
                 </button>
               </form>
+              <DestructiveConfirmDialog
+                open={deleteDialogOpen && !deleteState.ok}
+                count={selectedIds.length}
+                pending={deletePending}
+                onClose={() => setDeleteDialogOpen(false)}
+                onConfirm={() => {
+                  confirmedDelete.current = true;
+                  deleteFormRef.current?.requestSubmit();
+                }}
+              />
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-3">

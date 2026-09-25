@@ -220,6 +220,7 @@ export function BranchPageForm({
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-11 bg-primary px-5 font-medium text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
       >
         {pending

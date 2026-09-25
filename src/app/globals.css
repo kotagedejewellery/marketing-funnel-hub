@@ -133,3 +133,32 @@
 .kgj-admin-dialog fieldset {
   border-radius: 1rem;
 }
+
+.kgj-admin button[aria-busy="true"] {
+  cursor: wait;
+}
+
+.kgj-admin button[aria-busy="true"]::before {
+  display: inline-block;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-right: 0.5rem;
+  vertical-align: -0.125rem;
+  content: "";
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 9999px;
+  animation: kgj-spin 0.7s linear infinite;
+}
+
+@keyframes kgj-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kgj-admin button[aria-busy="true"]::before {
+    animation: none;
+  }
+}

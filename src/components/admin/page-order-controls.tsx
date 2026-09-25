@@ -34,6 +34,7 @@ export function PageOrderControls({
         name="direction"
         value="up"
         disabled={pending || index === 0}
+        aria-busy={pending || undefined}
         className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
       >
         {upLabel}
@@ -43,6 +44,7 @@ export function PageOrderControls({
         name="direction"
         value="down"
         disabled={pending || index === count - 1}
+        aria-busy={pending || undefined}
         className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
       >
         {downLabel}

@@ -34,6 +34,7 @@ export function SignOutButton() {
         type="button"
         onClick={signOut}
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-11 w-full rounded-full bg-secondary px-5 text-sm font-semibold transition-colors hover:bg-[var(--kgj-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
       >
         {pending ? "Keluar..." : "Keluar"}

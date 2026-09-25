@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Bricolage_Grotesque, Manrope } from "next/font/google";
 
 import "@/lib/env/server";
+
+import { RouteProgress } from "@/components/route-progress";
 
 import "./globals.css";
 
@@ -23,7 +25,12 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="id" className={`${bodyFont.variable} ${displayFont.variable}`}>
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}>
+          <RouteProgress />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

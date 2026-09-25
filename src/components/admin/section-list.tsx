@@ -78,13 +78,18 @@ export function SectionList({ sections }: { sections: Section[] }) {
                       placeholder="Judul publik (opsional)"
                       className="min-h-11 min-w-48 border border-border bg-background px-3"
                     />
-                    <ActionButton operation="title" disabled={pending}>
+                    <ActionButton
+                      operation="title"
+                      disabled={pending}
+                      pending={pending}
+                    >
                       Simpan judul
                     </ActionButton>
                   </label>
                 )}
                 <ActionButton
                   operation="up"
+                  pending={pending}
                   disabled={
                     pending ||
                     section.sectionKey === "profile_logo" ||
@@ -96,6 +101,7 @@ export function SectionList({ sections }: { sections: Section[] }) {
                 </ActionButton>
                 <ActionButton
                   operation="down"
+                  pending={pending}
                   disabled={
                     pending ||
                     section.sectionKey === "profile_logo" ||
@@ -108,6 +114,7 @@ export function SectionList({ sections }: { sections: Section[] }) {
                 <ActionButton
                   operation={section.isActive ? "deactivate" : "activate"}
                   disabled={pending}
+                  pending={pending}
                 >
                   {section.isActive ? "Sembunyikan" : "Tampilkan"}
                 </ActionButton>
@@ -123,10 +130,12 @@ export function SectionList({ sections }: { sections: Section[] }) {
 function ActionButton({
   operation,
   disabled,
+  pending,
   children,
 }: {
   operation: "up" | "down" | "activate" | "deactivate" | "title";
   disabled: boolean;
+  pending: boolean;
   children: ReactNode;
 }) {
   return (
@@ -135,6 +144,7 @@ function ActionButton({
       name="operation"
       value={operation}
       disabled={disabled}
+      aria-busy={pending || undefined}
       className="min-h-11 cursor-pointer border border-border px-3 text-sm font-medium hover:border-[var(--kgj-accent)] hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}

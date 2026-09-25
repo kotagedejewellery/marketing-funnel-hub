@@ -283,6 +283,7 @@ function GalleryItemForm({
       <button
         type="submit"
         disabled={pending || Boolean(fileError)}
+        aria-busy={pending || undefined}
         className="min-h-12 rounded-full bg-primary px-6 font-semibold text-primary-foreground hover:bg-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
       >
         {pending ? "Menyimpan..." : "Simpan galeri"}

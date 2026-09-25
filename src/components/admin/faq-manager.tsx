@@ -176,6 +176,7 @@ function FaqForm({
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-12 bg-primary px-6 font-semibold text-primary-foreground hover:bg-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
       >
         {pending ? "Menyimpan..." : "Simpan FAQ"}

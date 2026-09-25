@@ -132,6 +132,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-12 w-full cursor-pointer bg-primary px-5 font-semibold text-primary-foreground transition-colors hover:bg-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kgj-accent)] disabled:cursor-wait disabled:opacity-50"
       >
         {pending ? "Sedang masuk..." : "Masuk ke CMS"}

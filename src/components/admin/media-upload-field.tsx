@@ -305,6 +305,7 @@ function MediaUploadForm({
       <button
         type="submit"
         disabled={pending || !hasDimensions}
+        aria-busy={pending || undefined}
         className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {pending ? "Mengunggah..." : "Unggah gambar"}
@@ -336,6 +337,7 @@ function MediaOverrideResetForm({
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50"
       >
         {pending ? "Menyimpan..." : "Ya, gunakan gambar bawaan"}

@@ -113,6 +113,7 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className={
           profile
             ? "min-h-11 border border-border px-5 font-medium hover:bg-secondary disabled:opacity-50 md:justify-self-end"

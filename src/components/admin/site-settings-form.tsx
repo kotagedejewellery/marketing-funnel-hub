@@ -134,6 +134,7 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="mt-6 min-h-12 cursor-pointer bg-primary px-6 font-semibold text-primary-foreground hover:bg-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50"
       >
         {pending ? "Menyimpan..." : "Simpan standar KGJ"}

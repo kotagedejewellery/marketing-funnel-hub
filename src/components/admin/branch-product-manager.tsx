@@ -255,6 +255,7 @@ function AddExistingProductForm({
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground disabled:opacity-50"
       >
         {pending ? "Menambahkan..." : "Tambahkan ke cabang"}
@@ -304,6 +305,7 @@ function CreateBranchProductForm({ branchId }: { branchId: string }) {
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground disabled:opacity-50"
       >
         {pending ? "Membuat..." : "Buat dan tambahkan"}
@@ -422,6 +424,7 @@ function BranchProductForm({
       <button
         type="submit"
         disabled={pending}
+        aria-busy={pending || undefined}
         className="min-h-11 rounded-full bg-primary px-5 font-bold text-primary-foreground disabled:opacity-50"
       >
         {pending ? "Menyimpan..." : "Simpan tombol WhatsApp"}
