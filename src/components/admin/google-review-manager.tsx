@@ -46,7 +46,7 @@ function sourceValues(source: ReviewSource | null): ReviewSourceValues {
     isEnabled: source?.isEnabled ?? false,
     minimumRating: source?.minimumRating ?? 4,
     maximumReviews: source?.maximumReviews ?? 6,
-    displayMode: source?.displayMode ?? "automatic",
+    displayMode: source?.displayMode === "manual" ? "manual" : "automatic",
   };
 }
 
@@ -94,25 +94,10 @@ export function GoogleReviewManager({
   );
 
   useEffect(() => {
-    setSettings(sourceValues(source));
-  }, [source]);
-
-  useEffect(() => {
-    setDisplayValues(reviewDisplayValues(reviews));
-    setSelectedIds((current) =>
-      current.filter((id) => reviews.some((review) => review.id === id)),
-    );
-  }, [reviews]);
-
-  useEffect(() => {
-    if (!sourceState.source) return;
-    setSettings(sourceState.source);
-    router.refresh();
-  }, [router, sourceState.source]);
-
-  useEffect(() => {
-    if (scrapeState.ok || displayState.ok || deleteState.ok) router.refresh();
-  }, [deleteState, displayState, router, scrapeState]);
+    if (sourceState.ok || scrapeState.ok || displayState.ok || deleteState.ok) {
+      router.refresh();
+    }
+  }, [deleteState, displayState, router, scrapeState, sourceState]);
 
   const changes = reviews
     .map((review) => ({

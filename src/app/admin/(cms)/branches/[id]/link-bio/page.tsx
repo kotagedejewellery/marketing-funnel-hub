@@ -192,6 +192,12 @@ export default async function BranchLinkBioPage({
           />
           <BranchProductManager branchId={branch.id} products={products} />
           <GoogleReviewManager
+            key={[
+              reviewSource?.updatedAt.getTime() ?? "new",
+              ...reviews.map((review) =>
+                [review.id, review.updatedAt.getTime()].join("-"),
+              ),
+            ].join(":")}
             branchId={branch.id}
             source={reviewSource}
             reviews={reviews}
