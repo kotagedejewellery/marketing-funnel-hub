@@ -43,11 +43,39 @@ export const reviewSourceSchema = z.object({
   displayMode: z.enum(["automatic", "manual"]),
 });
 
-export const reviewDisplaySchema = z.object({
+const reviewDisplayChangeSchema = z.object({
   id: z.uuid(),
-  branchId: z.uuid(),
   isSelected: z.boolean(),
   isHidden: z.boolean(),
+});
+
+function parseReviewList(value: string, context: z.RefinementCtx) {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) throw new Error("Expected array");
+    return parsed;
+  } catch {
+    context.addIssue({ code: "custom", message: "Daftar review tidak valid." });
+    return z.NEVER;
+  }
+}
+
+export const reviewDisplayBatchSchema = z.object({
+  branchId: z.uuid(),
+  reviews: z
+    .string()
+    .max(20_000)
+    .transform(parseReviewList)
+    .pipe(z.array(reviewDisplayChangeSchema).min(1).max(50)),
+});
+
+export const reviewDeleteSchema = z.object({
+  branchId: z.uuid(),
+  ids: z
+    .string()
+    .max(5_000)
+    .transform(parseReviewList)
+    .pipe(z.array(z.uuid()).min(1).max(50)),
 });
 
 export const branchReviewSchema = z.object({ branchId: z.uuid() });
@@ -64,7 +92,9 @@ const extractedReviewSchema = z.object({
     .optional(),
   rating: z.number().int().min(1).max(5),
   relativeTime: z.string().trim().min(1).max(120),
+  relativeTimeId: z.string().trim().min(1).max(160),
   reviewText: z.string().trim().min(1).max(4_000),
+  reviewTextId: z.string().trim().min(1).max(5_000),
 });
 
 export const extractedGoogleReviewsSchema = z.object({

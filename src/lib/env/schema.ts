@@ -31,9 +31,6 @@ export const publicEnvironmentShape = {
   NEXT_PUBLIC_META_PIXEL_ID: optionalEnvironmentString(
     z.string().regex(/^\d+$/),
   ),
-  NEXT_PUBLIC_GTM_CONTAINER_ID: optionalEnvironmentString(
-    z.string().regex(/^GTM-[A-Z0-9]+$/),
-  ),
 };
 
 export function requireHttpsOutsideLocal(

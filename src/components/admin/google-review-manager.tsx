@@ -1,18 +1,33 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { PageOrderControls } from "@/components/admin/page-order-controls";
 import type { branchGoogleReviews, branchReviewSources } from "@/lib/db/schema";
 import {
+  deleteBranchGoogleReviews,
   saveBranchReviewSource,
-  saveReviewDisplayState,
+  saveReviewDisplayStates,
   scrapeBranchGoogleReviews,
 } from "@/modules/reviews/actions";
 
 type ReviewSource = typeof branchReviewSources.$inferSelect;
 type GoogleReview = typeof branchGoogleReviews.$inferSelect;
+
+type ReviewSourceValues = {
+  sourceUrl: string;
+  isEnabled: boolean;
+  minimumRating: number;
+  maximumReviews: number;
+  displayMode: "automatic" | "manual";
+};
+
+type ReviewDisplayValues = Record<
+  string,
+  { isSelected: boolean; isHidden: boolean }
+>;
 
 const inputClass =
   "mt-2 min-h-11 w-full rounded-sm border border-border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -23,6 +38,25 @@ function formattedDate(value: Date | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(value);
+}
+
+function sourceValues(source: ReviewSource | null): ReviewSourceValues {
+  return {
+    sourceUrl: source?.sourceUrl ?? "",
+    isEnabled: source?.isEnabled ?? false,
+    minimumRating: source?.minimumRating ?? 4,
+    maximumReviews: source?.maximumReviews ?? 6,
+    displayMode: source?.displayMode ?? "automatic",
+  };
+}
+
+function reviewDisplayValues(reviews: GoogleReview[]): ReviewDisplayValues {
+  return Object.fromEntries(
+    reviews.map((review) => [
+      review.id,
+      { isSelected: review.isSelected, isHidden: review.isHidden },
+    ]),
+  );
 }
 
 export function GoogleReviewManager({
@@ -36,6 +70,12 @@ export function GoogleReviewManager({
   reviews: GoogleReview[];
   canScrape: boolean;
 }) {
+  const router = useRouter();
+  const [settings, setSettings] = useState(() => sourceValues(source));
+  const [displayValues, setDisplayValues] = useState(() =>
+    reviewDisplayValues(reviews),
+  );
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sourceState, sourceAction, sourcePending] = useActionState(
     saveBranchReviewSource,
     { message: "", errors: {} },
@@ -44,6 +84,70 @@ export function GoogleReviewManager({
     scrapeBranchGoogleReviews,
     { message: "", errors: {} },
   );
+  const [displayState, displayAction, displayPending] = useActionState(
+    saveReviewDisplayStates,
+    { message: "", errors: {} },
+  );
+  const [deleteState, deleteAction, deletePending] = useActionState(
+    deleteBranchGoogleReviews,
+    { message: "", errors: {} },
+  );
+
+  useEffect(() => {
+    setSettings(sourceValues(source));
+  }, [source]);
+
+  useEffect(() => {
+    setDisplayValues(reviewDisplayValues(reviews));
+    setSelectedIds((current) =>
+      current.filter((id) => reviews.some((review) => review.id === id)),
+    );
+  }, [reviews]);
+
+  useEffect(() => {
+    if (!sourceState.source) return;
+    setSettings(sourceState.source);
+    router.refresh();
+  }, [router, sourceState.source]);
+
+  useEffect(() => {
+    if (scrapeState.ok || displayState.ok || deleteState.ok) router.refresh();
+  }, [deleteState, displayState, router, scrapeState]);
+
+  const changes = reviews
+    .map((review) => ({
+      id: review.id,
+      isSelected: displayValues[review.id]?.isSelected ?? review.isSelected,
+      isHidden: displayValues[review.id]?.isHidden ?? review.isHidden,
+    }))
+    .filter(
+      (review) =>
+        review.isSelected !==
+          reviews.find((current) => current.id === review.id)?.isSelected ||
+        review.isHidden !==
+          reviews.find((current) => current.id === review.id)?.isHidden,
+    );
+  const allSelected =
+    reviews.length > 0 && selectedIds.length === reviews.length;
+
+  function toggleSelectedId(id: string, checked: boolean) {
+    setSelectedIds((current) =>
+      checked
+        ? [...new Set([...current, id])]
+        : current.filter((item) => item !== id),
+    );
+  }
+
+  function updateDisplay(
+    id: string,
+    key: "isSelected" | "isHidden",
+    value: boolean,
+  ) {
+    setDisplayValues((current) => ({
+      ...current,
+      [id]: { ...current[id], [key]: value },
+    }));
+  }
 
   return (
     <section
@@ -74,7 +178,13 @@ export function GoogleReviewManager({
             id="google-maps-url"
             name="sourceUrl"
             type="url"
-            defaultValue={source?.sourceUrl ?? ""}
+            value={settings.sourceUrl}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                sourceUrl: event.target.value,
+              }))
+            }
             placeholder="https://maps.app.goo.gl/..."
             required
             maxLength={2048}
@@ -91,7 +201,13 @@ export function GoogleReviewManager({
             Rating minimum
             <select
               name="minimumRating"
-              defaultValue={String(source?.minimumRating ?? 4)}
+              value={String(settings.minimumRating)}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  minimumRating: Number(event.target.value),
+                }))
+              }
               className={inputClass}
             >
               {[1, 2, 3, 4, 5].map((rating) => (
@@ -105,7 +221,13 @@ export function GoogleReviewManager({
             Maksimum tampil
             <select
               name="maximumReviews"
-              defaultValue={String(source?.maximumReviews ?? 6)}
+              value={String(settings.maximumReviews)}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  maximumReviews: Number(event.target.value),
+                }))
+              }
               className={inputClass}
             >
               {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((count) => (
@@ -119,7 +241,14 @@ export function GoogleReviewManager({
             Pilihan review
             <select
               name="displayMode"
-              defaultValue={source?.displayMode ?? "automatic"}
+              value={settings.displayMode}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  displayMode: event.target
+                    .value as ReviewSourceValues["displayMode"],
+                }))
+              }
               className={inputClass}
             >
               <option value="automatic">Otomatis sesuai filter</option>
@@ -131,7 +260,13 @@ export function GoogleReviewManager({
           <input
             type="checkbox"
             name="isEnabled"
-            defaultChecked={source?.isEnabled ?? false}
+            checked={settings.isEnabled}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                isEnabled: event.target.checked,
+              }))
+            }
             className="size-5 accent-primary"
           />
           Tampilkan section Ulasan Google bila ada review yang lolos
@@ -185,92 +320,167 @@ export function GoogleReviewManager({
           Belum ada review yang diambil untuk cabang ini.
         </p>
       ) : (
-        <ul className="mt-6 divide-y divide-border border-t border-border">
-          {reviews.map((review, index) => (
-            <li key={review.id} className="py-5">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <p className="font-semibold break-words">
-                      {review.reviewerName}
-                    </p>
-                    <span className="text-sm text-amber-600">
-                      {"★".repeat(review.rating)} {review.rating}/5
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {review.relativeTime}
-                    </span>
-                  </div>
-                  {review.reviewerReviewCount !== null && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {review.reviewerReviewCount} ulasan dari reviewer
-                    </p>
-                  )}
-                  <p className="mt-2 line-clamp-4 text-sm leading-6 whitespace-pre-line text-muted-foreground">
-                    {review.reviewText}
-                  </p>
-                </div>
-                <PageOrderControls
-                  kind="review"
-                  id={review.id}
-                  branchId={branchId}
-                  index={index}
-                  count={reviews.length}
+        <div className="mt-6 border-t border-border pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={(event) =>
+                  setSelectedIds(
+                    event.target.checked
+                      ? reviews.map((review) => review.id)
+                      : [],
+                  )
+                }
+                className="size-4 accent-primary"
+              />
+              Pilih semua ({reviews.length})
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <form
+                id="review-display-form"
+                action={displayAction}
+                className="contents"
+              >
+                <input type="hidden" name="branchId" value={branchId} />
+                <input
+                  type="hidden"
+                  name="reviews"
+                  value={JSON.stringify(changes)}
                 />
-              </div>
-              <ReviewDisplayControls branchId={branchId} review={review} />
-            </li>
-          ))}
-        </ul>
+              </form>
+              <button
+                type="submit"
+                form="review-display-form"
+                disabled={displayPending || changes.length === 0}
+                className="min-h-11 rounded-full border border-border bg-card px-4 text-sm font-semibold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
+              >
+                {displayPending
+                  ? "Menyimpan..."
+                  : `Simpan tampilan${changes.length ? ` (${changes.length})` : ""}`}
+              </button>
+              <form
+                action={deleteAction}
+                onSubmit={(event) => {
+                  if (
+                    !window.confirm(
+                      `Hapus permanen ${selectedIds.length} review yang dipilih?`,
+                    )
+                  ) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <input type="hidden" name="branchId" value={branchId} />
+                <input
+                  type="hidden"
+                  name="ids"
+                  value={JSON.stringify(selectedIds)}
+                />
+                <button
+                  type="submit"
+                  disabled={deletePending || selectedIds.length === 0}
+                  className="min-h-11 rounded-full border border-destructive/40 px-4 text-sm font-semibold text-destructive hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
+                >
+                  {deletePending
+                    ? "Menghapus..."
+                    : `Hapus terpilih${selectedIds.length ? ` (${selectedIds.length})` : ""}`}
+                </button>
+              </form>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <FormFeedback state={displayState} pending={displayPending} />
+            <FormFeedback state={deleteState} pending={deletePending} />
+          </div>
+          <ul className="mt-4 divide-y divide-border">
+            {reviews.map((review, index) => {
+              const display = displayValues[review.id] ?? {
+                isSelected: review.isSelected,
+                isHidden: review.isHidden,
+              };
+              return (
+                <li key={review.id} className="py-5">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(review.id)}
+                        onChange={(event) =>
+                          toggleSelectedId(review.id, event.target.checked)
+                        }
+                        aria-label={`Pilih review ${review.reviewerName}`}
+                        className="mt-1 size-4 shrink-0 accent-primary"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <p className="font-semibold break-words">
+                            {review.reviewerName}
+                          </p>
+                          <span className="text-sm text-amber-600">
+                            {"★".repeat(review.rating)} {review.rating}/5
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {review.relativeTime}
+                          </span>
+                        </div>
+                        {review.reviewerReviewCount !== null && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {review.reviewerReviewCount} ulasan dari reviewer
+                          </p>
+                        )}
+                        <p className="mt-2 line-clamp-4 text-sm leading-6 whitespace-pre-line text-muted-foreground">
+                          {review.reviewText}
+                        </p>
+                      </div>
+                    </div>
+                    <PageOrderControls
+                      kind="review"
+                      id={review.id}
+                      branchId={branchId}
+                      index={index}
+                      count={reviews.length}
+                    />
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 pl-7">
+                    <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        checked={display.isSelected}
+                        onChange={(event) =>
+                          updateDisplay(
+                            review.id,
+                            "isSelected",
+                            event.target.checked,
+                          )
+                        }
+                        className="size-4 accent-primary"
+                      />
+                      Pilih untuk mode manual
+                    </label>
+                    <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        checked={display.isHidden}
+                        onChange={(event) =>
+                          updateDisplay(
+                            review.id,
+                            "isHidden",
+                            event.target.checked,
+                          )
+                        }
+                        className="size-4 accent-primary"
+                      />
+                      Sembunyikan
+                    </label>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </section>
-  );
-}
-
-function ReviewDisplayControls({
-  branchId,
-  review,
-}: {
-  branchId: string;
-  review: GoogleReview;
-}) {
-  const [state, action, pending] = useActionState(saveReviewDisplayState, {
-    message: "",
-    errors: {},
-  });
-  return (
-    <form
-      action={action}
-      className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3"
-    >
-      <input type="hidden" name="id" value={review.id} />
-      <input type="hidden" name="branchId" value={branchId} />
-      <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-        <input
-          type="checkbox"
-          name="isSelected"
-          defaultChecked={review.isSelected}
-          className="size-4 accent-primary"
-        />
-        Pilih untuk mode manual
-      </label>
-      <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-        <input
-          type="checkbox"
-          name="isHidden"
-          defaultChecked={review.isHidden}
-          className="size-4 accent-primary"
-        />
-        Sembunyikan
-      </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="min-h-10 rounded-full border border-border px-4 text-sm font-semibold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
-      >
-        {pending ? "Menyimpan..." : "Simpan tampilan"}
-      </button>
-      <FormFeedback state={state} pending={pending} />
-    </form>
   );
 }

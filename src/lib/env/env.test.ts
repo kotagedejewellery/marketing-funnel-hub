@@ -24,6 +24,18 @@ describe("environment contract", () => {
     expect(environment.TRACKING_ENABLED).toBe("false");
   });
 
+  it("requires Meta Pixel and CAPI, but not GTM, when tracking is enabled", () => {
+    const environment = parseServerEnv({
+      ...validServerEnvironment,
+      TRACKING_ENABLED: "true",
+      NEXT_PUBLIC_META_PIXEL_ID: "1234567890",
+      META_CAPI_DATASET_ID: "1234567890",
+      META_CAPI_ACCESS_TOKEN: "test-meta-access-token",
+    });
+
+    expect(environment.TRACKING_ENABLED).toBe("true");
+  });
+
   it("reports only invalid variable names without exposing supplied secrets", () => {
     const secret = "must-never-appear-in-an-error";
 

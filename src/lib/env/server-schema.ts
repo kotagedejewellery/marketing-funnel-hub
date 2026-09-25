@@ -45,7 +45,6 @@ const serverEnvironmentSchema = z
 
     for (const variable of [
       "NEXT_PUBLIC_META_PIXEL_ID",
-      "NEXT_PUBLIC_GTM_CONTAINER_ID",
       "META_CAPI_DATASET_ID",
       "META_CAPI_ACCESS_TOKEN",
     ] as const) {

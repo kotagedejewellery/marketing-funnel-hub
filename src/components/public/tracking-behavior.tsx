@@ -32,7 +32,6 @@ type Pixel = ((...args: unknown[]) => void) & {
 type ProviderWindow = Window & {
   fbq?: Pixel;
   _fbq?: Pixel;
-  dataLayer?: Record<string, unknown>[];
 };
 
 function loadProviderScript(id: string, src: string) {
@@ -48,7 +47,6 @@ function activateProviders() {
   if (clientEnv.NEXT_PUBLIC_APP_ENV !== "production") return;
   const browser = window as ProviderWindow;
   const metaPixelId = clientEnv.NEXT_PUBLIC_META_PIXEL_ID;
-  const gtmContainerId = clientEnv.NEXT_PUBLIC_GTM_CONTAINER_ID;
 
   if (metaPixelId) {
     if (!browser.fbq) {
@@ -68,17 +66,6 @@ function activateProviders() {
       );
     }
     browser.fbq("consent", "grant");
-  }
-
-  if (gtmContainerId) {
-    browser.dataLayer ??= [];
-    if (!document.getElementById("kgj-gtm")) {
-      browser.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
-    }
-    loadProviderScript(
-      "kgj-gtm",
-      `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmContainerId)}`,
-    );
   }
 }
 
@@ -103,33 +90,6 @@ function sendEvent(event: CanonicalEvent) {
         },
         { eventID: event.eventId },
       );
-    } catch {
-      // Provider failure must not change a WhatsApp click.
-    }
-  }
-
-  if (Array.isArray(browser.dataLayer)) {
-    try {
-      browser.dataLayer.push({
-        event: {
-          PageView: "kgj_page_view",
-          ViewContent: "kgj_view_content",
-          Contact: "kgj_contact",
-          LinkClick: "kgj_link_click",
-        }[event.eventName],
-        event_id: event.eventId,
-        anonymous_session_id: event.anonymousSessionId,
-        product_category: event.product?.category ?? null,
-        branch: event.branch?.name ?? null,
-        cta: event.cta,
-        link_label: event.eventName === "LinkClick" ? event.link.label : null,
-        link_type: event.eventName === "LinkClick" ? event.link.type : null,
-        utm_source: event.attribution.utmSource,
-        utm_medium: event.attribution.utmMedium,
-        utm_campaign: event.attribution.utmCampaign,
-        utm_content: event.attribution.utmContent,
-        utm_term: event.attribution.utmTerm,
-      });
     } catch {
       // Provider failure must not change a WhatsApp click.
     }

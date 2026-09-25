@@ -18,7 +18,6 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_fixture_only
       NEXT_PUBLIC_META_PIXEL_ID: "1234567890"
-      NEXT_PUBLIC_GTM_CONTAINER_ID: GTM-TEST123
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       DATABASE_MIGRATION_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       SUPABASE_SECRET_KEY: sb_secret_ci_fixture_only
@@ -39,11 +38,7 @@ jobs:
           runtime: node@24
           require-lockfile: true
           cache: true
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
+      - run: pnpm quality:check
       - uses: supabase/setup-cli@v3.0.0
         with:
           version: 2.58.5

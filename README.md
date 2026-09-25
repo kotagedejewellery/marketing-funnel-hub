@@ -2,7 +2,7 @@
 
 An owned marketing conversion layer for Kotagede Jewellery. The P0 product will
 publish a custom Link Bio, route product interest to the correct WhatsApp branch,
-preserve campaign attribution, deliver Meta and GA4 signals, and retain canonical
+preserve campaign attribution, deliver Meta signals, and retain canonical
 first-party events.
 
 ## Current status
@@ -64,6 +64,7 @@ links redirect to the direct URL. The CMS manages branch pages at
 | `pnpm typecheck`                 | Run strict TypeScript checks                            |
 | `pnpm lint`                      | Run ESLint                                              |
 | `pnpm format:check`              | Check source/configuration formatting with Prettier     |
+| `pnpm quality:check`             | Run the same fast quality gate as CI before pushing     |
 | `pnpm test`                      | Run all unit and component tests once                   |
 | `pnpm test:unit`                 | Run Node unit tests only                                |
 | `pnpm test:component`            | Run isolated jsdom component tests only                 |
@@ -81,6 +82,11 @@ and never needs live tracking credentials. On Windows, allow Playwright to
 terminate its local server process tree when the test ends.
 
 Browser smoke tests use only the local database, never the live database.
+
+Before pushing code or deploying, run `pnpm quality:check`. It runs formatting,
+lint, TypeScript, unit/component tests, and the production build in the same
+order as the fast GitHub CI gate. Database integration and browser E2E checks
+remain in CI because they require Supabase Local and Playwright.
 
 The Drizzle commands require an ignored `.env.local` with local `DATABASE_URL` and
 `DATABASE_MIGRATION_URL`; the migration command rejects non-local database targets.

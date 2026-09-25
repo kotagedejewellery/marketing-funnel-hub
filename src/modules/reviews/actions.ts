@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
@@ -20,7 +20,8 @@ import {
 } from "./firecrawl";
 import {
   branchReviewSchema,
-  reviewDisplaySchema,
+  reviewDeleteSchema,
+  reviewDisplayBatchSchema,
   reviewSourceSchema,
 } from "./validation";
 
@@ -28,6 +29,13 @@ type ActionState = {
   message: string;
   errors: Record<string, string>;
   ok?: boolean;
+  source?: {
+    sourceUrl: string;
+    isEnabled: boolean;
+    minimumRating: number;
+    maximumReviews: number;
+    displayMode: "automatic" | "manual";
+  };
 };
 
 async function branchSlug(branchId: string) {
@@ -125,7 +133,18 @@ export async function saveBranchReviewSource(
   }
 
   revalidateReviewPages(input.branchId, slug);
-  return { message: "Pengaturan review tersimpan.", errors: {}, ok: true };
+  return {
+    message: "Pengaturan review tersimpan.",
+    errors: {},
+    ok: true,
+    source: {
+      sourceUrl: input.sourceUrl,
+      isEnabled: input.isEnabled,
+      minimumRating: input.minimumRating,
+      maximumReviews: input.maximumReviews,
+      displayMode: input.displayMode,
+    },
+  };
 }
 
 export async function scrapeBranchGoogleReviews(
@@ -203,7 +222,9 @@ export async function scrapeBranchGoogleReviews(
           reviewerReviewCount: review.reviewerReviewCount ?? null,
           rating: review.rating,
           relativeTime: review.relativeTime,
+          relativeTimeId: review.relativeTimeId,
           reviewText: review.reviewText,
+          reviewTextId: review.reviewTextId,
           sourceUrl: source.sourceUrl,
           fetchedAt,
           updatedAt: fetchedAt,
@@ -254,19 +275,17 @@ export async function scrapeBranchGoogleReviews(
   };
 }
 
-export async function saveReviewDisplayState(
+export async function saveReviewDisplayStates(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await requireAdmin();
-  const parsed = reviewDisplaySchema.safeParse({
-    id: formData.get("id"),
+  const parsed = reviewDisplayBatchSchema.safeParse({
     branchId: formData.get("branchId"),
-    isSelected: formData.get("isSelected") === "on",
-    isHidden: formData.get("isHidden") === "on",
+    reviews: formData.get("reviews"),
   });
   if (!parsed.success)
-    return { message: "Status review tidak valid.", errors: {} };
+    return { message: "Perubahan review tidak valid.", errors: {} };
 
   const input = parsed.data;
   const slug = await branchSlug(input.branchId);
@@ -274,7 +293,7 @@ export async function saveReviewDisplayState(
 
   try {
     const changed = await getDatabase().transaction(async (tx) => {
-      const [current] = await tx
+      const current = await tx
         .select({
           id: branchGoogleReviews.id,
           isSelected: branchGoogleReviews.isSelected,
@@ -283,40 +302,109 @@ export async function saveReviewDisplayState(
         .from(branchGoogleReviews)
         .where(
           and(
-            eq(branchGoogleReviews.id, input.id),
             eq(branchGoogleReviews.branchId, input.branchId),
+            inArray(
+              branchGoogleReviews.id,
+              input.reviews.map((review) => review.id),
+            ),
           ),
-        )
-        .limit(1);
-      if (!current) return false;
-      if (
-        current.isSelected === input.isSelected &&
-        current.isHidden === input.isHidden
-      ) {
-        return false;
-      }
-      await tx
-        .update(branchGoogleReviews)
-        .set({
-          isSelected: input.isSelected,
-          isHidden: input.isHidden,
-          updatedAt: new Date(),
-        })
-        .where(eq(branchGoogleReviews.id, current.id));
-      await tx.insert(auditLogs).values({
-        adminId: profile.id,
-        action: "update",
-        entityType: "branch_google_reviews",
-        entityId: current.id,
-        changes: { fields: ["isSelected", "isHidden"] },
+        );
+      if (current.length !== input.reviews.length) throw new Error("Not found");
+
+      const currentById = new Map(current.map((review) => [review.id, review]));
+      const changedReviews = input.reviews.filter((review) => {
+        const saved = currentById.get(review.id);
+        return (
+          saved &&
+          (saved.isSelected !== review.isSelected ||
+            saved.isHidden !== review.isHidden)
+        );
       });
-      return true;
+      for (const review of changedReviews) {
+        await tx
+          .update(branchGoogleReviews)
+          .set({
+            isSelected: review.isSelected,
+            isHidden: review.isHidden,
+            updatedAt: new Date(),
+          })
+          .where(eq(branchGoogleReviews.id, review.id));
+      }
+      if (changedReviews.length) {
+        await tx.insert(auditLogs).values({
+          adminId: profile.id,
+          action: "update",
+          entityType: "branch_google_reviews",
+          changes: {
+            branchId: input.branchId,
+            updatedCount: changedReviews.length,
+            fields: ["isSelected", "isHidden"],
+          },
+        });
+      }
+      return changedReviews.length;
     });
-    if (!changed) return { message: "Tidak ada perubahan review.", errors: {} };
+    if (changed === 0)
+      return { message: "Tidak ada perubahan tampilan review.", errors: {} };
   } catch {
-    return { message: "Status review belum tersimpan.", errors: {} };
+    return { message: "Tampilan review belum tersimpan.", errors: {} };
   }
 
   revalidateReviewPages(input.branchId, slug);
   return { message: "Tampilan review diperbarui.", errors: {}, ok: true };
+}
+
+export async function deleteBranchGoogleReviews(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const profile = await requireAdmin();
+  const parsed = reviewDeleteSchema.safeParse({
+    branchId: formData.get("branchId"),
+    ids: formData.get("ids"),
+  });
+  if (!parsed.success)
+    return { message: "Review yang dipilih tidak valid.", errors: {} };
+
+  const input = parsed.data;
+  const slug = await branchSlug(input.branchId);
+  if (!slug) return { message: "Cabang tidak ditemukan.", errors: {} };
+
+  try {
+    await getDatabase().transaction(async (tx) => {
+      const selected = await tx
+        .select({ id: branchGoogleReviews.id })
+        .from(branchGoogleReviews)
+        .where(
+          and(
+            eq(branchGoogleReviews.branchId, input.branchId),
+            inArray(branchGoogleReviews.id, input.ids),
+          ),
+        );
+      if (selected.length !== input.ids.length) throw new Error("Not found");
+      await tx
+        .delete(branchGoogleReviews)
+        .where(
+          and(
+            eq(branchGoogleReviews.branchId, input.branchId),
+            inArray(branchGoogleReviews.id, input.ids),
+          ),
+        );
+      await tx.insert(auditLogs).values({
+        adminId: profile.id,
+        action: "delete",
+        entityType: "branch_google_reviews",
+        changes: { branchId: input.branchId, deletedCount: selected.length },
+      });
+    });
+  } catch {
+    return { message: "Review belum dapat dihapus.", errors: {} };
+  }
+
+  revalidateReviewPages(input.branchId, slug);
+  return {
+    message: `${input.ids.length} review dihapus permanen.`,
+    errors: {},
+    ok: true,
+  };
 }

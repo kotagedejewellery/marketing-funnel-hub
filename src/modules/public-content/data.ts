@@ -218,8 +218,8 @@ async function loadScopedContent(
         reviewerPhotoUrl: branchGoogleReviews.reviewerPhotoUrl,
         reviewerReviewCount: branchGoogleReviews.reviewerReviewCount,
         rating: branchGoogleReviews.rating,
-        relativeTime: branchGoogleReviews.relativeTime,
-        reviewText: branchGoogleReviews.reviewText,
+        relativeTimeId: branchGoogleReviews.relativeTimeId,
+        reviewTextId: branchGoogleReviews.reviewTextId,
         isSelected: branchGoogleReviews.isSelected,
         isHidden: branchGoogleReviews.isHidden,
         sortOrder: branchGoogleReviews.sortOrder,
@@ -294,7 +294,9 @@ async function loadScopedContent(
           (review) =>
             !review.isHidden &&
             review.rating >= reviewSource.minimumRating &&
-            (reviewSource.displayMode === "automatic" || review.isSelected),
+            (reviewSource.displayMode === "automatic" || review.isSelected) &&
+            review.relativeTimeId !== null &&
+            review.reviewTextId !== null,
         )
         .slice(0, reviewSource.maximumReviews)
         .map(
@@ -304,16 +306,16 @@ async function loadScopedContent(
             reviewerPhotoUrl,
             reviewerReviewCount,
             rating,
-            relativeTime,
-            reviewText,
+            relativeTimeId,
+            reviewTextId,
           }) => ({
             id,
             reviewerName,
             reviewerPhotoUrl,
             reviewerReviewCount,
             rating,
-            relativeTime,
-            reviewText,
+            relativeTime: relativeTimeId!,
+            reviewText: reviewTextId!,
           }),
         )
     : [];

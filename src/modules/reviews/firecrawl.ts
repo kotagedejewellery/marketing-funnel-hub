@@ -91,7 +91,7 @@ export async function scrapeGoogleMapsReviews(sourceUrl: string) {
           {
             type: "json",
             prompt:
-              "Extract the visible Google Maps reviews for this place. Preserve the original review text exactly. Return only genuine review cards, do not invent values. reviewerReviewCount is the review count shown beside the reviewer when available.",
+              "Extract the visible Google Maps reviews for this place. Preserve the original review text and relative time exactly in reviewText and relativeTime. Also provide accurate Indonesian translations in reviewTextId and relativeTimeId, even when the source is already Indonesian. Return only genuine review cards, do not invent values. reviewerReviewCount is the review count shown beside the reviewer when available.",
             schema: z.toJSONSchema(extractedGoogleReviewsSchema),
           },
         ],

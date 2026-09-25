@@ -19,7 +19,7 @@ export default async function DiagnosticsPage() {
     ],
     ["Event internal", String(result?.value ?? 0)],
     [
-      "Meta/GTM",
+      "Meta",
       serverEnv.NEXT_PUBLIC_APP_ENV === "production" &&
       serverEnv.TRACKING_ENABLED === "true"
         ? "Jalur kode aktif; verifikasi penyedia masih diperlukan"
@@ -32,7 +32,7 @@ export default async function DiagnosticsPage() {
       <p className="mt-3 max-w-2xl text-muted-foreground">
         Ringkasan konfigurasi aplikasi tanpa menampilkan token atau kredensial.
         Status pengiriman penyedia tetap perlu diverifikasi di Meta Events
-        Manager dan GTM/GA4.
+        Manager.
       </p>
       <dl className="mt-8 divide-y divide-border border-y border-border">
         {rows.map(([label, value]) => (

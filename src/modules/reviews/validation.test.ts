@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { reviewSourceSchema, isGoogleMapsUrl } from "./validation";
+import {
+  isGoogleMapsUrl,
+  extractedGoogleReviewsSchema,
+  reviewDeleteSchema,
+  reviewDisplayBatchSchema,
+  reviewSourceSchema,
+} from "./validation";
 
 describe("Google Maps review source", () => {
   it("accepts official Google Maps URLs and rejects unrelated URLs", () => {
@@ -13,6 +19,44 @@ describe("Google Maps review source", () => {
     expect(isGoogleMapsUrl("http://maps.google.com/maps/place/KGJ")).toBe(
       false,
     );
+  });
+
+  it("validates bounded batch display changes and permanent deletions", () => {
+    const id = "00000000-0000-4000-8000-000000000002";
+    const branchId = "00000000-0000-4000-8000-000000000001";
+    const display = reviewDisplayBatchSchema.safeParse({
+      branchId,
+      reviews: JSON.stringify([{ id, isSelected: true, isHidden: false }]),
+    });
+    const deletion = reviewDeleteSchema.safeParse({
+      branchId,
+      ids: JSON.stringify([id]),
+    });
+
+    expect(display.success).toBe(true);
+    expect(deletion.success).toBe(true);
+  });
+
+  it("requires Indonesian display text and relative time from Firecrawl", () => {
+    const review = {
+      reviewerName: "Maria Prasasti",
+      reviewerPhotoUrl: null,
+      reviewerReviewCount: 1,
+      rating: 5,
+      relativeTime: "6 months ago",
+      relativeTimeId: "6 bulan lalu",
+      reviewText: "Wonderful service.",
+      reviewTextId: "Pelayanannya luar biasa.",
+    };
+
+    expect(
+      extractedGoogleReviewsSchema.safeParse({ reviews: [review] }).success,
+    ).toBe(true);
+    expect(
+      extractedGoogleReviewsSchema.safeParse({
+        reviews: [{ ...review, reviewTextId: undefined }],
+      }).success,
+    ).toBe(false);
   });
 
   it("validates the per-branch display controls", () => {

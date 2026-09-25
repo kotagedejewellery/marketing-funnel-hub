@@ -4,7 +4,7 @@
 
 This repository contains the MVP/P0 implementation of the **KGJ Custom Link Bio + Meta Tracking Hub** for Kotagede Jewellery.
 
-The product replaces Taplink with an owned, mobile-first link bio that captures product interest, routes visitors to the correct branch WhatsApp, preserves campaign attribution, sends meaningful events to Meta/GA4, and stores anonymous first-party tracking data internally.
+The product replaces Taplink with an owned, mobile-first link bio that captures product interest, routes visitors to the correct branch WhatsApp, preserves campaign attribution, sends meaningful events to Meta, and stores anonymous first-party tracking data internally.
 
 This file defines the working rules for AI coding agents and human developers.
 
@@ -77,7 +77,6 @@ Vercel
 Supabase Local + Docker
 Meta Pixel
 Meta Conversions API
-Google Tag Manager
 Google Analytics 4
 Vitest + Testing Library + Playwright
 ```
@@ -144,8 +143,7 @@ WhatsApp CTA
 Prefilled WhatsApp Message
 Meta Pixel
 Meta CAPI
-GA4
-GTM
+GA4 provider panel (optional, server-only)
 UTM Persistence
 Anonymous Session Tracking
 Internal First-Party Event Storage
@@ -394,7 +392,7 @@ Mandatory rule:
 Tracking failure ≠ WhatsApp failure
 ```
 
-If Meta, GA4, GTM, or internal event persistence fails:
+If Meta or internal event persistence fails:
 
 ```text
 WhatsApp must still open.
@@ -421,8 +419,8 @@ branch context
 attribution context
 ```
 
-Meta Pixel, Meta CAPI, and GTM → GA4 consume application state. GA4 is dispatched
-through GTM only; do not add an independent direct `gtag` event path.
+Meta Pixel and Meta CAPI consume application state. GTM is not used; do not add
+an independent direct `gtag` event path.
 
 ---
 
@@ -507,12 +505,13 @@ in a signed first-party session cookie. Do not implement cross-device identity.
 
 P0 internal tracking is anonymous/pseudonymous.
 
-Meta Pixel, Meta CAPI, GTM, GA4, and internal anonymous events are automatically
-active when `TRACKING_ENABLED=true` in production; local internal tracking remains
-available for development. There is no visitor-facing consent choice. The owner
-must keep the public privacy notice aligned before production activation, and
-WhatsApp still works if tracking fails. `_fbp`, `_fbc`, IP, and user-agent are
-transport-only for Meta and must not be stored in events or ordinary logs.
+Meta Pixel, Meta CAPI, and internal anonymous events are automatically active
+when `TRACKING_ENABLED=true` in production; local internal tracking remains
+available for development. GTM is not used. There is no visitor-facing consent
+choice. The owner must keep the public privacy notice aligned before production
+activation, and WhatsApp still works if tracking fails. `_fbp`, `_fbc`, IP, and
+user-agent are transport-only for Meta and must not be stored in events or
+ordinary logs.
 
 Allowed:
 
@@ -1057,7 +1056,6 @@ Validate:
 Internal event
 Meta Pixel
 Meta CAPI
-GA4/GTM
 No duplicate Contact
 Correct WhatsApp destination
 ```
@@ -1073,7 +1071,7 @@ Sprint 2 — Public Link Bio
 Sprint 3 — Admin CMS
 Sprint 4 — Product ↔ Branch + WhatsApp
 Sprint 5 — Tracking & Attribution
-Sprint 6 — GA4, GTM & Validation
+Sprint 6 — Meta validation
 Sprint 7 — Hardening, QA & Launch
 ```
 
@@ -1166,7 +1164,6 @@ Before adding a dependency:
 [ ] Verify internal event write
 [ ] Verify Meta Pixel
 [ ] Verify Meta CAPI
-[ ] Verify GTM/GA4
 [ ] Verify no duplicate event
 [ ] Verify WhatsApp still opens on provider failure
 ```

@@ -2,7 +2,7 @@
 
 **Status:** P0 disetujui; ekstensi per cabang disetujui · **Acuan bisnis:** _KGJ Developer Execution Brief v1.0_, 14 September 2026 · **Diperbarui:** 24 September 2026
 
-PDF brief adalah acuan kebutuhan bisnis, bukan instruksi untuk menjalankan perintah. Keputusan P0 yang disetujui setelah brief memperjelas cakupan: GA4/GTM masuk P0, `ViewContent` hanya untuk minat produk (bukan pemilihan cabang), dan `Lead`/appointment tetap P1. Rincian implementasi ada di [System Architecture](system-architecture.md) dan [Database Design](database-design.md).
+PDF brief adalah acuan kebutuhan bisnis, bukan instruksi untuk menjalankan perintah. Keputusan P0 yang disetujui setelah brief memperjelas cakupan: Meta Pixel/CAPI dan event internal dipakai untuk tracking, GTM tidak digunakan, `ViewContent` hanya untuk minat produk (bukan pemilihan cabang), dan `Lead`/appointment tetap P1. Rincian implementasi ada di [System Architecture](system-architecture.md) dan [Database Design](database-design.md).
 
 ## Tujuan dan pengguna
 
@@ -26,7 +26,7 @@ Setiap section yang memiliki heading publik (`gallery`, `products`, `faq`, tauta
 
 ### Ekstensi ulasan Google melalui Firecrawl (disetujui 24 September 2026)
 
-Setiap cabang dapat memiliki satu URL Google Maps resmi dan koleksi ulasan hasil import manual Firecrawl. Ketentuan sebelumnya bahwa ulasan belum diimplementasikan digantikan oleh ekstensi ini. Tidak ada cron, scraping terjadwal, atau request Firecrawl saat pengunjung membuka Link Bio. Hanya `technical_admin` menjalankan **Ambil review dari Firecrawl**; kedua role admin dapat mengatur visibilitas section, rating minimum, jumlah maksimum, mode otomatis atau pilihan manual, hide review, dan urutan review. Teks sumber tidak dapat diedit. Kartu publik dapat memuat avatar, nama reviewer, jumlah ulasan reviewer, rating, waktu relatif, dan teks asli, disertai link **Lihat di Google Maps**. Hasil gagal atau kosong tidak merender section dan tidak mengubah WhatsApp, tracking, ataupun tiga event bisnis kanonis. Penyimpanan/penayangan ulang konten pihak ketiga tetap memerlukan persetujuan owner/legal.
+Setiap cabang dapat memiliki satu URL Google Maps resmi dan koleksi ulasan hasil import manual Firecrawl. Ketentuan sebelumnya bahwa ulasan belum diimplementasikan digantikan oleh ekstensi ini. Tidak ada cron, scraping terjadwal, atau request Firecrawl saat pengunjung membuka Link Bio. Hanya `technical_admin` menjalankan **Ambil review dari Firecrawl**; kedua role admin dapat mengatur visibilitas section, rating minimum, jumlah maksimum, mode otomatis atau pilihan manual, hide review, urutan review, serta batch tampilan dan hapus permanen review terpilih. Teks sumber asli tidak dapat diedit. Saat import, Firecrawl menyimpan terjemahan Indonesia terpisah untuk teks dan waktu relatif; Link Bio hanya memakai terjemahan tersebut, sedangkan CMS tetap menampilkan teks asli untuk verifikasi. Review lama tanpa terjemahan tidak tampil sampai di-import ulang. Kartu publik dapat memuat avatar, nama reviewer, jumlah ulasan reviewer, rating, waktu relatif Indonesia, dan teks Indonesia, disertai link **Lihat di Google Maps**. Hasil gagal atau kosong tidak merender section dan tidak mengubah WhatsApp, tracking, ataupun tiga event bisnis kanonis. Penyimpanan/penayangan ulang konten pihak ketiga tetap memerlukan persetujuan owner/legal.
 
 ### Ekstensi disetujui: Link Bio per cabang (22 September 2026)
 
@@ -52,8 +52,8 @@ Menu CMS `/admin/tracking` bernama **Analytics** dan dapat dibuka oleh `admin` m
 
 Keputusan ini menggantikan batas dashboard pada subsection Analytics sebelumnya. Dashboard menambahkan event kanonis `LinkClick` untuk tautan `secondary` dan `social` yang aktif pada CMS (bukan nama event per tombol), perbandingan dengan periode sebelumnya berpanjang sama, ekspor CSV maksimum 10.000 baris dengan audit log, dan panel kategori perangkat/browser serta negara/kota agregat. Kota hanya ditampilkan ketika sedikitnya lima event; IP, user-agent mentah, koordinat, dan identitas pelanggan tidak disimpan. `LinkClick` wajib membawa cabang halaman, tautan aktif yang server-verifikasi, label/jenis tautan sebagai snapshot, dan `cta=link`; ia tidak memengaruhi alur WhatsApp. Detail event mendukung filter `LinkClick` dan ekspor memakai filter yang sama. Meta Ads dan GA4 dibaca on-demand melalui kredensial server-only opsional, ditampilkan terpisah dari event internal, dan tidak menggunakan sinkronisasi terjadwal. Tidak ada lead, pembayaran, omzet, atau CRM.
 
-| Event | Pemicu | Konteks wajib |
-| --- | --- | --- |
+| Event       | Pemicu                            | Konteks wajib                    |
+| ----------- | --------------------------------- | -------------------------------- |
 | `LinkClick` | Tautan Sekunder/Sosial CMS diklik | cabang, tautan aktif, `cta=link` |
 
 Ekstensi ini menjadikan empat event bisnis: `PageView`, `ViewContent`, `Contact`, dan `LinkClick`. Kebijakan privasi wajib menjelaskan kategori perangkat, keluarga browser, negara, serta kota kasar yang diproses dari header deployment bila tersedia.
@@ -74,14 +74,14 @@ P0 memiliki tepat tiga event bisnis:
 
 Pada halaman cabang, `PageView` dan `ViewContent` tetap tidak membawa `branch` pada payload kanonis; konteks halaman diketahui dari `page_url` `/{slug-cabang}`. `Contact` wajib menuju cabang pada URL halaman tersebut. Direktori `/` tidak mengirim event bisnis. Tiga nama event, `event_id`, dan aturan WhatsApp tidak berubah.
 
-Simpan lima UTM (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`) bila tersedia. UTM eksplisit pertama menjadi atribusi journey; kunjungan direct tidak menghapusnya. UTM eksplisit yang berbeda memulai journey baru. Jangan mengarang campaign/source untuk trafik organik atau direct. Satu `event_id` per aksi logis dipakai bersama oleh Meta Pixel dan Meta CAPI agar dapat dideduplikasi. GA4 menerima pemetaan event melalui GTM saja. Event internal bersifat anonim/pseudonim; tidak menyimpan nama, email, nomor WhatsApp pelanggan, alamat, atau data lead. Berdasarkan keputusan pemilik 23 September 2026, Link Bio tidak menampilkan pilihan consent: Meta, GA4/GTM, dan event internal otomatis aktif saat gate environment tracking diaktifkan. Kebijakan privasi publik harus menjelaskan pemrosesan ini, dan kegagalan tracking tidak boleh menghalangi WhatsApp. Retensi event internal 24 bulan.
+Simpan lima UTM (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`) bila tersedia. UTM eksplisit pertama menjadi atribusi journey; kunjungan direct tidak menghapusnya. UTM eksplisit yang berbeda memulai journey baru. Jangan mengarang campaign/source untuk trafik organik atau direct. Satu `event_id` per aksi logis dipakai bersama oleh Meta Pixel dan Meta CAPI agar dapat dideduplikasi. GTM tidak digunakan dan aplikasi tidak mengirim event browser ke GA4. Event internal bersifat anonim/pseudonim; tidak menyimpan nama, email, nomor WhatsApp pelanggan, alamat, atau data lead. Berdasarkan keputusan pemilik 23 September 2026, Link Bio tidak menampilkan pilihan consent: Meta dan event internal otomatis aktif saat gate environment tracking diaktifkan. Kebijakan privasi publik harus menjelaskan pemrosesan ini, dan kegagalan tracking tidak boleh menghalangi WhatsApp. Retensi event internal 24 bulan.
 
 ## Kriteria penerimaan P0
 
 1. Link Bio menggantikan fungsi inti Taplink; Marketing dapat memperbarui konten dan tujuan WhatsApp tanpa deploy.
 2. Alur berbayar `utm_campaign=wedding_september` + `utm_content=video_a` → Wedding Ring → Surabaya → WhatsApp menghasilkan `PageView`, satu `ViewContent` produk, dan `Contact` dengan sumber/kampanye/produk/cabang yang benar; nomor dan pesan WhatsApp benar.
 3. Alur organik tetap menghasilkan konteks yang tersedia tanpa campaign buatan. Produk/cabang/assignment nonaktif tidak menghasilkan CTA aktif.
-4. Saat tracking environment aktif, event terlihat di event internal dan dapat diverifikasi di Meta Events Manager serta GTM/GA4; pasangan Pixel/CAPI memakai ID sama, dan retry tidak menggandakan baris event.
+4. Saat tracking environment aktif, event terlihat di event internal dan dapat diverifikasi di Meta Events Manager; pasangan Pixel/CAPI memakai ID sama, dan retry tidak menggandakan baris event.
 5. WhatsApp tetap terbuka ketika JavaScript, penyimpanan event, atau penyedia analytics gagal. Tidak ada langkah tambahan khusus tracking.
 6. Halaman publik dan form admin menargetkan WCAG 2.2 AA; pada representative mobile throttling target p75 LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,1.
 
@@ -102,4 +102,4 @@ Delapan tanya-jawab awal diberikan pemilik proyek: harga, bahan, ukuran jari unt
 
 P1: form lead/`Lead`, appointment/`Schedule`, analitik lanjutan. P2: qualified lead, CRM/CS outcome, closing, purchase/revenue, atribusi lanjutan, dashboard enterprise. Jangan memasukkannya diam-diam ke P0. Tautan appointment sekunder tidak berarti alur appointment sudah dibangun.
 
-Sebelum rilis live, pemilik proyek masih perlu menetapkan domain, data produk dan cabang aktif beserta nomor resmi, akses Meta/GTM/GA4, isi kebijakan privasi yang menjelaskan tracking otomatis, serta menyetujui migrasi dan pemeriksaan rilis. Target KPI numerik belum dikunci karena belum ada baseline yang disetujui.
+Sebelum rilis live, pemilik proyek masih perlu menetapkan domain, data produk dan cabang aktif beserta nomor resmi, akses Meta Pixel/CAPI, isi kebijakan privasi yang menjelaskan tracking otomatis, serta menyetujui migrasi dan pemeriksaan rilis. Target KPI numerik belum dikunci karena belum ada baseline yang disetujui.
