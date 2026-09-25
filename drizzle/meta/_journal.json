@@ -57,6 +57,13 @@
       "when": 1790233574931,
       "tag": "0007_concerned_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790326800000,
+      "tag": "0008_analytics_scope_extension",
+      "breakpoints": true
     }
   ]
 }

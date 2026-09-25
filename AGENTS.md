@@ -319,12 +319,13 @@ Do not expose technical tracking identifiers in customer-visible messages.
 
 ## 10. Canonical Tracking Events
 
-P0 has exactly three business events:
+The approved Analytics extension has four business events:
 
 ```text
 PageView
 ViewContent
 Contact
+LinkClick
 ```
 
 | Event       | Meaning                        |

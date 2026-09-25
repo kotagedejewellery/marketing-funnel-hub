@@ -16,6 +16,12 @@ type TrackingProduct = {
   branches: { id: string; name: string }[];
 };
 
+type TrackingLink = {
+  id: string;
+  label: string;
+  type: "secondary" | "social";
+};
+
 type Pixel = ((...args: unknown[]) => void) & {
   callMethod?: (...args: unknown[]) => void;
   queue: unknown[][];
@@ -82,7 +88,7 @@ function sendEvent(event: CanonicalEvent) {
   if (typeof browser.fbq === "function") {
     try {
       browser.fbq(
-        "track",
+        event.eventName === "LinkClick" ? "trackCustom" : "track",
         event.eventName,
         {
           product_category: event.product?.category ?? null,
@@ -90,6 +96,10 @@ function sendEvent(event: CanonicalEvent) {
           cta: event.cta,
           source: event.attribution.source,
           campaign: event.attribution.campaign,
+          ...(event.eventName === "LinkClick" && {
+            link_label: event.link.label,
+            link_type: event.link.type,
+          }),
         },
         { eventID: event.eventId },
       );
@@ -105,12 +115,15 @@ function sendEvent(event: CanonicalEvent) {
           PageView: "kgj_page_view",
           ViewContent: "kgj_view_content",
           Contact: "kgj_contact",
+          LinkClick: "kgj_link_click",
         }[event.eventName],
         event_id: event.eventId,
         anonymous_session_id: event.anonymousSessionId,
         product_category: event.product?.category ?? null,
         branch: event.branch?.name ?? null,
         cta: event.cta,
+        link_label: event.eventName === "LinkClick" ? event.link.label : null,
+        link_type: event.eventName === "LinkClick" ? event.link.type : null,
         utm_source: event.attribution.utmSource,
         utm_medium: event.attribution.utmMedium,
         utm_campaign: event.attribution.utmCampaign,
@@ -138,9 +151,13 @@ function sendEvent(event: CanonicalEvent) {
 export function TrackingBehavior({
   context,
   products,
+  links,
+  branch,
 }: {
   context: TrackingContext;
   products: TrackingProduct[];
+  links: TrackingLink[];
+  branch: { id: string; name: string };
 }) {
   const pageViewSent = useRef(false);
   const viewedProductIds = useRef(new Set<string>());
@@ -150,6 +167,7 @@ export function TrackingBehavior({
     if (!root) return;
 
     const byId = new Map(products.map((product) => [product.id, product]));
+    const linksById = new Map(links.map((link) => [link.id, link]));
 
     function baseEvent() {
       return {
@@ -177,10 +195,20 @@ export function TrackingBehavior({
 
     function onClick(event: MouseEvent) {
       if (!(event.target instanceof Element)) return;
-      const anchor = event.target.closest<HTMLAnchorElement>(
-        "a[data-track-branch-id]",
-      );
+      const anchor = event.target.closest<HTMLAnchorElement>("a[data-track]");
       if (!anchor || !root?.contains(anchor)) return;
+      const link = linksById.get(anchor.dataset.trackLinkId ?? "");
+      if (link) {
+        sendEvent({
+          ...baseEvent(),
+          eventName: "LinkClick",
+          product: null,
+          branch,
+          cta: "link",
+          link,
+        });
+        return;
+      }
       const productCard = anchor.closest<HTMLElement>(
         "article[data-track-product-id]",
       );
@@ -214,7 +242,7 @@ export function TrackingBehavior({
     return () => {
       root.removeEventListener("click", onClick);
     };
-  }, [context, products]);
+  }, [branch, context, links, products]);
 
   return null;
 }

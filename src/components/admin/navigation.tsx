@@ -31,7 +31,7 @@ const items: {
   },
   {
     href: "/admin/tracking",
-    label: "Validasi tracking",
+    label: "Analytics",
     icon: "M3 13h4l3-7 4 12 3-5h4",
   },
   {

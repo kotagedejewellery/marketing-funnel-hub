@@ -3,8 +3,15 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
-import { branches, events, productBranches, products } from "@/lib/db/schema";
+import {
+  branches,
+  events,
+  links,
+  productBranches,
+  products,
+} from "@/lib/db/schema";
 import type { CanonicalEvent } from "@/modules/tracking/event";
+import type { TrackingRequestContext } from "@/modules/tracking/request-context";
 
 type StoredEvent = typeof events.$inferSelect;
 
@@ -17,6 +24,10 @@ function equivalent(existing: StoredEvent, event: CanonicalEvent) {
     existing.pageUrl === event.pageUrl &&
     existing.productId === (event.product?.id ?? null) &&
     existing.branchId === (event.branch?.id ?? null) &&
+    existing.linkId === (event.eventName === "LinkClick" ? event.link.id : null) &&
+    existing.linkLabel ===
+      (event.eventName === "LinkClick" ? event.link.label : null) &&
+    existing.linkType === (event.eventName === "LinkClick" ? event.link.type : null) &&
     existing.cta === event.cta &&
     existing.source === attribution.source &&
     existing.campaign === attribution.campaign &&
@@ -43,15 +54,36 @@ export async function existingEventStatus(event: CanonicalEvent) {
 }
 
 export async function resolveEventContext(event: CanonicalEvent) {
-  if (!event.product) return { product: null, branch: null };
   const db = getDatabase();
+  if (event.eventName === "LinkClick") {
+    const [link] = await db
+      .select({ id: links.id, label: links.label, type: links.linkType })
+      .from(links)
+      .where(
+        and(
+          eq(links.id, event.link.id),
+          eq(links.branchId, event.branch.id),
+          eq(links.isActive, true),
+          eq(links.linkType, event.link.type),
+        ),
+      )
+      .limit(1);
+    if (!link || link.label !== event.link.label) return null;
+    const [branch] = await db
+      .select({ id: branches.id, name: branches.name })
+      .from(branches)
+      .where(and(eq(branches.id, event.branch.id), eq(branches.isActive, true)))
+      .limit(1);
+    return branch ? { product: null, branch, link } : null;
+  }
+  if (!event.product) return { product: null, branch: null, link: null };
   const [product] = await db
     .select({ id: products.id, slug: products.slug })
     .from(products)
     .where(and(eq(products.id, event.product.id), eq(products.isActive, true)))
     .limit(1);
   if (!product) return null;
-  if (!event.branch) return { product, branch: null };
+  if (!event.branch) return { product, branch: null, link: null };
   const [assignment] = await db
     .select({ id: branches.id, name: branches.name })
     .from(productBranches)
@@ -65,12 +97,13 @@ export async function resolveEventContext(event: CanonicalEvent) {
       ),
     )
     .limit(1);
-  return assignment ? { product, branch: assignment } : null;
+  return assignment ? { product, branch: assignment, link: null } : null;
 }
 
 export async function storeEvent(
   event: CanonicalEvent,
   resolved: NonNullable<Awaited<ReturnType<typeof resolveEventContext>>>,
+  requestContext: TrackingRequestContext,
 ) {
   const db = getDatabase();
   const row = {
@@ -83,6 +116,9 @@ export async function storeEvent(
     productCategory: resolved.product?.slug ?? null,
     branchId: resolved.branch?.id ?? null,
     branchName: resolved.branch?.name ?? null,
+    linkId: resolved.link?.id ?? null,
+    linkLabel: resolved.link?.label ?? null,
+    linkType: resolved.link?.type ?? null,
     cta: event.cta,
     source: event.attribution.source,
     campaign: event.attribution.campaign,
@@ -91,6 +127,10 @@ export async function storeEvent(
     utmCampaign: event.attribution.utmCampaign,
     utmContent: event.attribution.utmContent,
     utmTerm: event.attribution.utmTerm,
+    deviceType: requestContext.deviceType,
+    browserFamily: requestContext.browserFamily,
+    countryCode: requestContext.countryCode,
+    city: requestContext.city,
     metadata: event.metadata,
   };
   const inserted = await db

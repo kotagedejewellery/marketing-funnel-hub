@@ -25,6 +25,12 @@ const branchSchema = z.strictObject({
   name: z.string().trim().min(1).max(120),
 });
 
+const linkSchema = z.strictObject({
+  id: z.uuid(),
+  label: z.string().trim().min(1).max(200),
+  type: z.enum(["secondary", "social"]),
+});
+
 const pageUrlSchema = z
   .url()
   .max(2048)
@@ -62,6 +68,14 @@ export const canonicalEventSchema = z.discriminatedUnion("eventName", [
     product: productSchema,
     branch: branchSchema,
     cta: z.literal("whatsapp"),
+  }),
+  z.strictObject({
+    ...common,
+    eventName: z.literal("LinkClick"),
+    product: z.null(),
+    branch: branchSchema,
+    cta: z.literal("link"),
+    link: linkSchema,
   }),
 ]);
 

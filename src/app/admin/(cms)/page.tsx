@@ -143,7 +143,7 @@ export default async function AdminDashboardPage() {
           <div className="mt-5 grid gap-1">
             <QuickLink href="/admin/link-bio" label="Pilih halaman Link Bio" />
             <QuickLink href="/admin/settings" label="Standar & Template KGJ" />
-            <QuickLink href="/admin/tracking" label="Validasi tracking" />
+            <QuickLink href="/admin/tracking" label="Analytics" />
           </div>
         </aside>
       </div>

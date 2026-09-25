@@ -72,6 +72,33 @@ describe("canonical event contract", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("accepts one generic LinkClick only with an active-link context shape", () => {
+    expect(
+      canonicalEventSchema.safeParse({
+        ...base,
+        eventName: "LinkClick",
+        product: null,
+        branch: { id: base.anonymousSessionId, name: "Surabaya" },
+        cta: "link",
+        link: {
+          id: base.eventId,
+          label: "Katalog cincin",
+          type: "secondary",
+        },
+      }).success,
+    ).toBe(true);
+    expect(
+      canonicalEventSchema.safeParse({
+        ...base,
+        eventName: "LinkClick",
+        product: null,
+        branch: null,
+        cta: "link",
+        link: { id: base.eventId, label: "Instagram", type: "social" },
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("branch page path", () => {

@@ -44,6 +44,24 @@ Pengurutan konten tidak meminta Marketing mengisi angka teknis. Item baru otomat
 
 Satu produk P0 mewakili kategori/kebutuhan pelanggan (bukan SKU) dan boleh tersedia di banyak cabang. CTA primer selalu berada dalam konteks produk dan hanya muncul jika produk, assignment, dan cabang sama-sama aktif. Nomor tujuan berasal dari cabang. Template pesan memakai override assignment lalu default situs; label CTA memakai override assignment, lalu cabang, lalu default situs. Variabel pesan yang didukung hanya `{product}` dan `{branch}`; identitas tracking tidak dimasukkan ke pesan. URL akhir: `https://wa.me/{nomor_normalisasi}?text={pesan_terkode}`. CTA harus berupa tautan biasa yang tetap bekerja tanpa JavaScript.
 
+### Analytics event internal (disetujui 25 September 2026)
+
+Menu CMS `/admin/tracking` bernama **Analytics** dan dapat dibuka oleh `admin` maupun `technical_admin`. Tampilan awalnya adalah ringkasan 30 hari terakhir dengan filter rentang 7 hari, 30 hari, bulan berjalan, atau kustom maksimal 366 hari, serta filter satu cabang. Ringkasan menghitung `PageView`, `ViewContent`, `Contact`, konversi WhatsApp (`Contact ÷ PageView`), dan konversi minat produk (`Contact ÷ ViewContent`); ia menampilkan tren harian, peringkat cabang/produk, serta sumber dan kampanye. Tab **Detail event** mempertahankan riwayat event internal dengan filter event, produk, sumber, dan kampanye. Filter cabang untuk `PageView`/`ViewContent` membaca path `page_url` cabang yang tervalidasi, tanpa menambah konteks cabang pada event kanonis. Dashboard tidak memuat device/browser, lokasi/geografi, leads, pembayaran, omzet, atau click generik. Tidak ada event, provider, PII, atau tabel baru.
+
+### Ekstensi Analytics (disetujui 25 September 2026)
+
+Keputusan ini menggantikan batas dashboard pada subsection Analytics sebelumnya. Dashboard menambahkan event kanonis `LinkClick` untuk tautan `secondary` dan `social` yang aktif pada CMS (bukan nama event per tombol), perbandingan dengan periode sebelumnya berpanjang sama, ekspor CSV maksimum 10.000 baris dengan audit log, dan panel kategori perangkat/browser serta negara/kota agregat. Kota hanya ditampilkan ketika sedikitnya lima event; IP, user-agent mentah, koordinat, dan identitas pelanggan tidak disimpan. `LinkClick` wajib membawa cabang halaman, tautan aktif yang server-verifikasi, label/jenis tautan sebagai snapshot, dan `cta=link`; ia tidak memengaruhi alur WhatsApp. Detail event mendukung filter `LinkClick` dan ekspor memakai filter yang sama. Meta Ads dan GA4 dibaca on-demand melalui kredensial server-only opsional, ditampilkan terpisah dari event internal, dan tidak menggunakan sinkronisasi terjadwal. Tidak ada lead, pembayaran, omzet, atau CRM.
+
+| Event | Pemicu | Konteks wajib |
+| --- | --- | --- |
+| `LinkClick` | Tautan Sekunder/Sosial CMS diklik | cabang, tautan aktif, `cta=link` |
+
+Ekstensi ini menjadikan empat event bisnis: `PageView`, `ViewContent`, `Contact`, dan `LinkClick`. Kebijakan privasi wajib menjelaskan kategori perangkat, keluarga browser, negara, serta kota kasar yang diproses dari header deployment bila tersedia.
+
+### Konvensi URL Meta Ads (disetujui 25 September 2026)
+
+Tidak ada identifier Meta tambahan yang dikumpulkan atau tabel baru. Untuk attribution yang terbaca sampai `Contact`, setiap destination URL Meta Ads harus mengisi UTM yang sudah didukung aplikasi: `utm_source=meta`, `utm_medium=paid_social`, `utm_campaign` untuk campaign, `utm_content` untuk ad set, dan `utm_term` untuk ad. Nilai tersebut harus diisi oleh konfigurasi Ads Manager sesuai identitas yang ingin dibaca Marketing; aplikasi menyimpannya sebagai teks attribution, tidak mengklaim atau memverifikasi bahwa nilai tersebut adalah ID resmi Meta. Detail event dan ekspor CSV menampilkan kelima UTM yang tersimpan. Konvensi ini berhenti di klik WhatsApp dan tidak membuat Lead, Purchase, CRM, atau pengiriman outcome penjualan ke Meta.
+
 ## Pengukuran dan privasi
 
 P0 memiliki tepat tiga event bisnis:

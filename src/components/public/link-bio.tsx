@@ -84,6 +84,12 @@ export function LinkBio({
               name: branch.name,
             })),
           }))}
+          links={content.links.map((link) => ({
+            id: link.id,
+            label: link.label,
+            type: link.linkType as "secondary" | "social",
+          }))}
+          branch={content.pageBranch}
         />
       )}
       {logoSection && (
@@ -334,6 +340,7 @@ export function LinkBio({
                                 {destination ? (
                                   <a
                                     href={destination.whatsappUrl}
+                                    data-track="whatsapp"
                                     data-track-branch-id={destination.id}
                                     className="group flex min-h-20 w-full items-center gap-4 rounded-2xl bg-[var(--kgj-dark)] px-5 py-4 text-[var(--primary-foreground)] shadow-[0_12px_26px_-18px_rgba(40,33,28,0.65)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
                                     aria-label={`${destination.ctaLabel}, WhatsApp ${content.pageBranch.name}`}
@@ -410,6 +417,8 @@ export function LinkBio({
                       <li key={link.id}>
                         <a
                           href={link.url}
+                          data-track="link"
+                          data-track-link-id={link.id}
                           className="flex min-h-16 items-center gap-4 rounded-2xl bg-card px-5 py-3 font-bold transition-colors hover:bg-[var(--kgj-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
                           <span className="min-w-0 break-words">

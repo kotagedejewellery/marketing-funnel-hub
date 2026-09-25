@@ -402,8 +402,13 @@ export const events = pgTable(
     branchId: uuid("branch_id").references(() => branches.id, {
       onDelete: "restrict",
     }),
+    linkId: uuid("link_id").references(() => links.id, {
+      onDelete: "restrict",
+    }),
     productCategory: text("product_category"),
     branchName: text("branch_name"),
+    linkLabel: text("link_label"),
+    linkType: text("link_type"),
     cta: text("cta"),
     source: text("source"),
     campaign: text("campaign"),
@@ -412,6 +417,10 @@ export const events = pgTable(
     utmCampaign: text("utm_campaign"),
     utmContent: text("utm_content"),
     utmTerm: text("utm_term"),
+    deviceType: text("device_type"),
+    browserFamily: text("browser_family"),
+    countryCode: text("country_code"),
+    city: text("city"),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -421,10 +430,23 @@ export const events = pgTable(
     check(
       "events_context_check",
       sql`(
-        (${table.eventName} = 'PageView' and ${table.productId} is null and ${table.productCategory} is null and ${table.branchId} is null and ${table.branchName} is null and ${table.cta} is null)
-        or (${table.eventName} = 'ViewContent' and ${table.productId} is not null and ${table.productCategory} is not null and ${table.branchId} is null and ${table.branchName} is null and ${table.cta} is null)
-        or (${table.eventName} = 'Contact' and ${table.productId} is not null and ${table.productCategory} is not null and ${table.branchId} is not null and ${table.branchName} is not null and ${table.cta} = 'whatsapp')
+        (${table.eventName} = 'PageView' and ${table.productId} is null and ${table.productCategory} is null and ${table.branchId} is null and ${table.branchName} is null and ${table.linkId} is null and ${table.linkLabel} is null and ${table.linkType} is null and ${table.cta} is null)
+        or (${table.eventName} = 'ViewContent' and ${table.productId} is not null and ${table.productCategory} is not null and ${table.branchId} is null and ${table.branchName} is null and ${table.linkId} is null and ${table.linkLabel} is null and ${table.linkType} is null and ${table.cta} is null)
+        or (${table.eventName} = 'Contact' and ${table.productId} is not null and ${table.productCategory} is not null and ${table.branchId} is not null and ${table.branchName} is not null and ${table.linkId} is null and ${table.linkLabel} is null and ${table.linkType} is null and ${table.cta} = 'whatsapp')
+        or (${table.eventName} = 'LinkClick' and ${table.productId} is null and ${table.productCategory} is null and ${table.branchId} is not null and ${table.branchName} is not null and ${table.linkId} is not null and ${table.linkLabel} is not null and ${table.linkType} in ('secondary', 'social') and ${table.cta} = 'link')
       )`,
+    ),
+    check(
+      "events_device_type_check",
+      sql`${table.deviceType} is null or ${table.deviceType} in ('mobile', 'tablet', 'desktop', 'other')`,
+    ),
+    check(
+      "events_browser_family_check",
+      sql`${table.browserFamily} is null or ${table.browserFamily} in ('Chrome', 'Safari', 'Firefox', 'Edge', 'Other')`,
+    ),
+    check(
+      "events_country_code_check",
+      sql`${table.countryCode} is null or ${table.countryCode} ~ '^[A-Z]{2}$'`,
     ),
     index("events_time_idx").on(table.eventTime.desc()),
     index("events_name_time_idx").on(table.eventName, table.eventTime.desc()),
@@ -437,6 +459,9 @@ export const events = pgTable(
       table.eventTime.desc(),
     ),
     index("events_branch_time_idx").on(table.branchId, table.eventTime.desc()),
+    index("events_link_time_idx").on(table.linkId, table.eventTime.desc()),
+    index("events_device_time_idx").on(table.deviceType, table.eventTime.desc()),
+    index("events_country_time_idx").on(table.countryCode, table.eventTime.desc()),
     index("events_utm_campaign_time_idx").on(
       table.utmCampaign,
       table.eventTime.desc(),

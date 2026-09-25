@@ -48,6 +48,10 @@ export function metaPayload(
           ...(resolved.product && { content_category: resolved.product.slug }),
           ...(resolved.branch && { branch: resolved.branch.name }),
           ...(event.cta && { cta: event.cta }),
+          ...(event.eventName === "LinkClick" && {
+            link_label: event.link.label,
+            link_type: event.link.type,
+          }),
           ...(event.attribution.utmSource && {
             utm_source: event.attribution.utmSource,
           }),

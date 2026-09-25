@@ -19,6 +19,7 @@ import {
   resolveEventContext,
   storeEvent,
 } from "@/modules/tracking/store";
+import { trackingRequestContext } from "@/modules/tracking/request-context";
 
 export const runtime = "nodejs";
 const maxBytes = 32 * 1024;
@@ -123,7 +124,10 @@ export async function POST(request: Request) {
       .where(and(eq(branches.slug, branchSlug), eq(branches.isActive, true)))
       .limit(1);
     let validPageContext = Boolean(pageBranch);
-    if (pageBranch && event.eventName === "Contact") {
+    if (
+      pageBranch &&
+      (event.eventName === "Contact" || event.eventName === "LinkClick")
+    ) {
       validPageContext = event.branch.id === pageBranch.id;
     }
     if (pageBranch && event.eventName === "ViewContent") {
@@ -177,7 +181,11 @@ export async function POST(request: Request) {
         );
       return error(422, "INVALID_CONTEXT", "Product or branch is inactive.");
     }
-    const status = await storeEvent(canonicalEvent, resolved);
+    const status = await storeEvent(
+      canonicalEvent,
+      resolved,
+      trackingRequestContext(request),
+    );
     if (status === "conflict")
       return error(
         409,

@@ -51,6 +51,16 @@ Tambahkan tabel konten `faqs`: `id` UUID PK, `branch_id?` FK `branches.id` denga
 
 Tambahkan tabel `gallery_items`: `id` UUID PK, `branch_id` wajib FK `branches.id` dengan `ON DELETE RESTRICT`, `image_path` wajib, `title?`, `description?`, `alt_text` wajib, `sort_order` default 0, `is_active` default true, serta `created_at`/`updated_at` `timestamptz`. Galeri tidak memiliki `product_id`, URL CTA, label CTA, atau pesan WhatsApp. Index `branch_id + is_active + sort_order` mendukung pembacaan publik. RLS dan grant role aplikasi mengikuti tabel konten lain; `anon`/`authenticated` tidak mendapat akses langsung. Migrasi awal menyalin setiap gambar assignment yang sebelumnya eligible ke item milik cabang dengan nama produk sebagai judul/teks alternatif agar konten publik lama tidak hilang. Kolom gambar produk/assignment lama dipertahankan tetapi tidak dibaca oleh galeri baru. Ini adalah tabel ekstensi kedua setelah sepuluh tabel P0, sehingga schema aplikasi memiliki dua belas tabel termasuk `faqs`.
 
+### Analytics event internal (disetujui 25 September 2026)
+
+Analytics hanya membaca tabel `events` dan `branches`; tidak ada tabel, kolom, index, maupun migrasi baru. Filter waktu memakai `events.event_time`; filter cabang memakai `events.page_url` yang sudah dinormalisasi saat ingest agar PageView/ViewContent tetap mematuhi CHECK tanpa foreign key cabang. Index event yang ada cukup untuk rentang awal maksimal 366 hari; kebutuhan index gabungan baru dievaluasi berdasarkan volume nyata, bukan ditambahkan spekulatif.
+
+### Ekstensi schema Analytics (disetujui 25 September 2026)
+
+Migrasi `0008_analytics_scope_extension` menambah `events.link_id?` (FK `links.id` restrict), snapshot `link_label?`/`link_type?`, dan kategori `device_type?`, `browser_family?`, `country_code?`, serta `city?`. Ia juga mengganti CHECK konteks: `LinkClick` wajib tanpa produk, dengan cabang/snapshot cabang, tautan/snapshot label-jenis, dan `cta='link'`; event lain wajib tidak memiliki kolom tautan. Device dibatasi `mobile`/`tablet`/`desktop`/`other`, browser `Chrome`/`Safari`/`Firefox`/`Edge`/`Other`, dan negara dua huruf kapital. Index baru: link+waktu, device+waktu, dan negara+waktu. Tidak ada tabel baru atau penyimpanan IP/user-agent mentah.
+
+Analytics membaca events dan branches; ekspor CSV mencatat satu audit log `entity_type='analytics_events'` tanpa isi event dan dibatasi 10.000 baris. Query detail/ekspor menggunakan `event_time`, page URL cabang ternormalisasi, serta filter detail yang sama. Snapshot event mempertahankan sejarah walau tautan dinonaktifkan; FK restrict mencegah penghapusan data historis.
+
 ## Aturan baca dan integritas
 
 ### Ekstensi ulasan Google manual melalui Firecrawl (disetujui 24 September 2026)
