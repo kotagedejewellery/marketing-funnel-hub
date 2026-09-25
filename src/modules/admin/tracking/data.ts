@@ -7,10 +7,7 @@ import { branches, events } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import { requireAdmin } from "@/modules/admin/access";
 
-import {
-  getProviderAnalytics,
-  type ProviderAnalytics,
-} from "./provider-data";
+import { getProviderAnalytics, type ProviderAnalytics } from "./provider-data";
 
 import type { TrackingAnalyticsFilters } from "./validation";
 
@@ -228,10 +225,14 @@ function branchPageUrl(slug: string) {
 function detailFilter(rows: EventRow[], filters: TrackingAnalyticsFilters) {
   return rows.filter((row) => {
     if (filters.eventName && row.eventName !== filters.eventName) return false;
-    if (filters.product && row.productCategory !== filters.product) return false;
+    if (filters.product && row.productCategory !== filters.product)
+      return false;
     if (filters.source && attributionValue(row, "source") !== filters.source)
       return false;
-    if (filters.campaign && attributionValue(row, "campaign") !== filters.campaign)
+    if (
+      filters.campaign &&
+      attributionValue(row, "campaign") !== filters.campaign
+    )
       return false;
     return true;
   });
@@ -366,9 +367,9 @@ export async function getTrackingAnalytics(
         ),
       ),
     ].sort((a, b) => a.localeCompare(b, "id")),
-    sources: [...new Set(rows.map((row) => attributionValue(row, "source")))].sort(
-      (a, b) => a.localeCompare(b, "id"),
-    ),
+    sources: [
+      ...new Set(rows.map((row) => attributionValue(row, "source"))),
+    ].sort((a, b) => a.localeCompare(b, "id")),
     campaigns: [
       ...new Set(rows.map((row) => attributionValue(row, "campaign"))),
     ].sort((a, b) => a.localeCompare(b, "id")),
@@ -391,7 +392,10 @@ export async function getTrackingAnalytics(
     productConversion: ratio(totals.Contact, totals.ViewContent),
     trend: [...days.values()],
     branchPerformance: [...branchStats.values()]
-      .map((item) => ({ ...item, conversion: ratio(item.Contact, item.PageView) }))
+      .map((item) => ({
+        ...item,
+        conversion: ratio(item.Contact, item.PageView),
+      }))
       .sort(
         (left, right) =>
           right.Contact - left.Contact ||
@@ -405,7 +409,8 @@ export async function getTrackingAnalytics(
           row.productCategory === item.name && row.eventName === "ViewContent",
       ).length,
       Contact: rows.filter(
-        (row) => row.productCategory === item.name && row.eventName === "Contact",
+        (row) =>
+          row.productCategory === item.name && row.eventName === "Contact",
       ).length,
     })),
     sources: countBy(pageViews, (row) => attributionValue(row, "source")),

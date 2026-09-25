@@ -23,11 +23,17 @@ const serverEnvironmentSchema = z
     SUPABASE_PUBLIC_ASSET_BUCKET: nonEmptyString,
     META_CAPI_DATASET_ID: optionalEnvironmentString(z.string().regex(/^\d+$/)),
     META_CAPI_ACCESS_TOKEN: optionalEnvironmentString(z.string().min(16)),
-    META_AD_ACCOUNT_ID: optionalEnvironmentString(z.string().regex(/^(act_)?\d+$/)),
-    META_MARKETING_API_ACCESS_TOKEN: optionalEnvironmentString(z.string().min(16)),
+    META_AD_ACCOUNT_ID: optionalEnvironmentString(
+      z.string().regex(/^(act_)?\d+$/),
+    ),
+    META_MARKETING_API_ACCESS_TOKEN: optionalEnvironmentString(
+      z.string().min(16),
+    ),
     GA4_PROPERTY_ID: optionalEnvironmentString(z.string().regex(/^\d+$/)),
     GA4_SERVICE_ACCOUNT_EMAIL: optionalEnvironmentString(z.email()),
-    GA4_SERVICE_ACCOUNT_PRIVATE_KEY: optionalEnvironmentString(z.string().min(32)),
+    GA4_SERVICE_ACCOUNT_PRIVATE_KEY: optionalEnvironmentString(
+      z.string().min(32),
+    ),
     FIRECRAWL_API_KEY: optionalEnvironmentString(nonEmptyString),
     TRACKING_ENABLED: z.enum(["true", "false"]).default("false"),
     CRON_SECRET: z.string().min(16),

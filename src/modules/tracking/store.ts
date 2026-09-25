@@ -24,10 +24,12 @@ function equivalent(existing: StoredEvent, event: CanonicalEvent) {
     existing.pageUrl === event.pageUrl &&
     existing.productId === (event.product?.id ?? null) &&
     existing.branchId === (event.branch?.id ?? null) &&
-    existing.linkId === (event.eventName === "LinkClick" ? event.link.id : null) &&
+    existing.linkId ===
+      (event.eventName === "LinkClick" ? event.link.id : null) &&
     existing.linkLabel ===
       (event.eventName === "LinkClick" ? event.link.label : null) &&
-    existing.linkType === (event.eventName === "LinkClick" ? event.link.type : null) &&
+    existing.linkType ===
+      (event.eventName === "LinkClick" ? event.link.type : null) &&
     existing.cta === event.cta &&
     existing.source === attribution.source &&
     existing.campaign === attribution.campaign &&

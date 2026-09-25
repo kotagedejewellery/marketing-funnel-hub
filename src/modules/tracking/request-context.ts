@@ -22,7 +22,9 @@ function countryCode(value: string | null) {
   return /^[A-Z]{2}$/.test(country) ? country : null;
 }
 
-export function trackingRequestContext(request: Request): TrackingRequestContext {
+export function trackingRequestContext(
+  request: Request,
+): TrackingRequestContext {
   const userAgent = request.headers.get("user-agent")?.slice(0, 512) ?? "";
   const browserFamily = /Edg\//.test(userAgent)
     ? "Edge"

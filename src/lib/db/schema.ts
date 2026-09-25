@@ -460,8 +460,14 @@ export const events = pgTable(
     ),
     index("events_branch_time_idx").on(table.branchId, table.eventTime.desc()),
     index("events_link_time_idx").on(table.linkId, table.eventTime.desc()),
-    index("events_device_time_idx").on(table.deviceType, table.eventTime.desc()),
-    index("events_country_time_idx").on(table.countryCode, table.eventTime.desc()),
+    index("events_device_time_idx").on(
+      table.deviceType,
+      table.eventTime.desc(),
+    ),
+    index("events_country_time_idx").on(
+      table.countryCode,
+      table.eventTime.desc(),
+    ),
     index("events_utm_campaign_time_idx").on(
       table.utmCampaign,
       table.eventTime.desc(),

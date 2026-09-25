@@ -581,7 +581,9 @@ function ProviderPanel({
         {report.metrics.map((metric) => (
           <div key={metric.label} className="flex justify-between gap-3">
             <dt className="text-muted-foreground">{metric.label}</dt>
-            <dd className="font-semibold tabular-nums">{count(metric.value)}</dd>
+            <dd className="font-semibold tabular-nums">
+              {count(metric.value)}
+            </dd>
           </div>
         ))}
       </dl>
@@ -810,7 +812,8 @@ function EventTable({ analytics }: { analytics: TrackingAnalytics }) {
                   {event.source ?? event.utmSource ?? "Tidak diketahui"}
                 </p>
                 <p className="mt-1 break-words text-muted-foreground">
-                  Campaign: {event.campaign ?? event.utmCampaign ?? "Tidak diketahui"}
+                  Campaign:{" "}
+                  {event.campaign ?? event.utmCampaign ?? "Tidak diketahui"}
                 </p>
                 {(event.utmContent || event.utmTerm) && (
                   <dl className="mt-3 space-y-1 text-xs text-muted-foreground">

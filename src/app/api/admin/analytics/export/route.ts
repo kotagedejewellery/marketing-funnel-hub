@@ -46,7 +46,11 @@ function csv(rows: Awaited<ReturnType<typeof getTrackingExportRows>>) {
         row.branchName,
         row.linkLabel,
         row.linkType,
-        row.eventName === "Contact" ? "whatsapp" : row.eventName === "LinkClick" ? "link" : null,
+        row.eventName === "Contact"
+          ? "whatsapp"
+          : row.eventName === "LinkClick"
+            ? "link"
+            : null,
         row.source,
         row.campaign,
         row.utmSource,
@@ -72,17 +76,19 @@ export async function GET(request: Request) {
     Object.fromEntries(url.searchParams.entries()),
   );
   const rows = await getTrackingExportRows(filters);
-  await getDatabase().insert(auditLogs).values({
-    adminId: profile.id,
-    action: "export",
-    entityType: "analytics_events",
-    changes: {
-      rowCount: rows.length,
-      range: filters.range,
-      hasBranchFilter: Boolean(filters.branchId),
-      hasEventFilter: Boolean(filters.eventName),
-    },
-  });
+  await getDatabase()
+    .insert(auditLogs)
+    .values({
+      adminId: profile.id,
+      action: "export",
+      entityType: "analytics_events",
+      changes: {
+        rowCount: rows.length,
+        range: filters.range,
+        hasBranchFilter: Boolean(filters.branchId),
+        hasEventFilter: Boolean(filters.eventName),
+      },
+    });
   const filename = `kgj-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
   return new Response(`\uFEFF${csv(rows)}`, {
     headers: {

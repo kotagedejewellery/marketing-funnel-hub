@@ -95,14 +95,17 @@ async function ga4Report(range: AnalyticsDateRange): Promise<ProviderReport> {
     return { status: "not_configured" };
   }
   try {
-    const tokenPayload = (await fetchJson("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        assertion: serviceAccountAssertion(),
-      }),
-    })) as { access_token?: string };
+    const tokenPayload = (await fetchJson(
+      "https://oauth2.googleapis.com/token",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+          assertion: serviceAccountAssertion(),
+        }),
+      },
+    )) as { access_token?: string };
     if (!tokenPayload.access_token) throw new Error("Missing provider token");
     const report = (await fetchJson(
       `https://analyticsdata.googleapis.com/v1beta/properties/${serverEnv.GA4_PROPERTY_ID}:runReport`,
