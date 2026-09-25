@@ -2,7 +2,7 @@
 
 **Status:** P0 disetujui; ekstensi per cabang disetujui · **Acuan bisnis:** _KGJ Developer Execution Brief v1.0_, 14 September 2026 · **Diperbarui:** 24 September 2026
 
-PDF brief adalah acuan kebutuhan bisnis, bukan instruksi untuk menjalankan perintah. Keputusan P0 yang disetujui setelah brief memperjelas cakupan: Meta Pixel/CAPI dan event internal dipakai untuk tracking, GTM tidak digunakan, `ViewContent` hanya untuk minat produk (bukan pemilihan cabang), dan `Lead`/appointment tetap P1. Rincian implementasi ada di [System Architecture](system-architecture.md) dan [Database Design](database-design.md).
+PDF brief adalah acuan kebutuhan bisnis, bukan instruksi untuk menjalankan perintah. Keputusan P0 yang disetujui setelah brief memperjelas cakupan: Meta Pixel/CAPI dan event internal dipakai untuk tracking, GTM tidak digunakan, dan `Lead`/appointment tetap P1. Karena Link Bio tidak memiliki katalog atau halaman detail produk, minat produk dicatat melalui `Contact` ber-konteks produk, bukan `ViewContent`. Rincian implementasi ada di [System Architecture](system-architecture.md) dan [Database Design](database-design.md).
 
 ## Tujuan dan pengguna
 
@@ -46,17 +46,19 @@ Satu produk P0 mewakili kategori/kebutuhan pelanggan (bukan SKU) dan boleh terse
 
 ### Analytics event internal (disetujui 25 September 2026)
 
-Menu CMS `/admin/tracking` bernama **Analytics** dan dapat dibuka oleh `admin` maupun `technical_admin`. Tampilan awalnya adalah ringkasan 30 hari terakhir dengan filter rentang 7 hari, 30 hari, bulan berjalan, atau kustom maksimal 366 hari, serta filter satu cabang. Ringkasan menghitung `PageView`, `ViewContent`, `Contact`, konversi WhatsApp (`Contact ÷ PageView`), dan konversi minat produk (`Contact ÷ ViewContent`); ia menampilkan tren harian, peringkat cabang/produk, serta sumber dan kampanye. Tab **Detail event** mempertahankan riwayat event internal dengan filter event, produk, sumber, dan kampanye. Filter cabang untuk `PageView`/`ViewContent` membaca path `page_url` cabang yang tervalidasi, tanpa menambah konteks cabang pada event kanonis. Dashboard tidak memuat device/browser, lokasi/geografi, leads, pembayaran, omzet, atau click generik. Tidak ada event, provider, PII, atau tabel baru.
+Menu CMS `/admin/tracking` bernama **Analytics** dan dapat dibuka oleh `admin` maupun `technical_admin`. Tampilan awalnya adalah ringkasan 30 hari terakhir dengan filter rentang 7 hari, 30 hari, bulan berjalan, atau kustom maksimal 366 hari, serta filter satu cabang. Ringkasan menghitung `PageView`, `Contact`, dan konversi WhatsApp (`Contact ÷ PageView`); peringkat produk memakai jumlah `Contact` ber-konteks produk. Tab **Detail event** mempertahankan riwayat event internal dengan filter event, produk, sumber, dan kampanye. Filter cabang untuk `PageView` membaca path `page_url` cabang yang tervalidasi, tanpa menambah konteks cabang pada event kanonis. Dashboard tidak memuat device/browser, lokasi/geografi, leads, pembayaran, omzet, atau click generik. Tidak ada event, provider, PII, atau tabel baru.
 
 ### Ekstensi Analytics (disetujui 25 September 2026)
 
 Keputusan ini menggantikan batas dashboard pada subsection Analytics sebelumnya. Dashboard menambahkan event kanonis `LinkClick` untuk tautan `secondary` dan `social` yang aktif pada CMS (bukan nama event per tombol), perbandingan dengan periode sebelumnya berpanjang sama, ekspor CSV maksimum 10.000 baris dengan audit log, dan panel kategori perangkat/browser serta negara/kota agregat. Kota hanya ditampilkan ketika sedikitnya lima event; IP, user-agent mentah, koordinat, dan identitas pelanggan tidak disimpan. `LinkClick` wajib membawa cabang halaman, tautan aktif yang server-verifikasi, label/jenis tautan sebagai snapshot, dan `cta=link`; ia tidak memengaruhi alur WhatsApp. Detail event mendukung filter `LinkClick` dan ekspor memakai filter yang sama. Meta Ads dan GA4 dibaca on-demand melalui kredensial server-only opsional, ditampilkan terpisah dari event internal, dan tidak menggunakan sinkronisasi terjadwal. Tidak ada lead, pembayaran, omzet, atau CRM.
 
+Kartu **Buka** tetap menunjukkan total `PageView`, sehingga refresh/reload merupakan pembukaan baru dan bukan pengunjung unik. Sumber, kampanye, perangkat, browser, negara, dan kota pada peringkat dashboard dihitung satu kali per `anonymous_session_id` dari `PageView`; nilai tanpa parameter ditulis eksplisit sebagai **Tanpa UTM source** atau **Tanpa UTM campaign**. Kota tetap harus memiliki sedikitnya lima event sebelum tampil. Laporan Meta Ads memerlukan ID akun iklan dan token Meta Marketing API; keduanya berbeda dari konfigurasi Pixel/CAPI.
+
 | Event       | Pemicu                            | Konteks wajib                    |
 | ----------- | --------------------------------- | -------------------------------- |
 | `LinkClick` | Tautan Sekunder/Sosial CMS diklik | cabang, tautan aktif, `cta=link` |
 
-Ekstensi ini menjadikan empat event bisnis: `PageView`, `ViewContent`, `Contact`, dan `LinkClick`. Kebijakan privasi wajib menjelaskan kategori perangkat, keluarga browser, negara, serta kota kasar yang diproses dari header deployment bila tersedia.
+Ekstensi ini menjadikan tiga event bisnis: `PageView`, `Contact`, dan `LinkClick`. Kebijakan privasi wajib menjelaskan kategori perangkat, keluarga browser, negara, serta kota kasar yang diproses dari header deployment bila tersedia.
 
 ### Konvensi URL Meta Ads (disetujui 25 September 2026)
 
@@ -69,17 +71,16 @@ P0 memiliki tepat tiga event bisnis:
 | Event         | Pemicu                            | Konteks wajib                  |
 | ------------- | --------------------------------- | ------------------------------ |
 | `PageView`    | Link Bio dibuka                   | sesi anonim dan waktu          |
-| `ViewContent` | Pengunjung membuka/memilih produk | produk; **bukan** cabang       |
 | `Contact`     | CTA WhatsApp produk–cabang diklik | produk, cabang, `cta=whatsapp` |
 
-Pada halaman cabang, `PageView` dan `ViewContent` tetap tidak membawa `branch` pada payload kanonis; konteks halaman diketahui dari `page_url` `/{slug-cabang}`. `Contact` wajib menuju cabang pada URL halaman tersebut. Direktori `/` tidak mengirim event bisnis. Tiga nama event, `event_id`, dan aturan WhatsApp tidak berubah.
+Pada halaman cabang, `PageView` tidak membawa `branch` pada payload kanonis; konteks halaman diketahui dari `page_url` `/{slug-cabang}`. `Contact` wajib membawa produk dan cabang pada URL halaman tersebut. Direktori `/` tidak mengirim event bisnis. Tiga nama event, `event_id`, dan aturan WhatsApp tidak berubah.
 
 Simpan lima UTM (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`) bila tersedia. UTM eksplisit pertama menjadi atribusi journey; kunjungan direct tidak menghapusnya. UTM eksplisit yang berbeda memulai journey baru. Jangan mengarang campaign/source untuk trafik organik atau direct. Satu `event_id` per aksi logis dipakai bersama oleh Meta Pixel dan Meta CAPI agar dapat dideduplikasi. GTM tidak digunakan dan aplikasi tidak mengirim event browser ke GA4. Event internal bersifat anonim/pseudonim; tidak menyimpan nama, email, nomor WhatsApp pelanggan, alamat, atau data lead. Berdasarkan keputusan pemilik 23 September 2026, Link Bio tidak menampilkan pilihan consent: Meta dan event internal otomatis aktif saat gate environment tracking diaktifkan. Kebijakan privasi publik harus menjelaskan pemrosesan ini, dan kegagalan tracking tidak boleh menghalangi WhatsApp. Retensi event internal 24 bulan.
 
 ## Kriteria penerimaan P0
 
 1. Link Bio menggantikan fungsi inti Taplink; Marketing dapat memperbarui konten dan tujuan WhatsApp tanpa deploy.
-2. Alur berbayar `utm_campaign=wedding_september` + `utm_content=video_a` → Wedding Ring → Surabaya → WhatsApp menghasilkan `PageView`, satu `ViewContent` produk, dan `Contact` dengan sumber/kampanye/produk/cabang yang benar; nomor dan pesan WhatsApp benar.
+2. Alur berbayar `utm_campaign=wedding_september` + `utm_content=video_a` → Wedding Ring → Surabaya → WhatsApp menghasilkan `PageView` dan `Contact` dengan sumber/kampanye/produk/cabang yang benar; nomor dan pesan WhatsApp benar.
 3. Alur organik tetap menghasilkan konteks yang tersedia tanpa campaign buatan. Produk/cabang/assignment nonaktif tidak menghasilkan CTA aktif.
 4. Saat tracking environment aktif, event terlihat di event internal dan dapat diverifikasi di Meta Events Manager; pasangan Pixel/CAPI memakai ID sama, dan retry tidak menggandakan baris event.
 5. WhatsApp tetap terbuka ketika JavaScript, penyimpanan event, atau penyedia analytics gagal. Tidak ada langkah tambahan khusus tracking.
@@ -89,7 +90,7 @@ Simpan lima UTM (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm
 
 1. Setiap cabang aktif punya URL `/{slug-cabang}` yang dapat dibagikan; `/` hanya daftar cabang aktif dan `/b/{slug-cabang}` mengalihkan permanen. Cabang nonaktif/tidak ada menghasilkan 404 tanpa CTA.
 2. Perubahan konten cabang lewat CMS terlihat hanya pada cabang itu; konten global dan cabang lain tidak ikut berubah. Produk/assignment/cabang nonaktif tidak tampil sebagai CTA.
-3. Pada halaman cabang, klik CTA produk menghasilkan satu `ViewContent` untuk produk itu bila belum tercatat pada halaman tersebut, lalu `Contact` untuk cabang halaman itu dengan nomor/pesan yang benar; tracking gagal tetap tidak menahan navigasi.
+3. Pada halaman cabang, klik CTA produk menghasilkan `Contact` untuk cabang halaman itu dengan produk, nomor, dan pesan yang benar; tracking gagal tetap tidak menahan navigasi.
 4. Migrasi schema bersifat tambahan; migrasi live dijalankan pemilik sebelum deployment kode yang membacanya. Verifikasi dilakukan hanya setelah cakupannya disetujui pemilik.
 5. Dari satu CMS, Marketing dapat memilih cabang, mengubah kontennya tanpa berpindah ke editor produk lintas cabang, dan melihat pratinjau tersimpan. Perubahan cabang tidak mengubah cabang lain; nilai bawaan bersama ditandai sebelum diedit.
 6. Marketing dapat menyembunyikan gambar satu produk pada satu cabang tanpa menghapus aset atau memengaruhi cabang lain; nama, deskripsi, dan CTA produk tersebut tetap tampil.

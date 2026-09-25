@@ -120,7 +120,6 @@ export function TrackingBehavior({
   branch: { id: string; name: string };
 }) {
   const pageViewSent = useRef(false);
-  const viewedProductIds = useRef(new Set<string>());
 
   useEffect(() => {
     const root = document.getElementById("main-content");
@@ -177,16 +176,6 @@ export function TrackingBehavior({
         (item) => item.id === anchor.dataset.trackBranchId,
       );
       if (!product || !productBranch) return;
-      if (!viewedProductIds.current.has(product.id)) {
-        sendEvent({
-          ...baseEvent(),
-          eventName: "ViewContent",
-          product: { id: product.id, category: product.slug },
-          branch: null,
-          cta: null,
-        });
-        viewedProductIds.current.add(product.id);
-      }
       sendEvent({
         ...baseEvent(),
         eventName: "Contact",

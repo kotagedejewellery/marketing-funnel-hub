@@ -57,13 +57,6 @@ export const canonicalEventSchema = z.discriminatedUnion("eventName", [
   }),
   z.strictObject({
     ...common,
-    eventName: z.literal("ViewContent"),
-    product: productSchema,
-    branch: z.null(),
-    cta: z.null(),
-  }),
-  z.strictObject({
-    ...common,
     eventName: z.literal("Contact"),
     product: productSchema,
     branch: branchSchema,

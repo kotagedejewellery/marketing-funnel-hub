@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { and, eq } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
-import { branches, productBranches } from "@/lib/db/schema";
+import { branches } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import {
   branchSlugFromPagePath,
@@ -129,20 +129,6 @@ export async function POST(request: Request) {
       (event.eventName === "Contact" || event.eventName === "LinkClick")
     ) {
       validPageContext = event.branch.id === pageBranch.id;
-    }
-    if (pageBranch && event.eventName === "ViewContent") {
-      const [assignment] = await db
-        .select({ id: productBranches.id })
-        .from(productBranches)
-        .where(
-          and(
-            eq(productBranches.branchId, pageBranch.id),
-            eq(productBranches.productId, event.product.id),
-            eq(productBranches.isActive, true),
-          ),
-        )
-        .limit(1);
-      validPageContext = Boolean(assignment);
     }
     if (!validPageContext) {
       const previous = await existingEventStatus(canonicalEvent);

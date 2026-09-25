@@ -41,18 +41,9 @@ describe("canonical event contract", () => {
     ).toBe(false);
   });
 
-  it("requires product context for ViewContent and product plus branch for Contact", () => {
+  it("requires product and branch context for Contact", () => {
     const product = { id: base.eventId, category: "wedding-ring" };
     const branch = { id: base.anonymousSessionId, name: "Surabaya" };
-    expect(
-      canonicalEventSchema.safeParse({
-        ...base,
-        eventName: "ViewContent",
-        product,
-        branch: null,
-        cta: null,
-      }).success,
-    ).toBe(true);
     expect(
       canonicalEventSchema.safeParse({
         ...base,
@@ -69,6 +60,15 @@ describe("canonical event contract", () => {
         product,
         branch: null,
         cta: "whatsapp",
+      }).success,
+    ).toBe(false);
+    expect(
+      canonicalEventSchema.safeParse({
+        ...base,
+        eventName: "ViewContent",
+        product,
+        branch: null,
+        cta: null,
       }).success,
     ).toBe(false);
   });

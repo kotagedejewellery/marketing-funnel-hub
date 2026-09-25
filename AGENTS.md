@@ -37,8 +37,6 @@ Meta Ads / Instagram / Organic
             ↓
          Product
             ↓
-       ViewContent
-            ↓
  WhatsApp CTA per Branch
             ↓
          Contact
@@ -51,7 +49,7 @@ Locked business rules:
 1. One product can be available in many branches.
 2. Visitors choose a branch at `/`; each `/{slug}` Link Bio has direct product-scoped WhatsApp CTAs for that branch.
 3. Each branch uses its own WhatsApp number.
-4. Branch selection does not emit a separate `ViewContent`.
+4. Product context is carried by `Contact`; branch selection does not emit an event.
 5. WhatsApp uses a configurable prefilled message.
 6. Tracking must not add user friction.
 7. Tracking failure must never block WhatsApp.
@@ -317,11 +315,10 @@ Do not expose technical tracking identifiers in customer-visible messages.
 
 ## 10. Canonical Tracking Events
 
-The approved Analytics extension has four business events:
+The approved Analytics extension has three business events:
 
 ```text
 PageView
-ViewContent
 Contact
 LinkClick
 ```
@@ -329,7 +326,6 @@ LinkClick
 | Event       | Meaning                        |
 | ----------- | ------------------------------ |
 | PageView    | Visitor opens the Link Bio     |
-| ViewContent | Visitor shows product interest |
 | Contact     | Visitor clicks a WhatsApp CTA  |
 
 Do not create event names per button, branch, or product.
@@ -352,18 +348,11 @@ with contextual parameters.
 
 ---
 
-## 11. ViewContent Rule
+## 11. Product Context Rule
 
-`ViewContent` is for product interest only.
-
-Example:
-
-```text
-event_name = ViewContent
-product_category = wedding_ring
-```
-
-Do not emit a second `ViewContent` for branch selection.
+The Link Bio has no product-detail catalog. Product interest is represented by
+the stronger `Contact` event, which carries the selected product category and
+branch. Do not emit `ViewContent` for a WhatsApp CTA click.
 
 ---
 
@@ -489,7 +478,6 @@ to correlate:
 
 ```text
 PageView
-→ ViewContent
 → Contact
 ```
 
@@ -995,7 +983,6 @@ for browser/E2E, and clean local Supabase/PostgreSQL migrations for DB integrati
 
 - UTM persistence
 - PageView payload
-- ViewContent payload
 - Contact payload
 - event_id idempotency
 - Meta browser/server same event ID
@@ -1029,8 +1016,6 @@ Meta/Instagram Campaign
 KGJ Link Bio
         ↓
 Wedding Ring
-        ↓
-ViewContent
         ↓
 WhatsApp Surabaya
         ↓

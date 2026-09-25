@@ -13,10 +13,7 @@ export const trackingAnalyticsSearchSchema = z.object({
   end: z.union([dateSchema, z.literal("")]).optional(),
   branchId: z.union([z.uuid(), z.literal("")]).optional(),
   eventName: z
-    .union([
-      z.enum(["PageView", "ViewContent", "Contact", "LinkClick"]),
-      z.literal(""),
-    ])
+    .union([z.enum(["PageView", "Contact", "LinkClick"]), z.literal("")])
     .optional(),
   product: z.string().trim().max(120).optional(),
   source: z.string().trim().max(200).optional(),
@@ -30,7 +27,7 @@ export type TrackingAnalyticsFilters = {
   start: string | null;
   end: string | null;
   branchId: string | null;
-  eventName: "PageView" | "ViewContent" | "Contact" | "LinkClick" | null;
+  eventName: "PageView" | "Contact" | "LinkClick" | null;
   product: string | null;
   source: string | null;
   campaign: string | null;

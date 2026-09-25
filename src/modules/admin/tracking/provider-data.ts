@@ -6,8 +6,15 @@ import { serverEnv } from "@/lib/env/server";
 
 import type { AnalyticsDateRange } from "./data";
 
+type ProviderSetupItem =
+  | "meta_ad_account"
+  | "meta_marketing_token"
+  | "ga4_property"
+  | "ga4_service_account"
+  | "ga4_private_key";
+
 type ProviderReport =
-  | { status: "not_configured" }
+  | { status: "not_configured"; missing: ProviderSetupItem[] }
   | { status: "error" }
   | { status: "ready"; metrics: { label: string; value: number }[] };
 
@@ -55,7 +62,15 @@ async function fetchJson(url: string, init: RequestInit) {
 async function metaReport(range: AnalyticsDateRange): Promise<ProviderReport> {
   const accountId = serverEnv.META_AD_ACCOUNT_ID;
   const accessToken = serverEnv.META_MARKETING_API_ACCESS_TOKEN;
-  if (!accountId || !accessToken) return { status: "not_configured" };
+  if (!accountId || !accessToken) {
+    return {
+      status: "not_configured",
+      missing: [
+        ...(!accountId ? (["meta_ad_account"] as const) : []),
+        ...(!accessToken ? (["meta_marketing_token"] as const) : []),
+      ],
+    };
+  }
   try {
     const normalizedAccountId = accountId.startsWith("act_")
       ? accountId
@@ -92,7 +107,18 @@ async function ga4Report(range: AnalyticsDateRange): Promise<ProviderReport> {
     !serverEnv.GA4_SERVICE_ACCOUNT_EMAIL ||
     !serverEnv.GA4_SERVICE_ACCOUNT_PRIVATE_KEY
   ) {
-    return { status: "not_configured" };
+    return {
+      status: "not_configured",
+      missing: [
+        ...(!serverEnv.GA4_PROPERTY_ID ? (["ga4_property"] as const) : []),
+        ...(!serverEnv.GA4_SERVICE_ACCOUNT_EMAIL
+          ? (["ga4_service_account"] as const)
+          : []),
+        ...(!serverEnv.GA4_SERVICE_ACCOUNT_PRIVATE_KEY
+          ? (["ga4_private_key"] as const)
+          : []),
+      ],
+    };
   }
   try {
     const tokenPayload = (await fetchJson(

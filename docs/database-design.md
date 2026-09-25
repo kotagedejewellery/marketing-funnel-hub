@@ -53,7 +53,9 @@ Tambahkan tabel `gallery_items`: `id` UUID PK, `branch_id` wajib FK `branches.id
 
 ### Analytics event internal (disetujui 25 September 2026)
 
-Analytics hanya membaca tabel `events` dan `branches`; tidak ada tabel, kolom, index, maupun migrasi baru. Filter waktu memakai `events.event_time`; filter cabang memakai `events.page_url` yang sudah dinormalisasi saat ingest agar PageView/ViewContent tetap mematuhi CHECK tanpa foreign key cabang. Index event yang ada cukup untuk rentang awal maksimal 366 hari; kebutuhan index gabungan baru dievaluasi berdasarkan volume nyata, bukan ditambahkan spekulatif.
+Analytics hanya membaca tabel `events` dan `branches`; tidak ada tabel, kolom, index, maupun migrasi baru. Filter waktu memakai `events.event_time`; filter cabang memakai `events.page_url` yang sudah dinormalisasi saat ingest agar `PageView` tetap mematuhi CHECK tanpa foreign key cabang. Index event yang ada cukup untuk rentang awal maksimal 366 hari; kebutuhan index gabungan baru dievaluasi berdasarkan volume nyata, bukan ditambahkan spekulatif.
+
+`PageView` tetap merupakan volume pembukaan mentah dan refresh menghasilkan baris event baru. Peringkat sumber, kampanye, perangkat, browser, negara, dan kota membaca hanya `PageView` lalu mengelompokkan `anonymous_session_id`, sehingga satu sesi hanya menambah satu nilai pada tiap kategori. Kota baru lolos tampil bila kategori yang sama mempunyai sekurangnya lima event; angka yang dirender tetap jumlah sesi. Perilaku baca ini tidak mengubah event, indeks, retensi, maupun schema.
 
 ### Ekstensi schema Analytics (disetujui 25 September 2026)
 
@@ -69,7 +71,7 @@ Analytics membaca events dan branches; ekspor CSV mencatat satu audit log `entit
 
 - CTA publik hanya jika `products.is_active AND product_branches.is_active AND branches.is_active`. Nomor dari `branches.whatsapp_number`. Template: assignment → default situs. Label: assignment → cabang → default situs. FK assignment ke produk/cabang memakai `ON DELETE RESTRICT`.
 - Kampanye eligible jika aktif, `active_from` kosong/≤ sekarang, dan `active_until` kosong/≥ sekarang. Tampilkan maksimal satu, urut `sort_order ASC`, `active_from DESC NULLS LAST`, `created_at DESC`, `id ASC`. Periode tumpang-tindih boleh tetapi CMS memberi peringatan.
-- `events.event_name` hanya `PageView`, `ViewContent`, `Contact`. CHECK database: PageView tanpa produk/cabang/CTA; ViewContent wajib `product_id` dan snapshot `product_category`, tanpa cabang/CTA; Contact wajib produk, cabang, kedua snapshot, dan `cta='whatsapp'`. FK event ke produk/cabang `ON DELETE RESTRICT`; histori dipertahankan lewat deactivation dan snapshot.
+- Event baru yang diterima aplikasi hanya `PageView`, `Contact`, dan `LinkClick`. CHECK database masih mengizinkan bentuk `ViewContent` lama untuk menjaga histori yang sudah tersimpan; aplikasi tidak lagi memproduksi, menerima, merender, maupun mengekspornya. PageView tanpa produk/cabang/CTA; Contact wajib produk, cabang, kedua snapshot, dan `cta='whatsapp'`; LinkClick wajib link snapshot serta `cta='link'`. FK event ke produk/cabang tetap `ON DELETE RESTRICT`; histori dipertahankan lewat deactivation dan snapshot.
 - `event_id` unik: retry setara memakai baris lama, sedangkan payload berbeda material ditolak 409 oleh aplikasi. Index event mengikuti waktu, nama+waktu, sesi+waktu, produk+waktu, cabang+waktu, `utm_campaign`+waktu, dan `utm_source`+waktu. `products` diindeks menurut status+urutan; kampanye menurut status/urutan/periode.
 - Atribusi UTM disnapshot pada tiap event; `anonymous_session_id` menghubungkan journey tanpa tabel sesi. Nilai sumber/kampanye yang tidak tersedia tetap kosong. Batas `metadata` 4 KiB serta validasi sesi, origin, path, dan konteks produk/cabang berada di server, bukan hanya pada CHECK database. Gate tracking ditentukan environment dan tidak menambah kolom consent pada event.
 

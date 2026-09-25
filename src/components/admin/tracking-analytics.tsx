@@ -205,7 +205,6 @@ function FilterBar({ analytics }: { analytics: TrackingAnalytics }) {
 function Overview({ analytics }: { analytics: TrackingAnalytics }) {
   const hasData =
     analytics.totals.PageView +
-      analytics.totals.ViewContent +
       analytics.totals.Contact +
       analytics.totals.LinkClick >
     0;
@@ -223,7 +222,7 @@ function Overview({ analytics }: { analytics: TrackingAnalytics }) {
           </p>
         </section>
       )}
-      <section className="grid gap-4 xl:grid-cols-[minmax(18rem,1.2fr)_repeat(4,minmax(0,1fr))]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(18rem,1.2fr)_repeat(3,minmax(0,1fr))]">
         <div className="rounded-2xl bg-[var(--kgj-dark)] p-6 text-[var(--primary-foreground)] sm:p-7">
           <p className="text-sm font-semibold text-[var(--kgj-on-dark-muted)]">
             Link Bio dibuka
@@ -237,15 +236,10 @@ function Overview({ analytics }: { analytics: TrackingAnalytics }) {
               analytics.previousTotals.PageView,
             )}
           </p>
+          <p className="mt-2 text-sm leading-6 text-[var(--kgj-on-dark-muted)]">
+            Setiap reload tercatat sebagai pembukaan baru.
+          </p>
         </div>
-        <Metric
-          label="Minat produk"
-          value={count(analytics.totals.ViewContent)}
-          note={periodChange(
-            analytics.totals.ViewContent,
-            analytics.previousTotals.ViewContent,
-          )}
-        />
         <Metric
           label="Klik WhatsApp"
           value={count(analytics.totals.Contact)}
@@ -286,17 +280,11 @@ function Overview({ analytics }: { analytics: TrackingAnalytics }) {
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-muted-foreground">
             <Legend color="bg-[var(--kgj-dark)]" label="PageView" />
-            <Legend color="bg-[var(--kgj-accent)]" label="ViewContent" />
             <Legend color="bg-[var(--kgj-accent-soft)]" label="Contact" />
             <Legend color="bg-secondary" label="LinkClick" />
           </div>
         </div>
         <TrendChart trend={analytics.trend} />
-        <p className="mt-5 text-sm text-muted-foreground">
-          Konversi minat produk: {percentage(analytics.productConversion)}
-          <span aria-hidden="true"> · </span>
-          <span>Contact ÷ ViewContent</span>
-        </p>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
@@ -345,12 +333,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 function TrendChart({ trend }: { trend: TrackingAnalytics["trend"] }) {
   const maximum = Math.max(
     1,
-    ...trend.flatMap((day) => [
-      day.PageView,
-      day.ViewContent,
-      day.Contact,
-      day.LinkClick,
-    ]),
+    ...trend.flatMap((day) => [day.PageView, day.Contact, day.LinkClick]),
   );
 
   return (
@@ -371,12 +354,6 @@ function TrendChart({ trend }: { trend: TrackingAnalytics["trend"] }) {
                 maximum={maximum}
                 color="bg-[var(--kgj-dark)]"
                 label={`${day.label}: ${day.PageView} PageView`}
-              />
-              <Bar
-                value={day.ViewContent}
-                maximum={maximum}
-                color="bg-[var(--kgj-accent)]"
-                label={`${day.label}: ${day.ViewContent} ViewContent`}
               />
               <Bar
                 value={day.Contact}
@@ -434,12 +411,11 @@ function PerformanceTable({ analytics }: { analytics: TrackingAnalytics }) {
         Kinerja cabang &amp; produk
       </h2>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Kunjungan halaman cabang ditentukan dari URL halaman event; konteks
-        produk dan Contact tetap berasal dari event kanonis.
+        Buka adalah total PageView, jadi reload dihitung lagi. Kunjungan halaman
+        cabang ditentukan dari URL event; konteks produk dan Contact tetap
+        berasal dari event kanonis.
       </p>
-      <TableHeading
-        columns={["Cabang", "Buka", "Minat", "WhatsApp", "Konversi"]}
-      />
+      <TableHeading columns={["Cabang", "Buka", "WhatsApp", "Konversi"]} />
       {analytics.branchPerformance.length === 0 ? (
         <EmptyTable copy="Belum ada kinerja cabang pada rentang ini." />
       ) : (
@@ -447,32 +423,32 @@ function PerformanceTable({ analytics }: { analytics: TrackingAnalytics }) {
           {analytics.branchPerformance.map((branch) => (
             <li
               key={branch.id}
-              className="grid grid-cols-[minmax(8rem,1.4fr)_repeat(4,minmax(3.75rem,0.6fr))] gap-3 py-4 text-sm tabular-nums"
+              className="grid grid-cols-[minmax(8rem,1.4fr)_repeat(3,minmax(3.75rem,0.6fr))] gap-3 py-4 text-sm tabular-nums"
             >
               <span className="min-w-0 break-words font-semibold">
                 {branch.name}
               </span>
               <span>{count(branch.PageView)}</span>
-              <span>{count(branch.ViewContent)}</span>
               <span>{count(branch.Contact)}</span>
               <span>{percentage(branch.conversion)}</span>
             </li>
           ))}
         </ul>
       )}
-      <h3 className="mt-8 text-lg font-bold">Produk yang paling diminati</h3>
-      <TableHeading columns={["Produk", "Minat", "WhatsApp"]} compact />
+      <h3 className="mt-8 text-lg font-bold">
+        Produk dengan klik WhatsApp terbanyak
+      </h3>
+      <TableHeading columns={["Produk", "Klik WhatsApp"]} compact />
       {analytics.products.length === 0 ? (
-        <EmptyTable copy="Belum ada minat produk pada rentang ini." />
+        <EmptyTable copy="Belum ada klik WhatsApp produk pada rentang ini." />
       ) : (
         <ul className="divide-y divide-border border-b border-border">
           {analytics.products.map((product) => (
             <li
               key={product.name}
-              className="grid grid-cols-[minmax(9rem,1fr)_5rem_5rem] gap-3 py-4 text-sm tabular-nums"
+              className="grid grid-cols-[minmax(9rem,1fr)_7rem] gap-3 py-4 text-sm tabular-nums"
             >
               <span className="break-words font-semibold">{product.name}</span>
-              <span>{count(product.ViewContent)}</span>
               <span>{count(product.Contact)}</span>
             </li>
           ))}
@@ -491,7 +467,7 @@ function TableHeading({
 }) {
   return (
     <div
-      className={`mt-6 grid gap-3 border-y border-border bg-secondary px-3 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase ${compact ? "grid-cols-[minmax(9rem,1fr)_5rem_5rem]" : "grid-cols-[minmax(8rem,1.4fr)_repeat(4,minmax(3.75rem,0.6fr))]"}`}
+      className={`mt-6 grid gap-3 border-y border-border bg-secondary px-3 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase ${compact ? "grid-cols-[minmax(9rem,1fr)_7rem]" : "grid-cols-[minmax(8rem,1.4fr)_repeat(3,minmax(3.75rem,0.6fr))]"}`}
     >
       {columns.map((column) => (
         <span key={column}>{column}</span>
@@ -511,8 +487,16 @@ function EmptyTable({ copy }: { copy: string }) {
 function AttributionPanels({ analytics }: { analytics: TrackingAnalytics }) {
   return (
     <div className="space-y-6">
-      <Ranking title="Sumber kunjungan" rows={analytics.sources} />
-      <Ranking title="Kampanye" rows={analytics.campaigns} />
+      <Ranking
+        title="Sumber kunjungan"
+        description="Sesi kunjungan halaman dikelompokkan menurut utm_source. Tanpa UTM source berarti URL kunjungan tidak memuat parameter tersebut."
+        rows={analytics.sources}
+      />
+      <Ranking
+        title="Kampanye"
+        description="Sesi kunjungan halaman dikelompokkan menurut utm_campaign. Tanpa UTM campaign berarti URL kunjungan tidak memuat parameter tersebut."
+        rows={analytics.campaigns}
+      />
     </div>
   );
 }
@@ -520,28 +504,57 @@ function AttributionPanels({ analytics }: { analytics: TrackingAnalytics }) {
 function TechnicalPanels({ analytics }: { analytics: TrackingAnalytics }) {
   return (
     <div className="grid gap-6 sm:grid-cols-2">
-      <Ranking title="Perangkat" rows={analytics.devices} />
-      <Ranking title="Browser" rows={analytics.browsers} />
-      <Ranking title="Negara" rows={analytics.countries} />
-      <Ranking title="Kota (minimum 5 event)" rows={analytics.cities} />
+      <Ranking
+        title="Perangkat"
+        description="Satu sesi kunjungan halaman dihitung satu kali. Reload tidak menambah sesi."
+        rows={analytics.devices}
+      />
+      <Ranking
+        title="Browser"
+        description="Satu sesi kunjungan halaman dihitung satu kali. Reload tidak menambah sesi."
+        rows={analytics.browsers}
+      />
+      <Ranking
+        title="Negara"
+        description="Satu sesi kunjungan halaman dihitung satu kali. Negara berasal dari header deployment bila tersedia."
+        rows={analytics.countries}
+      />
+      <Ranking
+        title="Kota (minimum 5 event)"
+        description="Ditampilkan hanya bila kategori kota memiliki sedikitnya lima event. Nilai tetap dihitung per sesi kunjungan halaman."
+        rows={analytics.cities}
+      />
     </div>
   );
 }
 
 function ProviderPanels({ analytics }: { analytics: TrackingAnalytics }) {
+  const providers = [
+    { name: "Meta Ads", report: analytics.providers.meta, required: 2 },
+    {
+      name: "Google Analytics 4",
+      report: analytics.providers.ga4,
+      required: 3,
+    },
+  ].filter(
+    ({ report, required }) =>
+      report.status !== "not_configured" || report.missing.length < required,
+  );
+
+  if (providers.length === 0) return null;
+
   return (
     <section className="rounded-2xl bg-card p-6 sm:p-8">
-      <h2 className="font-serif text-3xl">Sumber platform</h2>
+      <h2 className="font-serif text-3xl">Laporan iklan eksternal</h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
         Data ini dibaca langsung saat halaman dibuka dan tidak dicampur dengan
-        event internal. Tidak ada sinkronisasi terjadwal.
+        event internal. Meta Pixel dan CAPI tetap berjalan terpisah dari laporan
+        ini. Tidak ada sinkronisasi terjadwal.
       </p>
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
-        <ProviderPanel name="Meta Ads" report={analytics.providers.meta} />
-        <ProviderPanel
-          name="Google Analytics 4"
-          report={analytics.providers.ga4}
-        />
+        {providers.map(({ name, report }) => (
+          <ProviderPanel key={name} name={name} report={report} />
+        ))}
       </div>
     </section>
   );
@@ -559,7 +572,7 @@ function ProviderPanel({
       <div className="border border-border p-5">
         <h3 className="font-bold">{name}</h3>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Belum terhubung. Konfigurasi kredensial server diperlukan.
+          {providerSetupMessage(name, report.missing)}
         </p>
       </div>
     );
@@ -591,16 +604,31 @@ function ProviderPanel({
   );
 }
 
+function providerSetupMessage(name: string, missing: string[]) {
+  if (name === "Meta Ads") {
+    if (missing.includes("meta_marketing_token")) {
+      return "ID akun iklan tersedia, tetapi token Meta Marketing API belum tersedia di environment Production.";
+    }
+    return "ID akun iklan dan token Meta Marketing API belum tersedia di environment Production.";
+  }
+  return "Kredensial Google Analytics 4 belum lengkap di environment Production.";
+}
+
 function Ranking({
   title,
+  description,
   rows,
 }: {
   title: string;
+  description: string;
   rows: { name: string; count: number }[];
 }) {
   return (
     <section className="rounded-2xl bg-card p-6 sm:p-7">
       <h2 className="font-serif text-2xl">{title}</h2>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        {description}
+      </p>
       {rows.length === 0 ? (
         <p className="mt-5 text-sm text-muted-foreground">
           Belum ada data pada rentang ini.
@@ -616,7 +644,7 @@ function Ranking({
                 {row.name}
               </span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
-                {count(row.count)}
+                {count(row.count)} sesi
               </span>
             </li>
           ))}
@@ -694,7 +722,7 @@ function EventFilters({ analytics }: { analytics: TrackingAnalytics }) {
         name="eventName"
         label="Event"
         value={analytics.filters.eventName ?? ""}
-        options={["PageView", "ViewContent", "Contact", "LinkClick"]}
+        options={["PageView", "Contact", "LinkClick"]}
         allLabel="Semua event"
       />
       <FilterSelect

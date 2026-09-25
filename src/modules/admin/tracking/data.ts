@@ -13,18 +13,14 @@ import type { TrackingAnalyticsFilters } from "./validation";
 
 const jakartaTimeZone = "Asia/Jakarta";
 const pageSize = 20;
-export const eventNames = [
-  "PageView",
-  "ViewContent",
-  "Contact",
-  "LinkClick",
-] as const;
+export const eventNames = ["PageView", "Contact", "LinkClick"] as const;
 type EventName = (typeof eventNames)[number];
 type EventRow = {
   id: string;
   eventId: string;
   eventName: string;
   eventTime: Date;
+  anonymousSessionId: string;
   pageUrl: string | null;
   productCategory: string | null;
   branchId: string | null;
@@ -62,12 +58,11 @@ export type TrackingAnalytics = {
   totals: EventTotals;
   previousTotals: EventTotals;
   whatsappConversion: number | null;
-  productConversion: number | null;
   trend: Array<{ day: string; label: string } & EventTotals>;
   branchPerformance: Array<
     { id: string; name: string; conversion: number | null } & EventTotals
   >;
-  products: { name: string; ViewContent: number; Contact: number }[];
+  products: { name: string; Contact: number }[];
   sources: { name: string; count: number }[];
   campaigns: { name: string; count: number }[];
   devices: { name: string; count: number }[];
@@ -185,7 +180,7 @@ function asEventName(value: string): EventName | null {
 }
 
 function emptyTotals(): EventTotals {
-  return { PageView: 0, ViewContent: 0, Contact: 0, LinkClick: 0 };
+  return { PageView: 0, Contact: 0, LinkClick: 0 };
 }
 
 function ratio(numerator: number, denominator: number) {
@@ -197,7 +192,7 @@ function attributionValue(row: EventRow, field: "source" | "campaign") {
     field === "source"
       ? (row.source ?? row.utmSource)
       : (row.campaign ?? row.utmCampaign);
-  return value || "Tidak diketahui";
+  return value || `Tanpa UTM ${field}`;
 }
 
 function countBy<T>(rows: EventRow[], value: (row: EventRow) => T | null) {
@@ -216,6 +211,57 @@ function countBy<T>(rows: EventRow[], value: (row: EventRow) => T | null) {
     );
 }
 
+function countDistinctSessions(
+  rows: EventRow[],
+  value: (row: EventRow) => string | null,
+) {
+  const sessionsByName = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const name = value(row);
+    if (!name) continue;
+    const sessions = sessionsByName.get(name) ?? new Set<string>();
+    sessions.add(row.anonymousSessionId);
+    sessionsByName.set(name, sessions);
+  }
+  return [...sessionsByName.entries()]
+    .map(([name, sessions]) => ({ name, count: sessions.size }))
+    .sort(
+      (left, right) =>
+        right.count - left.count || left.name.localeCompare(right.name, "id"),
+    );
+}
+
+function namesWithMinimumEvents(
+  rows: EventRow[],
+  value: (row: EventRow) => string | null,
+  minimumEvents: number,
+) {
+  return new Set(
+    countBy(rows, value)
+      .filter((row) => row.count >= minimumEvents)
+      .map((row) => row.name),
+  );
+}
+
+const deviceLabels: Record<string, string> = {
+  mobile: "Ponsel",
+  tablet: "Tablet",
+  desktop: "Desktop",
+  other: "Lainnya",
+};
+
+function deviceLabel(device: string | null) {
+  if (!device) return null;
+  return deviceLabels[device] ?? device;
+}
+
+const countryNames = new Intl.DisplayNames(["id-ID"], { type: "region" });
+
+function countryLabel(countryCode: string | null) {
+  if (!countryCode) return null;
+  return `${countryNames.of(countryCode) ?? countryCode} (${countryCode})`;
+}
+
 function branchPageUrl(slug: string) {
   return new URL(`/${slug}`, serverEnv.NEXT_PUBLIC_SITE_URL)
     .toString()
@@ -224,6 +270,7 @@ function branchPageUrl(slug: string) {
 
 function detailFilter(rows: EventRow[], filters: TrackingAnalyticsFilters) {
   return rows.filter((row) => {
+    if (!asEventName(row.eventName)) return false;
     if (filters.eventName && row.eventName !== filters.eventName) return false;
     if (filters.product && row.productCategory !== filters.product)
       return false;
@@ -253,6 +300,7 @@ async function eventRows(
       eventId: events.eventId,
       eventName: events.eventName,
       eventTime: events.eventTime,
+      anonymousSessionId: events.anonymousSessionId,
       pageUrl: events.pageUrl,
       productCategory: events.productCategory,
       branchId: events.branchId,
@@ -359,19 +407,20 @@ export async function getTrackingAnalytics(
       branchStats.set(branchId, item);
     }
   }
+  const activeRows = rows.filter((row) => asEventName(row.eventName));
   const detailOptions = {
     products: [
       ...new Set(
-        rows.flatMap((row) =>
+        activeRows.flatMap((row) =>
           row.productCategory ? [row.productCategory] : [],
         ),
       ),
     ].sort((a, b) => a.localeCompare(b, "id")),
     sources: [
-      ...new Set(rows.map((row) => attributionValue(row, "source"))),
+      ...new Set(activeRows.map((row) => attributionValue(row, "source"))),
     ].sort((a, b) => a.localeCompare(b, "id")),
     campaigns: [
-      ...new Set(rows.map((row) => attributionValue(row, "campaign"))),
+      ...new Set(activeRows.map((row) => attributionValue(row, "campaign"))),
     ].sort((a, b) => a.localeCompare(b, "id")),
   };
   const matchingDetails = detailFilter(rows, filters);
@@ -381,6 +430,11 @@ export async function getTrackingAnalytics(
   );
   const detailPage = Math.min(filters.page, detailPageCount);
   const pageViews = rows.filter((row) => row.eventName === "PageView");
+  const citiesWithEnoughEvents = namesWithMinimumEvents(
+    activeRows,
+    (row) => row.city,
+    5,
+  );
   return {
     filters,
     range,
@@ -389,7 +443,6 @@ export async function getTrackingAnalytics(
     totals,
     previousTotals,
     whatsappConversion: ratio(totals.Contact, totals.PageView),
-    productConversion: ratio(totals.Contact, totals.ViewContent),
     trend: [...days.values()],
     branchPerformance: [...branchStats.values()]
       .map((item) => ({
@@ -402,23 +455,26 @@ export async function getTrackingAnalytics(
           right.PageView - left.PageView ||
           left.name.localeCompare(right.name, "id"),
       ),
-    products: countBy(rows, (row) => row.productCategory).map((item) => ({
-      name: item.name,
-      ViewContent: rows.filter(
-        (row) =>
-          row.productCategory === item.name && row.eventName === "ViewContent",
-      ).length,
-      Contact: rows.filter(
-        (row) =>
-          row.productCategory === item.name && row.eventName === "Contact",
-      ).length,
-    })),
-    sources: countBy(pageViews, (row) => attributionValue(row, "source")),
-    campaigns: countBy(pageViews, (row) => attributionValue(row, "campaign")),
-    devices: countBy(rows, (row) => row.deviceType),
-    browsers: countBy(rows, (row) => row.browserFamily),
-    countries: countBy(rows, (row) => row.countryCode),
-    cities: countBy(rows, (row) => row.city).filter((row) => row.count >= 5),
+    products: countBy(
+      rows.filter((row) => row.eventName === "Contact"),
+      (row) => row.productCategory,
+    ).map((item) => ({ name: item.name, Contact: item.count })),
+    sources: countDistinctSessions(pageViews, (row) =>
+      attributionValue(row, "source"),
+    ),
+    campaigns: countDistinctSessions(pageViews, (row) =>
+      attributionValue(row, "campaign"),
+    ),
+    devices: countDistinctSessions(pageViews, (row) =>
+      deviceLabel(row.deviceType),
+    ),
+    browsers: countDistinctSessions(pageViews, (row) => row.browserFamily),
+    countries: countDistinctSessions(pageViews, (row) =>
+      countryLabel(row.countryCode),
+    ),
+    cities: countDistinctSessions(pageViews, (row) => row.city).filter((row) =>
+      citiesWithEnoughEvents.has(row.name),
+    ),
     detailOptions,
     detailEvents: matchingDetails.slice(
       (detailPage - 1) * pageSize,
