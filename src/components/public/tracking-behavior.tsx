@@ -213,10 +213,10 @@ export function TrackingBehavior({
         "article[data-track-product-id]",
       );
       const product = byId.get(productCard?.dataset.trackProductId ?? "");
-      const branch = product?.branches.find(
+      const productBranch = product?.branches.find(
         (item) => item.id === anchor.dataset.trackBranchId,
       );
-      if (!product || !branch) return;
+      if (!product || !productBranch) return;
       if (!viewedProductIds.current.has(product.id)) {
         sendEvent({
           ...baseEvent(),
@@ -231,7 +231,7 @@ export function TrackingBehavior({
         ...baseEvent(),
         eventName: "Contact",
         product: { id: product.id, category: product.slug },
-        branch: { id: branch.id, name: branch.name },
+        branch: { id: productBranch.id, name: productBranch.name },
         cta: "whatsapp",
       });
     }

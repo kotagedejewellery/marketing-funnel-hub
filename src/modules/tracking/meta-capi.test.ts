@@ -37,6 +37,7 @@ const event = {
 const resolved = {
   product: { id: event.product.id, slug: "wedding-ring" },
   branch: { id: event.branch.id, name: "Surabaya" },
+  link: null,
 };
 const request = new Request("https://kgj.example/api/events", {
   headers: { "user-agent": "Test Browser", "x-forwarded-for": "203.0.113.1" },

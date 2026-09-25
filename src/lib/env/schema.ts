@@ -10,7 +10,9 @@ const webUrl = z.url().refine((value) => {
   }
 });
 
-export function optionalEnvironmentString(schema: z.ZodString) {
+export function optionalEnvironmentString<T extends z.ZodType<string>>(
+  schema: T,
+) {
   return z.preprocess(
     (value) => (value === "" ? undefined : value),
     schema.optional(),
