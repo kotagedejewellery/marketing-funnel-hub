@@ -67,6 +67,8 @@ Analytics membaca events dan branches; ekspor CSV mencatat satu audit log `entit
 
 ### Ekstensi ulasan Google manual melalui Firecrawl (disetujui 24 September 2026)
 
+Penyajian dua atau lebih review publik sebagai carousel satu kartu per slide tidak mengubah urutan, filter, relasi, data, atau event yang dijelaskan pada bagian ini.
+
 `branch_review_sources` memiliki satu baris unik per `branch_id`: `source_url`, `is_enabled`, `minimum_rating` 1–5, `maximum_reviews` 1–12, `display_mode` (`automatic`/`manual`), status pengambilan terakhir, dan timestamp. `branch_google_reviews` menyimpan FK cabang `ON DELETE RESTRICT`, `source_hash` unik per cabang, nama/avatar/count reviewer, rating 1–5, waktu relatif dan teks sumber asli, terjemahan Indonesia `relative_time_id`/`review_text_id`, URL sumber, flag pilihan/hide, urutan, dan waktu pengambilan. Index publik adalah `(branch_id, is_hidden, rating, sort_order)`. Kedua tabel memakai RLS; `anon`/`authenticated` tidak memiliki akses langsung dan role aplikasi mendapat `SELECT`/`INSERT`/`UPDATE`/`DELETE`. Isi review tidak dicatat pada audit log; audit batch hanya mencatat jumlah perubahan atau hapus. Migrasi menambahkan `google_reviews` di section global dan scope cabang yang sudah ada; renderer tetap kosong hingga source aktif dan review memiliki terjemahan Indonesia serta lolos filter. Ini menambah dua tabel ekstensi sehingga total tabel aplikasi menjadi empat belas.
 
 - CTA publik hanya jika `products.is_active AND product_branches.is_active AND branches.is_active`. Nomor dari `branches.whatsapp_number`. Template: assignment → default situs. Label: assignment → cabang → default situs. FK assignment ke produk/cabang memakai `ON DELETE RESTRICT`.

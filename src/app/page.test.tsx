@@ -184,8 +184,11 @@ describe("public Link Bio", () => {
     expect(screen.getByText("Maria Prasasti")).toBeVisible();
     expect(screen.getByText("Pelayanan sangat memuaskan.")).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Lihat di Google Maps" }),
-    ).toHaveAttribute("href", "https://maps.google.com/maps/place/KGJ");
+      screen.queryByText("Geser untuk membaca ulasan lainnya"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Lihat di Google Maps" }),
+    ).not.toBeInTheDocument();
   });
 });
 

@@ -2,6 +2,7 @@ import type { PublicContent } from "@/modules/public-content/data";
 
 import { GalleryCarousel } from "./gallery-carousel";
 import { PublicImage } from "./public-image";
+import { ReviewCarousel } from "./review-carousel";
 import { TrackingBehavior, type TrackingContext } from "./tracking-behavior";
 
 function bypassImageOptimization(url: string) {
@@ -448,68 +449,69 @@ export function LinkBio({
                       {publicTitle}
                     </h2>
                   )}
-                  <ul className={`${publicTitle ? "mt-5" : ""} space-y-3`}>
-                    {content.reviews.items.map((review) => {
-                      const avatarFallback = (
-                        <span
-                          aria-hidden="true"
-                          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-accent-soft)] font-serif font-bold text-[var(--kgj-dark)]"
-                        >
-                          {review.reviewerName.slice(0, 1).toUpperCase()}
-                        </span>
-                      );
-                      return (
-                        <li key={review.id}>
-                          <article className="rounded-2xl bg-card px-5 py-5 shadow-[0_12px_28px_-22px_rgba(40,33,28,0.45)] sm:px-6">
-                            <div className="flex items-start gap-3">
-                              {review.reviewerPhotoUrl ? (
-                                <PublicImage
-                                  src={review.reviewerPhotoUrl}
-                                  alt=""
-                                  width={88}
-                                  height={88}
-                                  sizes="44px"
-                                  className="size-11 shrink-0 rounded-full bg-secondary object-cover"
-                                  unoptimized
-                                  fallback={avatarFallback}
-                                />
-                              ) : (
-                                avatarFallback
-                              )}
-                              <div className="min-w-0">
-                                <p className="font-semibold break-words">
-                                  {review.reviewerName}
-                                </p>
-                                {review.reviewerReviewCount !== null && (
-                                  <p className="mt-0.5 text-xs text-muted-foreground">
-                                    {review.reviewerReviewCount} ulasan
-                                  </p>
+                  <div className={publicTitle ? "mt-5" : ""}>
+                    <ReviewCarousel itemCount={content.reviews.items.length}>
+                      {content.reviews.items.map((review) => {
+                        const avatarFallback = (
+                          <span
+                            aria-hidden="true"
+                            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-accent-soft)] font-serif font-bold text-[var(--kgj-dark)]"
+                          >
+                            {review.reviewerName.slice(0, 1).toUpperCase()}
+                          </span>
+                        );
+                        return (
+                          <li
+                            key={review.id}
+                            className={
+                              content.reviews.items.length > 1
+                                ? "w-full shrink-0 snap-start"
+                                : undefined
+                            }
+                          >
+                            <article className="rounded-2xl bg-card px-5 py-5 shadow-[0_12px_28px_-22px_rgba(40,33,28,0.45)] sm:px-6">
+                              <div className="flex items-start gap-3">
+                                {review.reviewerPhotoUrl ? (
+                                  <PublicImage
+                                    src={review.reviewerPhotoUrl}
+                                    alt=""
+                                    width={88}
+                                    height={88}
+                                    sizes="44px"
+                                    className="size-11 shrink-0 rounded-full bg-secondary object-cover"
+                                    unoptimized
+                                    fallback={avatarFallback}
+                                  />
+                                ) : (
+                                  avatarFallback
                                 )}
+                                <div className="min-w-0">
+                                  <p className="font-semibold break-words">
+                                    {review.reviewerName}
+                                  </p>
+                                  {review.reviewerReviewCount !== null && (
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                      {review.reviewerReviewCount} ulasan
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="sr-only">{`Rating ${review.rating} dari 5`}</span>
-                              <ReviewStars rating={review.rating} />
-                              <span className="text-xs text-muted-foreground">
-                                {review.relativeTime}
-                              </span>
-                            </div>
-                            <p className="mt-2 leading-7 whitespace-pre-line">
-                              {review.reviewText}
-                            </p>
-                          </article>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <a
-                    href={content.reviews.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--kgj-accent)] underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
-                  >
-                    Lihat di Google Maps
-                  </a>
+                              <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span className="sr-only">{`Rating ${review.rating} dari 5`}</span>
+                                <ReviewStars rating={review.rating} />
+                                <span className="text-xs text-muted-foreground">
+                                  {review.relativeTime}
+                                </span>
+                              </div>
+                              <p className="mt-2 leading-7 whitespace-pre-line">
+                                {review.reviewText}
+                              </p>
+                            </article>
+                          </li>
+                        );
+                      })}
+                    </ReviewCarousel>
+                  </div>
                 </section>
               ) : null;
 
