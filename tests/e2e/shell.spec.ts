@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("renders the local branch directory in a real browser", async ({
+test("redirects the deployment root to the Admin CMS in a real browser", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -15,12 +15,10 @@ test("renders the local branch directory in a real browser", async ({
   const response = await page.goto("/");
 
   expect(response?.ok()).toBe(true);
+  await expect(page).toHaveURL(/\/admin\/login$/);
   await expect(page).toHaveTitle("Kotagede Jewellery | Link Bio Cabang");
   await expect(
-    page.getByRole("heading", {
-      level: 1,
-      name: "Temukan Link Bio cabang Anda",
-    }),
+    page.getByRole("heading", { level: 1, name: "Selamat datang kembali." }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: /WhatsApp/i })).toHaveCount(0);
   expect(
@@ -32,7 +30,7 @@ test("renders the local branch directory in a real browser", async ({
   expect(pageErrors).toEqual([]);
 });
 
-test("does not send a business event from the branch directory", async ({
+test("does not send a business event from the deployment root", async ({
   page,
 }) => {
   const eventRequests: string[] = [];
@@ -46,13 +44,14 @@ test("does not send a business event from the branch directory", async ({
   );
   expect(eventRequests).toHaveLength(0);
 
+  await expect(page).toHaveURL(/\/admin\/login$/);
   await expect(
-    page.getByRole("heading", { name: /Temukan Link Bio cabang/ }),
+    page.getByRole("heading", { name: "Selamat datang kembali." }),
   ).toBeVisible();
   expect(eventRequests).toHaveLength(0);
 });
 
-test("keeps the desktop public page responsive and protects the Admin CMS", async ({
+test("keeps the desktop Admin CMS responsive and protected", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
