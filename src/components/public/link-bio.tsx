@@ -433,8 +433,9 @@ export function LinkBio({
               );
             }
 
-            case "google_reviews":
-              return content.reviews?.items.length ? (
+            case "google_reviews": {
+              const reviews = content.reviews;
+              return reviews?.items.length ? (
                 <section
                   key={sectionKey}
                   aria-labelledby={
@@ -450,8 +451,8 @@ export function LinkBio({
                     </h2>
                   )}
                   <div className={publicTitle ? "mt-5" : ""}>
-                    <ReviewCarousel itemCount={content.reviews.items.length}>
-                      {content.reviews.items.map((review) => {
+                    <ReviewCarousel itemCount={reviews.items.length}>
+                      {reviews.items.map((review) => {
                         const avatarFallback = (
                           <span
                             aria-hidden="true"
@@ -464,7 +465,7 @@ export function LinkBio({
                           <li
                             key={review.id}
                             className={
-                              content.reviews.items.length > 1
+                              reviews.items.length > 1
                                 ? "w-full shrink-0 snap-start"
                                 : undefined
                             }
@@ -514,6 +515,7 @@ export function LinkBio({
                   </div>
                 </section>
               ) : null;
+            }
 
             case "faq":
               return content.faqs.length ? (
