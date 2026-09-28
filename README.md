@@ -59,7 +59,8 @@ links redirect to the direct URL. The CMS manages branch pages at
 | Command                          | Purpose                                                 |
 | -------------------------------- | ------------------------------------------------------- |
 | `pnpm dev`                       | Start the local development server                      |
-| `pnpm build`                     | Create a production build                               |
+| `pnpm build`                     | Run the full deployment quality gate                    |
+| `pnpm build:next`                | Create a production Next.js build only                  |
 | `pnpm start`                     | Serve the production build                              |
 | `pnpm typecheck`                 | Run strict TypeScript checks                            |
 | `pnpm lint`                      | Run ESLint                                              |
@@ -85,10 +86,10 @@ Browser smoke tests use only the local database, never the live database.
 
 Before pushing code or deploying, run `pnpm quality:check`. It runs formatting,
 lint, TypeScript, unit/component tests, and the production build in the same
-order as the fast GitHub CI gate. Vercel runs this same command as its build
-command, so a deployment cannot pass when one of those checks fails. Database
-integration and browser E2E checks remain in CI because they require Supabase
-Local and Playwright.
+order as the fast GitHub CI gate. Vercel detects the standard `build` script,
+which delegates to this same command, so a deployment cannot pass when one of
+those checks fails. Database integration and browser E2E checks remain in CI
+because they require Supabase Local and Playwright.
 
 The Drizzle commands require an ignored `.env.local` with local `DATABASE_URL` and
 `DATABASE_MIGRATION_URL`; the migration command rejects non-local database targets.
