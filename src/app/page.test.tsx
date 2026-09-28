@@ -28,6 +28,14 @@ const emptyContent: PublicContent = {
 };
 
 describe("public Link Bio", () => {
+  it("uses the viewport-centering container for public content", () => {
+    render(<LinkBio content={emptyContent} />);
+
+    expect(
+      screen.getByRole("main").querySelector("#main-content")?.parentElement,
+    ).toHaveClass("kgj-public-content");
+  });
+
   it("shows an honest empty state when products have not been published", () => {
     render(<LinkBio content={emptyContent} />);
 

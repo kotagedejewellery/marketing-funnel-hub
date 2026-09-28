@@ -66,7 +66,7 @@ export function LinkBio({
   );
 
   return (
-    <main className="kgj-public min-h-dvh w-full text-foreground">
+    <main className="kgj-public relative min-h-dvh w-full text-foreground">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:bg-background focus:p-3 focus:outline-2 focus:outline-offset-2"
@@ -93,7 +93,7 @@ export function LinkBio({
           branch={content.pageBranch}
         />
       )}
-      <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-10 sm:px-6 sm:pt-8 sm:pb-12">
+      <div className="kgj-public-content px-4 pt-6 pb-10 sm:px-6 sm:pt-8 sm:pb-12">
         {logoSection && (
           <section
             className="flex justify-center px-3"

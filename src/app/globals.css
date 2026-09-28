@@ -100,6 +100,26 @@
   touch-action: manipulation;
 }
 
+/*
+ * Link Bio may render directly in a browser, an in-app browser, or the CMS
+ * preview frame. Position the content from the viewport rather than relying on
+ * an ancestor's calculated width, which keeps the desktop column centered in
+ * every host context.
+ */
+.kgj-public-content {
+  position: relative;
+  left: 50vw;
+  width: min(48rem, calc(100vw - 2rem));
+  margin-inline: 0;
+  transform: translateX(-50%);
+}
+
+@media (min-width: 40rem) {
+  .kgj-public-content {
+    width: min(48rem, calc(100vw - 3rem));
+  }
+}
+
 .kgj-public ::selection,
 .kgj-admin ::selection {
   background: var(--kgj-accent-soft);
