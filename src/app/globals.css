@@ -53,6 +53,11 @@
 }
 
 @layer base {
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   * {
     border-color: var(--border);
   }
@@ -91,6 +96,7 @@
 }
 
 .kgj-public {
+  overflow-x: clip;
   touch-action: manipulation;
 }
 
