@@ -85,8 +85,10 @@ Browser smoke tests use only the local database, never the live database.
 
 Before pushing code or deploying, run `pnpm quality:check`. It runs formatting,
 lint, TypeScript, unit/component tests, and the production build in the same
-order as the fast GitHub CI gate. Database integration and browser E2E checks
-remain in CI because they require Supabase Local and Playwright.
+order as the fast GitHub CI gate. Vercel runs this same command as its build
+command, so a deployment cannot pass when one of those checks fails. Database
+integration and browser E2E checks remain in CI because they require Supabase
+Local and Playwright.
 
 The Drizzle commands require an ignored `.env.local` with local `DATABASE_URL` and
 `DATABASE_MIGRATION_URL`; the migration command rejects non-local database targets.

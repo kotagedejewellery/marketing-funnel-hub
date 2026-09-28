@@ -966,6 +966,13 @@ running tests, tell the owner exactly which checks you propose and why, then wai
 for confirmation. For a small documentation, copy, or isolated configuration
 change, a direct inspection may be sufficient. Do not claim unrun tests passed.
 
+For every completed source or configuration change that can reach a deployment,
+the baseline verification is `pnpm typecheck` followed by `pnpm build`; the
+owner still approves that scope before either command runs. `pnpm quality:check`
+is the deployment gate and must retain format, lint, TypeScript, unit/component
+tests, and the production build in that order. Vercel must run that same command
+as its build command; do not weaken either gate to work around a failing check.
+
 Relevant coverage may include:
 
 Use Vitest for unit/module tests, Testing Library for React interaction, Playwright

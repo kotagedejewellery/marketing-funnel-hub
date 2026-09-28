@@ -195,9 +195,9 @@ export function LinkBio({
                   return "mx-auto grid max-w-sm grid-cols-1 gap-3 sm:gap-4";
                 }
                 if (itemCount === 2) {
-                  return "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0";
+                  return "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0";
                 }
-                return "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0";
+                return "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0";
               };
               const galleryImageSizes = (itemCount: number) => {
                 if (itemCount === 1) {
@@ -466,11 +466,11 @@ export function LinkBio({
                             key={review.id}
                             className={
                               reviews.items.length > 1
-                                ? "w-full shrink-0 snap-start"
+                                ? "flex w-full shrink-0 snap-start"
                                 : undefined
                             }
                           >
-                            <article className="rounded-2xl bg-card px-5 py-5 shadow-[0_12px_28px_-22px_rgba(40,33,28,0.45)] sm:px-6">
+                            <article className="flex h-full flex-1 flex-col rounded-2xl bg-card px-5 py-5 shadow-[0_12px_28px_-22px_rgba(40,33,28,0.45)] sm:px-6">
                               <div className="flex items-start gap-3">
                                 {review.reviewerPhotoUrl ? (
                                   <PublicImage
