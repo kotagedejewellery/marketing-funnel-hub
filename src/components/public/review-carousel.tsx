@@ -88,7 +88,7 @@ export function ReviewCarousel({
       tabIndex={itemCount > 1 ? 0 : undefined}
       className={
         itemCount > 1
-          ? "-mx-4 flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 focus-visible:outline-2 focus-visible:outline-offset-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ? "flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overscroll-x-contain pb-3 focus-visible:outline-2 focus-visible:outline-offset-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           : ""
       }
     >
