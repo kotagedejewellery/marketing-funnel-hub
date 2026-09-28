@@ -148,7 +148,7 @@ export async function clearMediaOverride(
   }
 
   const db = getDatabase();
-  const { entityType, entityId } = target.data;
+  const { entityId } = target.data;
 
   const [existing] = await db
     .select({
