@@ -15,6 +15,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -44,5 +46,43 @@ describe("ReviewCarousel", () => {
       screen.getByText("Geser untuk membaca ulasan lainnya"),
     ).toBeVisible();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("advances only the review rail without scrolling the page", () => {
+    vi.useFakeTimers();
+    const carouselScrollTo = vi.fn();
+    const itemScrollIntoView = vi.fn();
+
+    render(
+      <ReviewCarousel itemCount={2}>
+        <li>Ulasan pertama</li>
+        <li>Ulasan kedua</li>
+      </ReviewCarousel>,
+    );
+
+    const carousel = screen.getByRole("list", {
+      name: "Carousel ulasan pelanggan",
+    });
+    const secondItem = carousel.children.item(1) as HTMLElement;
+    Object.defineProperty(carousel, "scrollTo", {
+      configurable: true,
+      value: carouselScrollTo,
+    });
+    Object.defineProperty(secondItem, "scrollIntoView", {
+      configurable: true,
+      value: itemScrollIntoView,
+    });
+    Object.defineProperty(secondItem, "offsetLeft", {
+      configurable: true,
+      value: 240,
+    });
+
+    vi.advanceTimersByTime(3000);
+
+    expect(carouselScrollTo).toHaveBeenCalledWith({
+      left: 240,
+      behavior: "smooth",
+    });
+    expect(itemScrollIntoView).not.toHaveBeenCalled();
   });
 });

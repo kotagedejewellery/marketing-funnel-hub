@@ -37,11 +37,8 @@ export function ReviewCarousel({
       if (suspended || document.hidden || !media.matches) return;
       const nextIndex = (currentIndex() + 1) % itemCount;
       const item = carousel.children.item(nextIndex) as HTMLElement | null;
-      item?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "start",
-      });
+      if (!item) return;
+      carousel.scrollTo({ left: item.offsetLeft, behavior: "smooth" });
     };
     const startTimer = () => {
       clearTimer();
