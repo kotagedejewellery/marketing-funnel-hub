@@ -1,9 +1,9 @@
 import "server-only";
 
-import { and, desc, eq, gte, lt, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, type SQL } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
-import { branches, events } from "@/lib/db/schema";
+import { branches, events, siteSettings } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import { requireAdmin } from "@/modules/admin/access";
 
@@ -268,6 +268,10 @@ function branchPageUrl(slug: string) {
     .replace(/\/$/, "");
 }
 
+function rootPageUrl() {
+  return new URL("/", serverEnv.NEXT_PUBLIC_SITE_URL).toString();
+}
+
 function detailFilter(rows: EventRow[], filters: TrackingAnalyticsFilters) {
   return rows.filter((row) => {
     if (!asEventName(row.eventName)) return false;
@@ -287,13 +291,24 @@ function detailFilter(rows: EventRow[], filters: TrackingAnalyticsFilters) {
 
 async function eventRows(
   range: AnalyticsDateRange,
-  branch: { slug: string } | null,
+  branch: { id: string; slug: string } | null,
+  defaultLinkBioBranchId: string | null,
 ) {
   const conditions: SQL[] = [
     gte(events.eventTime, range.start),
     lt(events.eventTime, range.endExclusive),
   ];
-  if (branch) conditions.push(eq(events.pageUrl, branchPageUrl(branch.slug)));
+  if (branch) {
+    const branchConditions = [
+      eq(events.pageUrl, branchPageUrl(branch.slug)),
+      eq(events.branchId, branch.id),
+    ];
+    if (branch.id === defaultLinkBioBranchId) {
+      branchConditions.push(eq(events.pageUrl, rootPageUrl()));
+    }
+    const scopedCondition = or(...branchConditions);
+    if (scopedCondition) conditions.push(scopedCondition);
+  }
   return getDatabase()
     .select({
       id: events.id,
@@ -326,33 +341,44 @@ async function eventRows(
 
 async function scopedInputs(filters: TrackingAnalyticsFilters) {
   const db = getDatabase();
-  const [branchRows, range] = await Promise.all([
+  const [branchRows, range, settings] = await Promise.all([
     db
       .select({ id: branches.id, name: branches.name, slug: branches.slug })
       .from(branches)
       .orderBy(branches.sortOrder, branches.name),
     Promise.resolve(resolveAnalyticsDateRange(filters)),
+    db
+      .select({ defaultLinkBioBranchId: siteSettings.defaultLinkBioBranchId })
+      .from(siteSettings)
+      .limit(1),
   ]);
   const selectedBranch = filters.branchId
     ? (branchRows.find((branch) => branch.id === filters.branchId) ?? null)
     : null;
-  return { branchRows, range, selectedBranch };
+  return {
+    branchRows,
+    range,
+    selectedBranch,
+    defaultLinkBioBranchId: settings[0]?.defaultLinkBioBranchId ?? null,
+  };
 }
 
 export async function getTrackingExportRows(filters: TrackingAnalyticsFilters) {
   await requireAdmin();
-  const { range, selectedBranch } = await scopedInputs(filters);
-  return detailFilter(await eventRows(range, selectedBranch), filters).slice(
-    0,
-    10_000,
-  );
+  const { range, selectedBranch, defaultLinkBioBranchId } =
+    await scopedInputs(filters);
+  return detailFilter(
+    await eventRows(range, selectedBranch, defaultLinkBioBranchId),
+    filters,
+  ).slice(0, 10_000);
 }
 
 export async function getTrackingAnalytics(
   filters: TrackingAnalyticsFilters,
 ): Promise<TrackingAnalytics> {
   await requireAdmin();
-  const { branchRows, range, selectedBranch } = await scopedInputs(filters);
+  const { branchRows, range, selectedBranch, defaultLinkBioBranchId } =
+    await scopedInputs(filters);
   const lengthInDays = Math.round(
     (range.endExclusive.getTime() - range.start.getTime()) / 86_400_000,
   );
@@ -364,8 +390,8 @@ export async function getTrackingAnalytics(
     label: "",
   };
   const [rows, previousRows, providers] = await Promise.all([
-    eventRows(range, selectedBranch),
-    eventRows(previousRange, selectedBranch),
+    eventRows(range, selectedBranch, defaultLinkBioBranchId),
+    eventRows(previousRange, selectedBranch, defaultLinkBioBranchId),
     getProviderAnalytics(range),
   ]);
   const totals = emptyTotals();
@@ -382,6 +408,9 @@ export async function getTrackingAnalytics(
   const branchIdByPageUrl = new Map(
     branchRows.map((branch) => [branchPageUrl(branch.slug), branch.id]),
   );
+  if (defaultLinkBioBranchId) {
+    branchIdByPageUrl.set(rootPageUrl(), defaultLinkBioBranchId);
+  }
   const branchById = new Map(branchRows.map((branch) => [branch.id, branch]));
   const branchStats = new Map<
     string,

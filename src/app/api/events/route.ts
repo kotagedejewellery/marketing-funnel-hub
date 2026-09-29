@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { and, eq } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
-import { branches } from "@/lib/db/schema";
+import { branches, siteSettings } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import {
   branchSlugFromPagePath,
@@ -108,8 +108,8 @@ export async function POST(request: Request) {
     return error(422, "INVALID_PAGE_URL", "Page URL must use this origin.");
   const pagePath = event.pageUrl ? new URL(event.pageUrl).pathname : null;
   const branchSlug = pagePath ? branchSlugFromPagePath(pagePath) : null;
-  if (!branchSlug)
-    return error(422, "INVALID_PAGE_URL", "Page URL must be a branch page.");
+  if (!branchSlug && pagePath !== "/")
+    return error(422, "INVALID_PAGE_URL", "Page URL must be a Link Bio page.");
   // Avoid persisting arbitrary query parameters from a client-supplied URL.
   const canonicalEvent = {
     ...event,
@@ -118,11 +118,23 @@ export async function POST(request: Request) {
 
   try {
     const db = getDatabase();
-    const [pageBranch] = await db
-      .select({ id: branches.id })
-      .from(branches)
-      .where(and(eq(branches.slug, branchSlug), eq(branches.isActive, true)))
-      .limit(1);
+    const [pageBranch] = branchSlug
+      ? await db
+          .select({ id: branches.id })
+          .from(branches)
+          .where(
+            and(eq(branches.slug, branchSlug), eq(branches.isActive, true)),
+          )
+          .limit(1)
+      : await db
+          .select({ id: branches.id })
+          .from(siteSettings)
+          .innerJoin(
+            branches,
+            eq(siteSettings.defaultLinkBioBranchId, branches.id),
+          )
+          .where(eq(branches.isActive, true))
+          .limit(1);
     let validPageContext = Boolean(pageBranch);
     if (
       pageBranch &&
