@@ -1,0 +1,6 @@
+# Generated Graphify reports and saved Q&A history are graph outputs, not source.
+/graphify-out/
+
+# Local agent skills and temporary design-tool material do not describe this app.
+/.agents/
+/.impeccable/
