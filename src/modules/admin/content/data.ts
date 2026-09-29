@@ -1,9 +1,9 @@
 import "server-only";
 
-import { asc, isNull } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
-import { contentSections, faqs, siteSettings } from "@/lib/db/schema";
+import { branches, contentSections, faqs, siteSettings } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 import {
   branchSectionKeys,
@@ -13,7 +13,7 @@ import {
 export async function getContentSettings() {
   await requireAdmin();
   const db = getDatabase();
-  const [settings, sections, faqRows] = await Promise.all([
+  const [settings, sections, faqRows, activeBranches] = await Promise.all([
     db.select().from(siteSettings).limit(1),
     db
       .select({
@@ -32,6 +32,11 @@ export async function getContentSettings() {
       .from(faqs)
       .where(isNull(faqs.branchId))
       .orderBy(asc(faqs.sortOrder), asc(faqs.id)),
+    db
+      .select({ id: branches.id, name: branches.name, slug: branches.slug })
+      .from(branches)
+      .where(eq(branches.isActive, true))
+      .orderBy(asc(branches.sortOrder), asc(branches.name), asc(branches.id)),
   ]);
 
   if (!settings[0]) throw new Error("Site settings are missing.");
@@ -47,5 +52,6 @@ export async function getContentSettings() {
       };
     }),
     faqs: faqRows,
+    activeBranches,
   };
 }

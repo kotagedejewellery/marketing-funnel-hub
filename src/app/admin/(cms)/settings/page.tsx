@@ -8,7 +8,11 @@ import { getContentSettings } from "@/modules/admin/content/data";
 import { publicAssetUrl } from "@/modules/public-content/links";
 
 export default async function SettingsPage() {
-  const { settings, sections, faqs } = await getContentSettings();
+  const { settings, sections, faqs, activeBranches } =
+    await getContentSettings();
+  const defaultBranch = activeBranches.find(
+    (branch) => branch.id === settings.defaultLinkBioBranchId,
+  );
 
   return (
     <div>
@@ -44,13 +48,24 @@ export default async function SettingsPage() {
             CTA standar
           </p>
           <p className="mt-1 break-words">{settings.defaultCtaLabel}</p>
+          <p className="mt-5 text-sm font-semibold text-muted-foreground">
+            Halaman utama Link Bio
+          </p>
+          <p className="mt-1 break-words">
+            {defaultBranch
+              ? `${defaultBranch.name} (/${defaultBranch.slug})`
+              : "Belum ditentukan"}
+          </p>
           <div className="mt-8">
             <FormDialog
               title="Edit standar KGJ"
               triggerLabel="Edit standar KGJ"
               primary
             >
-              <SiteSettingsForm settings={settings} />
+              <SiteSettingsForm
+                settings={settings}
+                activeBranches={activeBranches}
+              />
             </FormDialog>
           </div>
         </section>

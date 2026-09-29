@@ -14,7 +14,29 @@ describe("admin content input", () => {
     });
 
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.privacyUrl).toBeNull();
+    if (result.success) {
+      expect(result.data.privacyUrl).toBeNull();
+      expect(result.data.defaultLinkBioBranchId).toBeNull();
+    }
+  });
+
+  it("accepts an active-page selection and normalizes an empty selection", () => {
+    const selected = settingsSchema.safeParse({
+      siteName: "KGJ",
+      headline: "Cincin pilihan",
+      introduction: "",
+      privacyUrl: "",
+      defaultLinkBioBranchId: "a8e65e40-7a0a-4b5e-9f57-0a23c2f9c013",
+      defaultWhatsappMessage: "Halo, saya tertarik {product} di {branch}.",
+      defaultCtaLabel: "Hubungi kami",
+    });
+
+    expect(selected.success).toBe(true);
+    if (selected.success) {
+      expect(selected.data.defaultLinkBioBranchId).toBe(
+        "a8e65e40-7a0a-4b5e-9f57-0a23c2f9c013",
+      );
+    }
   });
 
   it("rejects unsupported message variables and invalid section IDs", () => {

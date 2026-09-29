@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getDatabase } from "@/lib/db/client";
-import { auditLogs, branches } from "@/lib/db/schema";
+import { auditLogs, branches, siteSettings } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 
 import { branchSchema } from "./validation";
@@ -42,6 +42,21 @@ export async function saveBranch(
     isActive: input.isActive,
   };
   const db = getDatabase();
+  if (input.id && !input.isActive) {
+    const [settings] = await db
+      .select({ defaultLinkBioBranchId: siteSettings.defaultLinkBioBranchId })
+      .from(siteSettings)
+      .limit(1);
+    if (settings?.defaultLinkBioBranchId === input.id) {
+      return {
+        message: "Cabang ini masih menjadi halaman utama Link Bio.",
+        errors: {
+          isActive:
+            "Pilih halaman utama lain terlebih dahulu di Standar & Template KGJ.",
+        },
+      };
+    }
+  }
   const [duplicate] = await db
     .select({ id: branches.id })
     .from(branches)

@@ -62,6 +62,27 @@ export async function loadBranchDirectory() {
   };
 }
 
+export async function loadDefaultLinkBioSlug() {
+  const db = getDatabase();
+  const [settings] = await db
+    .select({ defaultLinkBioBranchId: siteSettings.defaultLinkBioBranchId })
+    .from(siteSettings)
+    .limit(1);
+  if (!settings?.defaultLinkBioBranchId) return null;
+
+  const [branch] = await db
+    .select({ slug: branches.slug })
+    .from(branches)
+    .where(
+      and(
+        eq(branches.id, settings.defaultLinkBioBranchId),
+        eq(branches.isActive, true),
+      ),
+    )
+    .limit(1);
+  return branch?.slug ?? null;
+}
+
 export async function loadBranchPublicContent(
   slug: string,
   now = new Date(),

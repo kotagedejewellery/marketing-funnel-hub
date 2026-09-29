@@ -6,6 +6,7 @@ import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveSiteSettings } from "@/modules/admin/content/actions";
 
 type Settings = {
+  defaultLinkBioBranchId: string | null;
   siteName: string;
   headline: string | null;
   introduction: string | null;
@@ -14,10 +15,18 @@ type Settings = {
   defaultCtaLabel: string;
 };
 
+type ActiveBranch = { id: string; name: string; slug: string };
+
 const inputClass =
   "mt-2 min-h-12 w-full rounded-sm border border-border bg-background px-4 py-2 text-base focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kgj-accent)]";
 
-export function SiteSettingsForm({ settings }: { settings: Settings }) {
+export function SiteSettingsForm({
+  settings,
+  activeBranches,
+}: {
+  settings: Settings;
+  activeBranches: ActiveBranch[];
+}) {
   const [state, action, pending] = useActionState(saveSiteSettings, {
     message: "",
     errors: {},
@@ -60,6 +69,29 @@ export function SiteSettingsForm({ settings }: { settings: Settings }) {
         </div>
       </div>
       <div className="mt-6 space-y-6">
+        <div>
+          <label htmlFor="defaultLinkBioBranchId" className="font-medium">
+            Halaman utama Link Bio
+          </label>
+          <select
+            id="defaultLinkBioBranchId"
+            name="defaultLinkBioBranchId"
+            defaultValue={settings.defaultLinkBioBranchId ?? ""}
+            className={inputClass}
+          >
+            <option value="">Belum ditentukan</option>
+            {activeBranches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name} (/{branch.slug})
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Kunjungan ke alamat utama Link Bio akan diteruskan ke cabang ini.
+            Kontennya tetap dikelola pada halaman cabang tersebut.
+          </p>
+          <FieldError message={state.errors.defaultLinkBioBranchId} />
+        </div>
         <div>
           <label htmlFor="introduction" className="font-medium">
             Deskripsi standar

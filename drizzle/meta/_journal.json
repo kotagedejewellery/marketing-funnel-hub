@@ -71,6 +71,13 @@
       "when": 1790413200000,
       "tag": "0009_review_indonesian_translation",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790640000000,
+      "tag": "0010_default_link_bio_branch",
+      "breakpoints": true
     }
   ]
 }

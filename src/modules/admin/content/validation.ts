@@ -3,6 +3,10 @@ import * as z from "zod";
 import { isAllowedPublicUrl } from "@/modules/admin/url-validation";
 
 export const settingsSchema = z.object({
+  defaultLinkBioBranchId: z
+    .union([z.uuid(), z.literal("")])
+    .optional()
+    .transform((value) => value || null),
   siteName: z.string().trim().min(1, "Nama situs wajib diisi.").max(120),
   headline: z
     .string()

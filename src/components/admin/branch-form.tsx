@@ -113,6 +113,7 @@ export function BranchForm({ branch }: { branch: Branch | null }) {
         />
         Halaman Link Bio aktif
       </label>
+      <FieldError message={state.errors.isActive} />
       <FormFeedback state={state} pending={pending} />
       <button
         type="submit"

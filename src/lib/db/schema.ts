@@ -48,6 +48,10 @@ export const siteSettings = pgTable(
     defaultWhatsappMessage: text("default_whatsapp_message").notNull(),
     defaultCtaLabel: text("default_cta_label").notNull(),
     privacyUrl: text("privacy_url"),
+    defaultLinkBioBranchId: uuid("default_link_bio_branch_id").references(
+      () => branches.id,
+      { onDelete: "restrict" },
+    ),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

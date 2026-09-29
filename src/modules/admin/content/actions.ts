@@ -4,7 +4,12 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
-import { auditLogs, contentSections, siteSettings } from "@/lib/db/schema";
+import {
+  auditLogs,
+  branches,
+  contentSections,
+  siteSettings,
+} from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 
 import { sectionActionSchema, settingsSchema } from "./validation";
@@ -35,6 +40,26 @@ export async function saveSiteSettings(
 
   const input = parsed.data;
   const db = getDatabase();
+  if (input.defaultLinkBioBranchId) {
+    const [branch] = await db
+      .select({ id: branches.id })
+      .from(branches)
+      .where(
+        and(
+          eq(branches.id, input.defaultLinkBioBranchId),
+          eq(branches.isActive, true),
+        ),
+      )
+      .limit(1);
+    if (!branch) {
+      return {
+        message: "Pilih halaman utama dari cabang yang masih aktif.",
+        errors: {
+          defaultLinkBioBranchId: "Cabang utama harus aktif.",
+        },
+      };
+    }
+  }
   let changed: boolean;
   try {
     changed = await db.transaction(async (tx) => {
