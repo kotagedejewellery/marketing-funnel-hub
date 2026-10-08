@@ -59,6 +59,10 @@ export function LinkBio({
   const sections = content.sections.filter(
     (section) => section.sectionKey !== "profile_logo",
   );
+  const hasVisibleBrandHeader =
+    content.site.showProfileName ||
+    (content.site.showHeadline && Boolean(content.site.headline)) ||
+    (content.site.showIntroduction && Boolean(content.site.introduction));
   const logoFallback = (
     <div className="flex size-24 shrink-0 items-center justify-center rounded-full bg-[var(--kgj-dark)] font-serif text-3xl font-bold text-[var(--kgj-accent-soft)]">
       KJ
@@ -115,28 +119,35 @@ export function LinkBio({
             )}
           </section>
         )}
+        {!content.site.showProfileName ? (
+          <h1 className="sr-only">{content.site.siteName}</h1>
+        ) : null}
         <div id="main-content" className="space-y-10 sm:space-y-14">
           {sections.map(({ sectionKey, publicTitle }) => {
             switch (sectionKey) {
               case "brand_header":
+                if (!hasVisibleBrandHeader) return null;
                 return (
                   <section
                     key={sectionKey}
                     className="flex flex-col items-center px-3 text-center"
                   >
-                    <h1 className="max-w-xl font-serif text-3xl leading-tight font-bold tracking-[-0.025em] text-balance break-words sm:text-4xl">
-                      {content.site.siteName}
-                    </h1>
-                    {content.site.headline && (
+                    {content.site.showProfileName ? (
+                      <h1 className="max-w-xl font-serif text-3xl leading-tight font-bold tracking-[-0.025em] text-balance break-words sm:text-4xl">
+                        {content.site.siteName}
+                      </h1>
+                    ) : null}
+                    {content.site.showHeadline && content.site.headline ? (
                       <p className="mt-3 max-w-xl text-base leading-7 font-semibold text-balance">
                         {content.site.headline}
                       </p>
-                    )}
-                    {content.site.introduction && (
+                    ) : null}
+                    {content.site.showIntroduction &&
+                    content.site.introduction ? (
                       <p className="mt-2 max-w-2xl text-sm leading-6 whitespace-pre-line text-muted-foreground sm:text-base sm:leading-7">
                         {content.site.introduction}
                       </p>
-                    )}
+                    ) : null}
                   </section>
                 );
 

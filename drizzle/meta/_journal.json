@@ -78,6 +78,13 @@
       "when": 1790640000000,
       "tag": "0010_default_link_bio_branch",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791421200000,
+      "tag": "0011_profile_visibility_overrides",
+      "breakpoints": true
     }
   ]
 }

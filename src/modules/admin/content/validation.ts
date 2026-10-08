@@ -2,12 +2,20 @@ import * as z from "zod";
 
 import { isAllowedPublicUrl } from "@/modules/admin/url-validation";
 
+const profileVisibilitySchema = z
+  .literal("on")
+  .optional()
+  .transform((value) => value === "on");
+
 export const settingsSchema = z.object({
   defaultLinkBioBranchId: z
     .union([z.uuid(), z.literal("")])
     .optional()
     .transform((value) => value || null),
   siteName: z.string().trim().min(1, "Nama situs wajib diisi.").max(120),
+  showProfileName: profileVisibilitySchema,
+  showHeadline: profileVisibilitySchema,
+  showIntroduction: profileVisibilitySchema,
   headline: z
     .string()
     .trim()

@@ -20,6 +20,7 @@ import {
 
 import { branchPageTitle } from "./branch-title";
 import { publicAssetUrl, publicHref, resolveWhatsappCta } from "./links";
+import { resolveProfileVisibility } from "./profile-visibility";
 
 const assetUrl = (path: string | null) =>
   publicAssetUrl(
@@ -33,7 +34,16 @@ const safeHref = (value: string | null) =>
 
 type BranchScope = Pick<
   typeof branches.$inferSelect,
-  "id" | "name" | "slug" | "headline" | "introduction" | "logoPath"
+  | "id"
+  | "name"
+  | "slug"
+  | "profileName"
+  | "headline"
+  | "introduction"
+  | "showProfileName"
+  | "showHeadline"
+  | "showIntroduction"
+  | "logoPath"
 >;
 
 export async function loadBranchDirectory() {
@@ -93,8 +103,12 @@ export async function loadBranchPublicContent(
       id: branches.id,
       name: branches.name,
       slug: branches.slug,
+      profileName: branches.profileName,
       headline: branches.headline,
       introduction: branches.introduction,
+      showProfileName: branches.showProfileName,
+      showHeadline: branches.showHeadline,
+      showIntroduction: branches.showIntroduction,
       logoPath: branches.logoPath,
     })
     .from(branches)
@@ -119,6 +133,9 @@ async function loadScopedContent(
       siteName: siteSettings.siteName,
       headline: siteSettings.headline,
       introduction: siteSettings.introduction,
+      showProfileName: siteSettings.showProfileName,
+      showHeadline: siteSettings.showHeadline,
+      showIntroduction: siteSettings.showIntroduction,
       logoPath: siteSettings.logoPath,
       privacyUrl: siteSettings.privacyUrl,
       defaultWhatsappMessage: siteSettings.defaultWhatsappMessage,
@@ -343,9 +360,22 @@ async function loadScopedContent(
 
   return {
     site: {
-      siteName: branchPageTitle(site.siteName, branch.name),
+      siteName:
+        branch.profileName || branchPageTitle(site.siteName, branch.name),
       headline: branch.headline || site.headline,
       introduction: branch.introduction || site.introduction,
+      showProfileName: resolveProfileVisibility(
+        branch.showProfileName,
+        site.showProfileName,
+      ),
+      showHeadline: resolveProfileVisibility(
+        branch.showHeadline,
+        site.showHeadline,
+      ),
+      showIntroduction: resolveProfileVisibility(
+        branch.showIntroduction,
+        site.showIntroduction,
+      ),
       logoUrl: assetUrl(branch.logoPath || site.logoPath),
       privacyUrl: safeHref(site.privacyUrl),
     },

@@ -45,6 +45,14 @@ export default async function SettingsPage() {
             {settings.headline || "Belum diisi"}
           </p>
           <p className="mt-5 text-sm font-semibold text-muted-foreground">
+            Tampilan profil standar
+          </p>
+          <p className="mt-1 break-words">
+            Nama {settings.showProfileName ? "tampil" : "sembunyi"}, judul{" "}
+            {settings.showHeadline ? "tampil" : "sembunyi"}, deskripsi{" "}
+            {settings.showIntroduction ? "tampil" : "sembunyi"}.
+          </p>
+          <p className="mt-5 text-sm font-semibold text-muted-foreground">
             CTA standar
           </p>
           <p className="mt-1 break-words">{settings.defaultCtaLabel}</p>

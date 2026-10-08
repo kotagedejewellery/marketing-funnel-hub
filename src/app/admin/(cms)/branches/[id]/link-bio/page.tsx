@@ -106,6 +106,11 @@ export default async function BranchLinkBioPage({
           <section className="rounded-2xl bg-card p-6 sm:p-8">
             <h2 className="font-serif text-2xl">Profil merek</h2>
             <p className="mt-2 text-sm text-muted-foreground">
+              {branch.profileName
+                ? "Nama tampilan khusus cabang sudah diisi."
+                : "Nama tampilan dibuat otomatis dari merek dan cabang."}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
               {branch.headline
                 ? "Headline khusus cabang sudah diisi."
                 : "Headline mengikuti Standar & Template KGJ."}
@@ -114,6 +119,11 @@ export default async function BranchLinkBioPage({
               {branch.introduction
                 ? "Deskripsi singkat khusus cabang sudah diisi."
                 : "Deskripsi singkat mengikuti Standar & Template KGJ."}
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Tampilan: nama {visibilityLabel(branch.showProfileName)}, judul{" "}
+              {visibilityLabel(branch.showHeadline)}, deskripsi{" "}
+              {visibilityLabel(branch.showIntroduction)}.
             </p>
             <div className="mt-5">
               <FormDialog
@@ -214,4 +224,12 @@ export default async function BranchLinkBioPage({
       </div>
     </div>
   );
+}
+
+function visibilityLabel(value: boolean | null) {
+  return value === null
+    ? "mengikuti template"
+    : value
+      ? "ditampilkan"
+      : "disembunyikan";
 }

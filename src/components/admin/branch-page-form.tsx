@@ -13,6 +13,8 @@ type Section = {
   isActive: boolean;
 };
 
+type VisibilityOverride = "inherit" | "show" | "hide";
+
 const sectionSupportsPublicTitle = (sectionKey: string) =>
   !["profile_logo", "brand_header", "campaign_banner", "footer"].includes(
     sectionKey,
@@ -27,7 +29,15 @@ export function BranchPageForm({
   inheritsSections,
   mode,
 }: {
-  branch: { id: string; headline: string | null; introduction: string | null };
+  branch: {
+    id: string;
+    profileName: string | null;
+    headline: string | null;
+    introduction: string | null;
+    showProfileName: boolean | null;
+    showHeadline: boolean | null;
+    showIntroduction: boolean | null;
+  };
   sections: Section[];
   inheritsSections: boolean;
   mode: "identity" | "sections";
@@ -60,56 +70,104 @@ export function BranchPageForm({
       <input type="hidden" name="mode" value={mode} />
       {mode === "identity" ? (
         <p className="text-sm text-muted-foreground">
-          Isi nilai untuk menjadikannya khusus cabang. Kosongkan judul atau
-          deskripsi agar tetap mengikuti Standar &amp; Template KGJ.
+          Nilai kosong mengikuti Standar &amp; Template KGJ. Pilih sembunyikan
+          untuk tidak menampilkan elemen tersebut pada halaman publik.
         </p>
       ) : null}
       {mode === "identity" ? (
-        <div>
-          <label htmlFor="branchHeadline" className="font-medium">
-            Judul profil
-          </label>
+        <fieldset className="space-y-6">
+          <legend className="font-serif text-xl">Tampilan publik</legend>
+          <div>
+            <label htmlFor="branchProfileName" className="font-medium">
+              Nama tampilan Link Bio (opsional)
+            </label>
+            <input
+              id="branchProfileName"
+              name="profileName"
+              defaultValue={branch.profileName ?? ""}
+              maxLength={160}
+              className={inputClass}
+            />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Kosongkan untuk memakai nama merek dan cabang secara otomatis.
+            </p>
+            <FieldError message={state.errors.profileName} />
+            <VisibilitySelect
+              id="branchProfileNameVisibility"
+              name="profileNameVisibility"
+              label="Tampilkan nama Link Bio"
+              value={visibilityValue(branch.showProfileName)}
+            />
+          </div>
+          <div>
+            <label htmlFor="branchHeadline" className="font-medium">
+              Judul profil
+            </label>
+            <input
+              id="branchHeadline"
+              name="headline"
+              defaultValue={branch.headline ?? ""}
+              maxLength={160}
+              className={inputClass}
+            />
+            <FieldError message={state.errors.headline} />
+            <VisibilitySelect
+              id="branchHeadlineVisibility"
+              name="headlineVisibility"
+              label="Tampilkan judul profil"
+              value={visibilityValue(branch.showHeadline)}
+            />
+          </div>
+          <div>
+            <label htmlFor="branchIntroduction" className="font-medium">
+              Deskripsi singkat
+            </label>
+            <textarea
+              id="branchIntroduction"
+              name="introduction"
+              defaultValue={branch.introduction ?? ""}
+              maxLength={1000}
+              rows={4}
+              className={inputClass}
+            />
+            <FieldError message={state.errors.introduction} />
+            <VisibilitySelect
+              id="branchIntroductionVisibility"
+              name="introductionVisibility"
+              label="Tampilkan deskripsi singkat"
+              value={visibilityValue(branch.showIntroduction)}
+            />
+          </div>
+        </fieldset>
+      ) : (
+        <>
           <input
-            id="branchHeadline"
-            name="headline"
-            defaultValue={branch.headline ?? ""}
-            maxLength={160}
-            className={inputClass}
+            type="hidden"
+            name="profileName"
+            value={branch.profileName ?? ""}
           />
-          {state.errors.headline && (
-            <p role="alert" className="mt-2 text-sm text-destructive">
-              {state.errors.headline}
-            </p>
-          )}
-        </div>
-      ) : (
-        <input type="hidden" name="headline" value={branch.headline ?? ""} />
-      )}
-      {mode === "identity" ? (
-        <div>
-          <label htmlFor="branchIntroduction" className="font-medium">
-            Deskripsi singkat
-          </label>
-          <textarea
-            id="branchIntroduction"
+          <input type="hidden" name="headline" value={branch.headline ?? ""} />
+          <input
+            type="hidden"
             name="introduction"
-            defaultValue={branch.introduction ?? ""}
-            maxLength={1000}
-            rows={4}
-            className={inputClass}
+            value={branch.introduction ?? ""}
           />
-          {state.errors.introduction && (
-            <p role="alert" className="mt-2 text-sm text-destructive">
-              {state.errors.introduction}
-            </p>
-          )}
-        </div>
-      ) : (
-        <input
-          type="hidden"
-          name="introduction"
-          value={branch.introduction ?? ""}
-        />
+          <input
+            type="hidden"
+            name="profileNameVisibility"
+            value={visibilityValue(branch.showProfileName)}
+          />
+          <input
+            type="hidden"
+            name="headlineVisibility"
+            value={visibilityValue(branch.showHeadline)}
+          />
+          <input
+            type="hidden"
+            name="introductionVisibility"
+            value={visibilityValue(branch.showIntroduction)}
+          />
+        </>
       )}
       {mode === "sections" ? (
         <fieldset className="space-y-3">
@@ -231,4 +289,39 @@ export function BranchPageForm({
       </button>
     </form>
   );
+}
+
+function visibilityValue(value: boolean | null): VisibilityOverride {
+  return value === null ? "inherit" : value ? "show" : "hide";
+}
+
+function VisibilitySelect({
+  id,
+  label,
+  name,
+  value,
+}: {
+  id: string;
+  label: string;
+  name: string;
+  value: VisibilityOverride;
+}) {
+  return (
+    <label htmlFor={id} className="mt-4 block text-sm font-medium">
+      {label}
+      <select id={id} name={name} defaultValue={value} className={inputClass}>
+        <option value="inherit">Ikuti template KGJ</option>
+        <option value="show">Tampilkan</option>
+        <option value="hide">Sembunyikan</option>
+      </select>
+    </label>
+  );
+}
+
+function FieldError({ message }: { message?: string }) {
+  return message ? (
+    <p role="alert" className="mt-2 text-sm text-destructive">
+      {message}
+    </p>
+  ) : null;
 }

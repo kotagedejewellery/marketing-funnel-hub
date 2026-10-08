@@ -30,8 +30,12 @@ describe("branch input", () => {
   it("allows an empty public title and includes the pinned profile logo section", () => {
     const result = branchPageSchema.safeParse({
       branchId: "00000000-0000-4000-8000-000000000001",
+      profileName: "",
       headline: "",
       introduction: "",
+      profileNameVisibility: "inherit",
+      headlineVisibility: "show",
+      introductionVisibility: "hide",
       sections: branchSectionKeys.map((sectionKey, index) => ({
         sectionKey,
         publicTitle: "",
@@ -45,6 +49,12 @@ describe("branch input", () => {
       expect(result.data.sections[0]).toMatchObject({
         sectionKey: "profile_logo",
         publicTitle: null,
+      });
+      expect(result.data).toMatchObject({
+        profileName: null,
+        profileNameVisibility: "inherit",
+        headlineVisibility: "show",
+        introductionVisibility: "hide",
       });
     }
   });

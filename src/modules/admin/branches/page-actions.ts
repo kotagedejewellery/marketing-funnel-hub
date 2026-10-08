@@ -26,8 +26,12 @@ export async function saveBranchPage(
   }
   const parsed = branchPageSchema.safeParse({
     branchId: formData.get("branchId"),
+    profileName: formData.get("profileName"),
     headline: formData.get("headline"),
     introduction: formData.get("introduction"),
+    profileNameVisibility: formData.get("profileNameVisibility"),
+    headlineVisibility: formData.get("headlineVisibility"),
+    introductionVisibility: formData.get("introductionVisibility"),
     sections: branchSectionKeys.map((sectionKey) => ({
       sectionKey,
       publicTitle: formData.get(`title_${sectionKey}`),
@@ -47,7 +51,16 @@ export async function saveBranchPage(
     };
   }
 
-  const { branchId, headline, introduction, sections } = parsed.data;
+  const {
+    branchId,
+    profileName,
+    headline,
+    introduction,
+    profileNameVisibility,
+    headlineVisibility,
+    introductionVisibility,
+    sections,
+  } = parsed.data;
   const db = getDatabase();
   let slug: string;
   try {
@@ -84,7 +97,24 @@ export async function saveBranchPage(
       if (mode === "identity") {
         await tx
           .update(branches)
-          .set({ headline, introduction, updatedAt: new Date() })
+          .set({
+            profileName,
+            headline,
+            introduction,
+            showProfileName:
+              profileNameVisibility === "inherit"
+                ? null
+                : profileNameVisibility === "show",
+            showHeadline:
+              headlineVisibility === "inherit"
+                ? null
+                : headlineVisibility === "show",
+            showIntroduction:
+              introductionVisibility === "inherit"
+                ? null
+                : introductionVisibility === "show",
+            updatedAt: new Date(),
+          })
           .where(eq(branches.id, branchId));
       }
       for (const section of mode === "sections" ? sections : []) {
@@ -128,7 +158,16 @@ export async function saveBranchPage(
         entityId: branchId,
         changes: {
           fields:
-            mode === "identity" ? ["headline", "introduction"] : ["sections"],
+            mode === "identity"
+              ? [
+                  "profile_name",
+                  "headline",
+                  "introduction",
+                  "show_profile_name",
+                  "show_headline",
+                  "show_introduction",
+                ]
+              : ["sections"],
         },
       });
       return branch.slug;

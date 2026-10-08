@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+const visibilityOverrideSchema = z.enum(["inherit", "show", "hide"]);
+
 export const branchSectionKeys = [
   "profile_logo",
   "brand_header",
@@ -31,6 +33,11 @@ export const branchSectionLabels: Record<
 
 export const branchPageSchema = z.object({
   branchId: z.uuid(),
+  profileName: z
+    .string()
+    .trim()
+    .max(160)
+    .transform((value) => value || null),
   headline: z
     .string()
     .trim()
@@ -41,6 +48,9 @@ export const branchPageSchema = z.object({
     .trim()
     .max(1000)
     .transform((value) => value || null),
+  profileNameVisibility: visibilityOverrideSchema,
+  headlineVisibility: visibilityOverrideSchema,
+  introductionVisibility: visibilityOverrideSchema,
   sections: z
     .array(
       z.object({

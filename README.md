@@ -97,6 +97,14 @@ For a fresh local database, start Docker Desktop, run
 `pnpm db:migrate:local`. A `supabase db reset --local` must be followed by the
 separate Drizzle migration. Keep local Supabase ports protected from non-local
 traffic and stop the stack when unused; never use live credentials for local work.
+
+### Menghentikan Supabase Lokal
+
+Saat selesai bekerja, jalankan `supabase stop`. Stack Supabase lokal memakai
+kebijakan Docker `unless-stopped`; menghentikannya melalui CLI mencegah container
+hidup kembali hanya karena Docker Desktop dibuka. Jalankan `supabase start
+--network-id kgj-marketing-funnel-local` kembali saat layanan lokal diperlukan.
+
 The database-role and deployment boundaries are in the
 [system architecture](docs/system-architecture.md).
 

@@ -8,8 +8,11 @@ import { saveSiteSettings } from "@/modules/admin/content/actions";
 type Settings = {
   defaultLinkBioBranchId: string | null;
   siteName: string;
+  showProfileName: boolean;
   headline: string | null;
+  showHeadline: boolean;
   introduction: string | null;
+  showIntroduction: boolean;
   privacyUrl: string | null;
   defaultWhatsappMessage: string;
   defaultCtaLabel: string;
@@ -68,6 +71,31 @@ export function SiteSettingsForm({
           <FieldError message={state.errors.headline} />
         </div>
       </div>
+      <fieldset className="mt-6 space-y-3 border-t border-border pt-6">
+        <legend className="font-serif text-xl">Tampilan profil standar</legend>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Cabang dapat mengikuti, menampilkan, atau menyembunyikan setiap elemen
+          ini secara mandiri.
+        </p>
+        <ProfileVisibilityCheckbox
+          id="showProfileName"
+          name="showProfileName"
+          label="Tampilkan nama Link Bio"
+          defaultChecked={settings.showProfileName}
+        />
+        <ProfileVisibilityCheckbox
+          id="showHeadline"
+          name="showHeadline"
+          label="Tampilkan judul profil"
+          defaultChecked={settings.showHeadline}
+        />
+        <ProfileVisibilityCheckbox
+          id="showIntroduction"
+          name="showIntroduction"
+          label="Tampilkan deskripsi singkat"
+          defaultChecked={settings.showIntroduction}
+        />
+      </fieldset>
       <div className="mt-6 space-y-6">
         <div>
           <label htmlFor="defaultLinkBioBranchId" className="font-medium">
@@ -181,4 +209,29 @@ function FieldError({ message }: { message?: string }) {
       {message}
     </p>
   ) : null;
+}
+
+function ProfileVisibilityCheckbox({
+  id,
+  name,
+  label,
+  defaultChecked,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  defaultChecked: boolean;
+}) {
+  return (
+    <label htmlFor={id} className="flex min-h-11 items-center gap-3">
+      <input
+        id={id}
+        name={name}
+        type="checkbox"
+        defaultChecked={defaultChecked}
+        className="size-5 accent-primary"
+      />
+      <span className="font-medium">{label}</span>
+    </label>
+  );
 }

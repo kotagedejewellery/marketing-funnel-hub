@@ -6,6 +6,8 @@ describe("admin content input", () => {
   it("accepts a settings message with supported WhatsApp variables", () => {
     const result = settingsSchema.safeParse({
       siteName: "KGJ",
+      showProfileName: "on",
+      showHeadline: "on",
       headline: "Cincin pilihan",
       introduction: "",
       privacyUrl: "",
@@ -17,6 +19,9 @@ describe("admin content input", () => {
     if (result.success) {
       expect(result.data.privacyUrl).toBeNull();
       expect(result.data.defaultLinkBioBranchId).toBeNull();
+      expect(result.data.showProfileName).toBe(true);
+      expect(result.data.showHeadline).toBe(true);
+      expect(result.data.showIntroduction).toBe(false);
     }
   });
 
