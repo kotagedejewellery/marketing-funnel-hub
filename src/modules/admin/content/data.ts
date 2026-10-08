@@ -23,6 +23,8 @@ export async function getContentSettings() {
         sectionKey: contentSections.sectionKey,
         sortOrder: contentSections.sortOrder,
         isActive: contentSections.isActive,
+        spacingAfter: contentSections.spacingAfter,
+        showDivider: contentSections.showDivider,
       })
       .from(contentSections)
       .where(isNull(contentSections.branchId))

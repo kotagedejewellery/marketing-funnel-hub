@@ -11,6 +11,8 @@ type Section = {
   publicTitle: string | null;
   sortOrder: number;
   isActive: boolean;
+  spacingAfter: string;
+  showDivider: boolean;
 };
 
 type VisibilityOverride = "inherit" | "show" | "hide";
@@ -19,6 +21,8 @@ const sectionSupportsPublicTitle = (sectionKey: string) =>
   !["profile_logo", "brand_header", "campaign_banner", "footer"].includes(
     sectionKey,
   );
+
+const sectionSupportsLayout = (sectionKey: string) => sectionKey !== "footer";
 
 const inputClass =
   "mt-2 min-h-11 w-full border border-border bg-background px-3 py-2 focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -217,6 +221,44 @@ export function BranchPageForm({
                   value=""
                 />
               )}
+              {sectionSupportsLayout(section.sectionKey) ? (
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+                  <label className="flex min-h-11 items-center gap-2">
+                    <span>Jarak setelah</span>
+                    <select
+                      name={`spacing_${section.sectionKey}`}
+                      defaultValue={section.spacingAfter}
+                      className="min-h-11 border border-border bg-background px-3"
+                    >
+                      <option value="compact">Rapat</option>
+                      <option value="normal">Normal</option>
+                      <option value="relaxed">Lega</option>
+                    </select>
+                  </label>
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name={`divider_${section.sectionKey}`}
+                      defaultChecked={section.showDivider}
+                      className="size-5 accent-primary"
+                    />
+                    Tampilkan garis pemisah
+                  </label>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="hidden"
+                    name={`spacing_${section.sectionKey}`}
+                    value="normal"
+                  />
+                  <input
+                    type="hidden"
+                    name={`divider_${section.sectionKey}`}
+                    value=""
+                  />
+                </>
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -264,6 +306,18 @@ export function BranchPageForm({
               name={`title_${section.sectionKey}`}
               value={section.publicTitle ?? ""}
             />
+            <input
+              type="hidden"
+              name={`spacing_${section.sectionKey}`}
+              value={section.spacingAfter}
+            />
+            {section.showDivider && (
+              <input
+                type="hidden"
+                name={`divider_${section.sectionKey}`}
+                value="on"
+              />
+            )}
             {section.isActive && (
               <input
                 type="hidden"

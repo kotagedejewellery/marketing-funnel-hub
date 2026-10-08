@@ -60,4 +60,21 @@ describe("admin content input", () => {
         .success,
     ).toBe(false);
   });
+
+  it("accepts section layout preferences", () => {
+    const result = sectionActionSchema.safeParse({
+      id: "a8e65e40-7a0a-4b5e-9f57-0a23c2f9c013",
+      operation: "layout",
+      spacingAfter: "relaxed",
+      showDivider: "on",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toMatchObject({
+        spacingAfter: "relaxed",
+        showDivider: true,
+      });
+    }
+  });
 });

@@ -52,11 +52,26 @@ export const settingsSchema = z.object({
 
 export const sectionActionSchema = z.object({
   id: z.uuid(),
-  operation: z.enum(["up", "down", "activate", "deactivate", "title"]),
+  operation: z.enum([
+    "up",
+    "down",
+    "activate",
+    "deactivate",
+    "title",
+    "layout",
+  ]),
   publicTitle: z
     .string()
     .trim()
     .max(160)
     .transform((value) => value || null)
     .optional(),
+  spacingAfter: z
+    .enum(["compact", "normal", "relaxed"])
+    .optional()
+    .default("normal"),
+  showDivider: z
+    .literal("on")
+    .optional()
+    .transform((value) => value === "on"),
 });

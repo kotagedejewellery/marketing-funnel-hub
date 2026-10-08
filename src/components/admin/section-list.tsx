@@ -11,12 +11,16 @@ type Section = {
   label: string;
   publicTitle: string | null;
   isActive: boolean;
+  spacingAfter: string;
+  showDivider: boolean;
 };
 
 const sectionSupportsPublicTitle = (sectionKey: string) =>
   !["profile_logo", "brand_header", "campaign_banner", "footer"].includes(
     sectionKey,
   );
+
+const sectionSupportsLayout = (sectionKey: string) => sectionKey !== "footer";
 
 export function SectionList({ sections }: { sections: Section[] }) {
   const [state, action, pending] = useActionState(changeContentSection, {
@@ -87,6 +91,38 @@ export function SectionList({ sections }: { sections: Section[] }) {
                     </ActionButton>
                   </label>
                 )}
+                {sectionSupportsLayout(section.sectionKey) && (
+                  <>
+                    <label className="flex min-h-11 items-center gap-2 text-sm">
+                      <span>Jarak setelah</span>
+                      <select
+                        name="spacingAfter"
+                        defaultValue={section.spacingAfter}
+                        className="min-h-11 border border-border bg-background px-3"
+                      >
+                        <option value="compact">Rapat</option>
+                        <option value="normal">Normal</option>
+                        <option value="relaxed">Lega</option>
+                      </select>
+                    </label>
+                    <label className="flex min-h-11 items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="showDivider"
+                        defaultChecked={section.showDivider}
+                        className="size-4 accent-primary"
+                      />
+                      Garis pemisah
+                    </label>
+                    <ActionButton
+                      operation="layout"
+                      disabled={pending}
+                      pending={pending}
+                    >
+                      Simpan jarak
+                    </ActionButton>
+                  </>
+                )}
                 <ActionButton
                   operation="up"
                   pending={pending}
@@ -133,7 +169,7 @@ function ActionButton({
   pending,
   children,
 }: {
-  operation: "up" | "down" | "activate" | "deactivate" | "title";
+  operation: "up" | "down" | "activate" | "deactivate" | "title" | "layout";
   disabled: boolean;
   pending: boolean;
   children: ReactNode;

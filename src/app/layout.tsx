@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
-import { Bricolage_Grotesque, Manrope } from "next/font/google";
+import { Bricolage_Grotesque, Inter, Manrope } from "next/font/google";
 
 import "@/lib/env/server";
 
@@ -13,6 +13,10 @@ const displayFont = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-display",
 });
+const linkBioFont = Inter({
+  subsets: ["latin"],
+  variable: "--font-link-bio",
+});
 
 export const metadata: Metadata = {
   title: "Kotagede Jewellery | Link Bio Cabang",
@@ -24,7 +28,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="id" className={`${bodyFont.variable} ${displayFont.variable}`}>
+    <html
+      lang="id"
+      className={`${bodyFont.variable} ${displayFont.variable} ${linkBioFont.variable}`}
+    >
       <body>
         <Suspense fallback={null}>
           <RouteProgress />

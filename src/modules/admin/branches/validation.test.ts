@@ -41,6 +41,8 @@ describe("branch input", () => {
         publicTitle: "",
         sortOrder: String(index * 10),
         isActive: true,
+        spacingAfter: "normal",
+        showDivider: false,
       })),
     });
 

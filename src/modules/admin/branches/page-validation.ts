@@ -68,6 +68,8 @@ export const branchPageSchema = z.object({
             (value) => Number.isSafeInteger(value) && value <= 2147483647,
           ),
         isActive: z.boolean(),
+        spacingAfter: z.enum(["compact", "normal", "relaxed"]),
+        showDivider: z.boolean(),
       }),
     )
     .length(branchSectionKeys.length),

@@ -37,6 +37,8 @@ export async function saveBranchPage(
       publicTitle: formData.get(`title_${sectionKey}`),
       sortOrder: formData.get(`order_${sectionKey}`),
       isActive: formData.get(`active_${sectionKey}`) === "on",
+      spacingAfter: formData.get(`spacing_${sectionKey}`),
+      showDivider: formData.get(`divider_${sectionKey}`) === "on",
     })),
   });
   if (!parsed.success) {
@@ -80,6 +82,8 @@ export async function saveBranchPage(
                   sectionKey: contentSections.sectionKey,
                   label: contentSections.label,
                   publicTitle: contentSections.publicTitle,
+                  spacingAfter: contentSections.spacingAfter,
+                  showDivider: contentSections.showDivider,
                 })
                 .from(contentSections)
                 .where(isNull(contentSections.branchId)),
@@ -88,6 +92,8 @@ export async function saveBranchPage(
                   id: contentSections.id,
                   sectionKey: contentSections.sectionKey,
                   publicTitle: contentSections.publicTitle,
+                  spacingAfter: contentSections.spacingAfter,
+                  showDivider: contentSections.showDivider,
                 })
                 .from(contentSections)
                 .where(eq(contentSections.branchId, branchId)),
@@ -128,6 +134,8 @@ export async function saveBranchPage(
               publicTitle: section.publicTitle,
               sortOrder: section.sortOrder,
               isActive: section.isActive,
+              spacingAfter: section.spacingAfter,
+              showDivider: section.showDivider,
               updatedAt: new Date(),
             })
             .where(
@@ -148,6 +156,8 @@ export async function saveBranchPage(
             publicTitle: section.publicTitle,
             sortOrder: section.sortOrder,
             isActive: section.isActive,
+            spacingAfter: section.spacingAfter,
+            showDivider: section.showDivider,
           });
         }
       }

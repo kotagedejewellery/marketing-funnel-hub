@@ -110,6 +110,8 @@ export async function changeContentSection(
     id: formData.get("id"),
     operation: formData.get("operation"),
     publicTitle: formData.get("publicTitle") ?? undefined,
+    spacingAfter: formData.get("spacingAfter") ?? undefined,
+    showDivider: formData.get("showDivider") ?? undefined,
   });
   if (!parsed.success) {
     return { message: "Perubahan section tidak valid.", errors: {} };
@@ -147,6 +149,26 @@ export async function changeContentSection(
           entityType: "content_sections",
           entityId: id,
           changes: { fields: ["public_title"] },
+        });
+        return true;
+      }
+
+      if (operation === "layout") {
+        const { spacingAfter, showDivider } = parsed.data;
+        await tx
+          .update(contentSections)
+          .set({ spacingAfter, showDivider, updatedAt: new Date() })
+          .where(
+            and(eq(contentSections.id, id), isNull(contentSections.branchId)),
+          );
+        await tx.insert(auditLogs).values({
+          adminId: profile.id,
+          action: "update",
+          entityType: "content_sections",
+          entityId: id,
+          changes: {
+            fields: ["spacing_after", "show_divider"],
+          },
         });
         return true;
       }

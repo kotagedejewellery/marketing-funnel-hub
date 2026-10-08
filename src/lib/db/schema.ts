@@ -82,6 +82,8 @@ export const contentSections = pgTable(
     publicTitle: text("public_title"),
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
+    spacingAfter: text("spacing_after").notNull().default("normal"),
+    showDivider: boolean("show_divider").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -96,6 +98,10 @@ export const contentSections = pgTable(
     uniqueIndex("content_sections_branch_key_unique")
       .on(table.branchId, table.sectionKey)
       .where(sql`${table.branchId} is not null`),
+    check(
+      "content_sections_spacing_after_check",
+      sql`${table.spacingAfter} in ('compact', 'normal', 'relaxed')`,
+    ),
   ],
 ).enableRLS();
 

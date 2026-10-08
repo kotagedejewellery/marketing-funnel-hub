@@ -96,8 +96,12 @@
 }
 
 .kgj-public {
+  --background: #f1f3f5;
+  --font-sans: var(--font-link-bio), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-link-bio), ui-sans-serif, system-ui, sans-serif;
   overflow-x: clip;
   touch-action: manipulation;
+  font-family: var(--font-link-bio), ui-sans-serif, system-ui, sans-serif;
 }
 
 /*

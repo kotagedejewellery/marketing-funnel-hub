@@ -281,6 +281,8 @@ async function loadScopedContent(
         sectionKey: contentSections.sectionKey,
         publicTitle: contentSections.publicTitle,
         isActive: contentSections.isActive,
+        spacingAfter: contentSections.spacingAfter,
+        showDivider: contentSections.showDivider,
       })
       .from(contentSections)
       .where(eq(contentSections.branchId, branch.id))
@@ -306,6 +308,8 @@ async function loadScopedContent(
             sectionKey: contentSections.sectionKey,
             publicTitle: contentSections.publicTitle,
             isActive: contentSections.isActive,
+            spacingAfter: contentSections.spacingAfter,
+            showDivider: contentSections.showDivider,
           })
           .from(contentSections)
           .where(isNull(contentSections.branchId))
@@ -443,7 +447,12 @@ async function loadScopedContent(
     faqs: visibleFaqs,
     sections: sections
       .filter((section) => section.isActive)
-      .map(({ sectionKey, publicTitle }) => ({ sectionKey, publicTitle })),
+      .map(({ sectionKey, publicTitle, spacingAfter, showDivider }) => ({
+        sectionKey,
+        publicTitle,
+        spacingAfter,
+        showDivider,
+      })),
     pageBranch: { id: branch.id, name: branch.name, slug: branch.slug },
   };
 }

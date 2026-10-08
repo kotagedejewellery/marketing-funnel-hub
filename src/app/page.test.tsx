@@ -23,9 +23,24 @@ const emptyContent: PublicContent = {
   links: [],
   faqs: [],
   sections: [
-    { sectionKey: "brand_header", publicTitle: null },
-    { sectionKey: "products", publicTitle: null },
-    { sectionKey: "footer", publicTitle: null },
+    {
+      sectionKey: "brand_header",
+      publicTitle: null,
+      spacingAfter: "normal",
+      showDivider: false,
+    },
+    {
+      sectionKey: "products",
+      publicTitle: null,
+      spacingAfter: "normal",
+      showDivider: false,
+    },
+    {
+      sectionKey: "footer",
+      publicTitle: null,
+      spacingAfter: "normal",
+      showDivider: false,
+    },
   ],
   pageBranch: { id: "branch-1", name: "Solo", slug: "solo" },
 };
@@ -122,7 +137,14 @@ describe("public Link Bio", () => {
               imageUrl: "/favorite.jpg",
             },
           ],
-          sections: [{ sectionKey: "gallery", publicTitle: null }],
+          sections: [
+            {
+              sectionKey: "gallery",
+              publicTitle: null,
+              spacingAfter: "normal",
+              showDivider: false,
+            },
+          ],
         }}
       />,
     );
@@ -148,7 +170,14 @@ describe("public Link Bio", () => {
             bannerUrl: "/promo-september.jpg",
             targetUrl: "https://example.com/promo",
           },
-          sections: [{ sectionKey: "campaign_banner", publicTitle: null }],
+          sections: [
+            {
+              sectionKey: "campaign_banner",
+              publicTitle: null,
+              spacingAfter: "normal",
+              showDivider: false,
+            },
+          ],
         }}
       />,
     );
@@ -185,7 +214,12 @@ describe("public Link Bio", () => {
             ],
           },
           sections: [
-            { sectionKey: "google_reviews", publicTitle: "Review kami" },
+            {
+              sectionKey: "google_reviews",
+              publicTitle: "Review kami",
+              spacingAfter: "normal",
+              showDivider: false,
+            },
           ],
         }}
       />,
@@ -200,6 +234,29 @@ describe("public Link Bio", () => {
     expect(
       screen.queryByRole("link", { name: "Lihat di Google Maps" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("applies a configured section gap and divider", () => {
+    render(
+      <LinkBio
+        content={{
+          ...emptyContent,
+          sections: [
+            {
+              sectionKey: "products",
+              publicTitle: null,
+              spacingAfter: "compact",
+              showDivider: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("status").closest("section")).toHaveClass(
+      "mb-6",
+      "border-b",
+    );
   });
 });
 
