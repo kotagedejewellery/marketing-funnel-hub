@@ -86,8 +86,9 @@ Browser smoke tests use only the local database, never the live database.
 Before pushing code or deploying, run `pnpm quality:check`. It runs formatting,
 lint, TypeScript, unit/component tests, and the production build in the same
 order as the fast GitHub CI gate. GitHub CI is the required quality gate before
-deploy; Vercel runs only the production Next.js build because its production
-environment is not a Vitest runtime. Database integration and browser E2E
+deploy. Vercel runs only the production Next.js build because its production
+environment is not a Vitest runtime; the owner-managed Docker image also runs
+only `pnpm build` during image creation. Database integration and browser E2E
 checks remain in CI because they require Supabase Local and Playwright.
 
 The Drizzle commands require an ignored `.env.local` with local `DATABASE_URL` and
@@ -115,7 +116,54 @@ cannot reach the IPv6 direct endpoint. Use the `postgres` role, percent-encode
 reserved password characters, and run `pnpm db:migrate:live` manually. The live
 configuration rejects localhost, non-Supabase hosts, transaction-pooler port
 `6543`, non-admin usernames, and SSL modes other than `require`. Never place the
-live migration URI in Vercel or reuse it as the application's `DATABASE_URL`.
+live migration URI in Vercel, Docker, or reuse it as the application's
+`DATABASE_URL`.
+
+## Docker production
+
+An owner-managed VPS can run the same production application through
+`Dockerfile` and `compose.production.yml`; this is separate from Supabase
+Local and does not start when Docker Desktop starts. The image uses Next.js
+standalone output and mounts `.env.production` only as a BuildKit secret while
+building, then supplies the same ignored file to the running container.
+
+On the VPS, copy `.env.live.example` to ignored `.env.production`, set
+`NEXT_PUBLIC_SITE_URL=https://link.kotagedejewellery.com`, create the external
+Traefik network named `proxy`, and ensure Traefik has `web`, `websecure`,
+and the `letsencrypt` certificate resolver. Point the domain's DNS record to
+the VPS, run reviewed live migrations separately, then run:
+
+```bash
+docker compose -f compose.production.yml up -d --build
+```
+
+Do not put `DATABASE_LIVE_MIGRATION_URL` in `.env.production`. Traefik rate
+limiting for `/api/events` and an external scheduler for
+`GET /api/cron/events-retention` remain owner-managed production operations.
+The existing geographic analytics uses Vercel request headers; country/city
+data is unavailable on Traefik unless the owner provides equivalent trusted
+headers.
+
+### Deploy melalui GitHub Actions
+
+`.github/workflows/deploy.yml` hanya melakukan deploy setelah workflow `CI`
+untuk push ke `main` selesai sukses. Ia tersambung ke VPS melalui SSH, checkout
+SHA yang telah diuji, lalu membangun ulang dan menjalankan
+`compose.production.yml`; deploy tidak dapat saling tumpang tindih. Tambahkan
+secret repository berikut di GitHub sebelum push ke `main`:
+
+```text
+VPS_HOST
+VPS_USER
+VPS_SSH_KEY
+```
+
+Checkout repository pada VPS harus sudah berada di
+`/opt/apps/sistem-marketing-funnel/marketing-funnel-hub`, memiliki remote
+`origin`, akses baca repository, Docker Compose v2, dan file ignored
+`.env.production` yang telah diisi. Workflow sengaja tidak menjalankan migrasi
+database; jalankan dan setujui migrasi live secara terpisah sebelum deploy kode
+yang membutuhkannya.
 
 ## Documentation
 
@@ -129,9 +177,10 @@ Implementation contributors must also follow [AGENTS.md](AGENTS.md).
 
 ## Architecture
 
-P0 is a Next.js modular monolith hosted on Vercel, with Supabase PostgreSQL, Auth,
-and Storage; Drizzle owns schema and migrations. Privileged database, auth,
-storage, and tracking paths use the Node.js runtime.
+P0 is a Next.js modular monolith hosted on Vercel or an owner-managed
+Docker/Traefik VPS, with Supabase PostgreSQL, Auth, and Storage; Drizzle owns
+schema and migrations. Privileged database, auth, storage, and tracking paths
+use the Node.js runtime.
 
 See the [system architecture](docs/system-architecture.md) for runtime, security,
 tracking, and the two-environment (local/live) decision.

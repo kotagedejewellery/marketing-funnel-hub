@@ -1,0 +1,36 @@
+name: Deploy Production
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Deploy tested revision to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/apps/sistem-marketing-funnel/marketing-funnel-hub
+            git fetch --depth=1 origin ${{ github.event.workflow_run.head_sha }}
+            git checkout --detach ${{ github.event.workflow_run.head_sha }}
+            docker compose -f compose.production.yml build --no-cache
+            docker compose -f compose.production.yml up -d --force-recreate

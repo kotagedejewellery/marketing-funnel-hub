@@ -39,6 +39,7 @@ if (supabaseUrl && publicAssetBucket) {
 if (remotePatterns.length === 0) remotePatterns = reviewerPhotoPatterns;
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   allowedDevOrigins: ["127.0.0.1"],
   images: { remotePatterns },
   experimental: { serverActions: { bodySizeLimit: "6mb" } },

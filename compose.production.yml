@@ -1,0 +1,41 @@
+name: marketing-funnel-hub
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        - app_env
+
+    restart: unless-stopped
+
+    env_file:
+      - .env.production
+
+    networks:
+      - proxy
+
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+
+      - traefik.http.routers.kgj-link-bio.rule=Host(`link.kotagedejewellery.com`)
+      - traefik.http.routers.kgj-link-bio.entrypoints=websecure
+      - traefik.http.routers.kgj-link-bio.tls=true
+      - traefik.http.routers.kgj-link-bio.tls.certresolver=letsencrypt
+
+      - traefik.http.routers.kgj-link-bio-http.rule=Host(`link.kotagedejewellery.com`)
+      - traefik.http.routers.kgj-link-bio-http.entrypoints=web
+      - traefik.http.routers.kgj-link-bio-http.middlewares=kgj-link-bio-https
+      - traefik.http.middlewares.kgj-link-bio-https.redirectscheme.scheme=https
+
+      - traefik.http.services.kgj-link-bio.loadbalancer.server.port=3000
+
+secrets:
+  app_env:
+    file: .env.production
+
+networks:
+  proxy:
+    external: true

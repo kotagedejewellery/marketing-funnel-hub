@@ -1,0 +1,15 @@
+.next
+node_modules
+.pnpm-store
+.env*
+!.env.example
+!.env.live.example
+.git
+.agents
+.impeccable
+docs
+tests
+coverage
+playwright-report
+test-results
+graphify-out
