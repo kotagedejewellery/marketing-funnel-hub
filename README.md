@@ -109,15 +109,12 @@ hidup kembali hanya karena Docker Desktop dibuka. Jalankan `supabase start
 The database-role and deployment boundaries are in the
 [system architecture](docs/system-architecture.md).
 
-For the first hosted Supabase migration, copy `.env.live.example` to the ignored
-`.env.live.local`, then paste the **Direct connection** URI from Supabase Dashboard
-`Connect`, or use the **Session pooler** URI on port `5432` when the local network
-cannot reach the IPv6 direct endpoint. Use the `postgres` role, percent-encode
-reserved password characters, and run `pnpm db:migrate:live` manually. The live
-configuration rejects localhost, non-Supabase hosts, transaction-pooler port
-`6543`, non-admin usernames, and SSL modes other than `require`. Never place the
-live migration URI in Vercel, Docker, or reuse it as the application's
-`DATABASE_URL`.
+The live database is the self-hosted Supabase PostgreSQL service on the VPS. The
+application uses `supabase-db:5432` through the private external Docker network
+`supabase_default` with TLS disabled only for that internal route. Never expose
+PostgreSQL publicly or reuse its URL outside the VPS network. A reviewed live
+migration remains a separate owner operation; its credential never belongs in
+the application runtime environment.
 
 ## Docker production
 
@@ -128,16 +125,19 @@ standalone output and mounts `.env.production` only as a BuildKit secret while
 building, then supplies the same ignored file to the running container.
 
 On the VPS, copy `.env.live.example` to ignored `.env.production`, set
-`NEXT_PUBLIC_SITE_URL=https://link.kotagedejewellery.com`, create the external
-Traefik network named `proxy`, and ensure Traefik has `web`, `websecure`,
-and the `letsencrypt` certificate resolver. Point the domain's DNS record to
-the VPS, run reviewed live migrations separately, then run:
+`NEXT_PUBLIC_SITE_URL=https://link.kotagedejewellery.com`, fill the internal
+`DATABASE_URL` with the `supabase-db` password, create the external Traefik
+network named `proxy`, and ensure the self-hosted Supabase network is named
+`supabase_default`. Traefik must have `web`, `websecure`, and the `letsencrypt`
+certificate resolver. Point the domain's DNS record to the VPS, run reviewed
+live migrations separately, then run:
 
 ```bash
 docker compose -f compose.production.yml up -d --build
 ```
 
-Do not put `DATABASE_LIVE_MIGRATION_URL` in `.env.production`. Traefik rate
+Do not put `DATABASE_LIVE_MIGRATION_URL` or `DATABASE_MIGRATION_URL` in
+`.env.production`; neither is read by the application runtime. Traefik rate
 limiting for `/api/events` and an external scheduler for
 `GET /api/cron/events-retention` remain owner-managed production operations.
 The existing geographic analytics uses Vercel request headers; country/city

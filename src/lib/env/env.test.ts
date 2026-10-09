@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { EnvironmentValidationError, parseClientEnv } from "./schema";
-import { parseDatabaseUrl, parseLocalMigrationUrl } from "./database-url";
+import {
+  parseDatabaseUrl,
+  parseLiveMigrationUrl,
+  parseLocalMigrationUrl,
+} from "./database-url";
 import { parseServerEnv } from "./server-schema";
 
 const validServerEnvironment = {
@@ -156,5 +160,17 @@ describe("environment contract", () => {
         "postgresql://migrator:secret@127.0.0.1:5432/postgres",
       ),
     ).toThrow("DATABASE_MIGRATION_URL");
+  });
+
+  it("allows the self-hosted Supabase database only through its private Docker hostname", () => {
+    const url =
+      "postgresql://postgres:password@supabase-db:5432/postgres?sslmode=disable";
+
+    expect(parseLiveMigrationUrl(url)).toBe(url);
+    expect(() =>
+      parseLiveMigrationUrl(
+        "postgresql://postgres:password@supabase-db:5432/postgres?sslmode=require",
+      ),
+    ).toThrow("DATABASE_LIVE_MIGRATION_URL");
   });
 });

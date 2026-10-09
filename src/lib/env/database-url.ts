@@ -50,17 +50,20 @@ export function parseLiveMigrationUrl(input: unknown): string {
   const isSessionPooler =
     url.hostname.endsWith(".pooler.supabase.com") &&
     url.username.startsWith("postgres.");
+  const isSelfHostedDatabase =
+    url.hostname === "supabase-db" && url.username === "postgres";
+  const expectedSslMode = isSelfHostedDatabase ? "disable" : "require";
 
   if (
-    (!isDirectConnection && !isSessionPooler) ||
+    (!isDirectConnection && !isSessionPooler && !isSelfHostedDatabase) ||
     url.port !== "5432" ||
     url.pathname !== "/postgres" ||
     (url.searchParams.has("sslmode") &&
-      url.searchParams.get("sslmode") !== "require")
+      url.searchParams.get("sslmode") !== expectedSslMode)
   ) {
     throw new EnvironmentValidationError([variable]);
   }
 
-  url.searchParams.set("sslmode", "require");
+  url.searchParams.set("sslmode", expectedSslMode);
   return url.toString();
 }

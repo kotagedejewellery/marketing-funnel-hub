@@ -15,6 +15,7 @@ services:
 
     networks:
       - proxy
+      - supabase
 
     labels:
       - traefik.enable=true
@@ -39,3 +40,6 @@ secrets:
 networks:
   proxy:
     external: true
+  supabase:
+    external: true
+    name: supabase_default
