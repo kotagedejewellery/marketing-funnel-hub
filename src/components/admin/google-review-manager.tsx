@@ -107,10 +107,6 @@ export function GoogleReviewManager({
     }
   }, [deleteState, displayState, router, scrapeState, sourceState]);
 
-  useEffect(() => {
-    if (sourceState.source) setSettings(sourceState.source);
-  }, [sourceState.source]);
-
   const changes = reviews
     .map((review) => ({
       id: review.id,
