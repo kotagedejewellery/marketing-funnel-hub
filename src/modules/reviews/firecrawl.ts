@@ -67,7 +67,24 @@ function parsedExtractionPayload(value: unknown) {
   return value;
 }
 
-export async function scrapeGoogleMapsReviews(sourceUrl: string) {
+function reviewScrollActions(limit: number) {
+  const scrolls = limit === 50 ? 24 : Math.ceil(limit / 2);
+  return [
+    { type: "wait", milliseconds: 1_000 },
+    ...Array.from({ length: scrolls }, () => [
+      { type: "scroll", direction: "down" },
+      { type: "wait", milliseconds: 500 },
+    ]).flat(),
+  ];
+}
+
+export async function scrapeGoogleMapsReviews({
+  sourceUrl,
+  limit,
+}: {
+  sourceUrl: string;
+  limit: number;
+}) {
   if (!serverEnv.FIRECRAWL_API_KEY) {
     throw new FirecrawlReviewError(
       "FIRECRAWL_API_KEY belum diatur pada environment server.",
@@ -87,11 +104,12 @@ export async function scrapeGoogleMapsReviews(sourceUrl: string) {
       body: JSON.stringify({
         url: sourceUrl,
         maxAge: 0,
+        onlyMainContent: false,
+        actions: reviewScrollActions(limit),
         formats: [
           {
             type: "json",
-            prompt:
-              "Extract the visible Google Maps reviews for this place. Preserve the original review text and relative time exactly in reviewText and relativeTime. Also provide accurate Indonesian translations in reviewTextId and relativeTimeId, even when the source is already Indonesian. Return only genuine review cards, do not invent values. reviewerReviewCount is the review count shown beside the reviewer when available.",
+            prompt: `Extract up to ${limit} visible Google Maps reviews for this place after all page actions finish. Preserve the original review text and relative time exactly in reviewText and relativeTime. Also provide accurate Indonesian translations in reviewTextId and relativeTimeId, even when the source is already Indonesian. Set reviewedAt to an exact review date in YYYY-MM-DD only when Google visibly provides that calendar date; otherwise return null and never derive it from relativeTime. Return only genuine review cards, do not invent values. reviewerReviewCount is the review count shown beside the reviewer when available.`,
             schema: z.toJSONSchema(extractedGoogleReviewsSchema),
           },
         ],
@@ -127,5 +145,5 @@ export async function scrapeGoogleMapsReviews(sourceUrl: string) {
     );
   }
 
-  return extracted.data.reviews;
+  return extracted.data.reviews.slice(0, limit);
 }

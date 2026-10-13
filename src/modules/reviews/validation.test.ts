@@ -47,6 +47,7 @@ describe("Google Maps review source", () => {
       relativeTimeId: "6 bulan lalu",
       reviewText: "Wonderful service.",
       reviewTextId: "Pelayanannya luar biasa.",
+      reviewedAt: "2026-01-15",
     };
 
     expect(
@@ -55,6 +56,11 @@ describe("Google Maps review source", () => {
     expect(
       extractedGoogleReviewsSchema.safeParse({
         reviews: [{ ...review, reviewTextId: undefined }],
+      }).success,
+    ).toBe(false);
+    expect(
+      extractedGoogleReviewsSchema.safeParse({
+        reviews: [{ ...review, reviewedAt: "6 months ago" }],
       }).success,
     ).toBe(false);
   });
@@ -67,12 +73,34 @@ describe("Google Maps review source", () => {
       minimumRating: "4",
       maximumReviews: "6",
       displayMode: "manual",
+      scrapeYear: "2026",
+      scrapeLimit: "50",
     });
 
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.minimumRating).toBe(4);
       expect(result.data.maximumReviews).toBe(6);
+      expect(result.data.scrapeYear).toBe(2026);
+      expect(result.data.scrapeLimit).toBe(50);
     }
+  });
+
+  it("accepts an all-years import and rejects unsupported import limits", () => {
+    const base = {
+      branchId: "00000000-0000-4000-8000-000000000001",
+      sourceUrl: "https://maps.app.goo.gl/example",
+      isEnabled: true,
+      minimumRating: "4",
+      maximumReviews: "6",
+      displayMode: "automatic",
+      scrapeYear: "",
+      scrapeLimit: "25",
+    };
+
+    expect(reviewSourceSchema.safeParse(base).success).toBe(true);
+    expect(
+      reviewSourceSchema.safeParse({ ...base, scrapeLimit: "100" }).success,
+    ).toBe(false);
   });
 });

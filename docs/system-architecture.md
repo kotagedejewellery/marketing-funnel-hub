@@ -8,14 +8,14 @@ Brief PDF menetapkan tujuan dan prinsip sederhana, tetapi tidak memilih stack, k
 
 Satu **modular monolith** Next.js App Router (`src/app`) dengan TypeScript ketat, React, Tailwind CSS, dan shadcn/ui untuk CMS. Halaman publik menggunakan Server Components secara default dan JavaScript klien seperlunya. Admin mutations memakai Server Actions; batas HTTP eksplisit memakai Route Handlers. Jalur database/Auth/Storage/tracking berjalan di Node.js. Tidak ada backend terpisah, headless CMS, queue, Redis wajib, atau state manager global P0.
 
-| Lapisan         | Pilihan P0                                                                             |
-| --------------- | -------------------------------------------------------------------------------------- |
+| Lapisan         | Pilihan P0                                                                                                             |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Aplikasi/deploy | Next.js di Vercel atau Docker/Traefik milik owner; Node 24, pnpm 11.15.1, versi paket exact di `package.json`/lockfile |
-| Data            | Supabase PostgreSQL self-hosted di VPS; Drizzle untuk schema, migrasi, dan query domain |
-| Identitas/media | Supabase Auth dan Storage                                                              |
-| Validasi        | Zod di server untuk input tak tepercaya; UI boleh memberi validasi tambahan            |
-| Sinyal          | Meta Pixel, Meta CAPI, dan tabel event internal                                        |
-| Verifikasi      | Vitest, Testing Library, Playwright, database lokal; cakupan berdasarkan risiko        |
+| Data            | Supabase PostgreSQL self-hosted di VPS; Drizzle untuk schema, migrasi, dan query domain                                |
+| Identitas/media | Supabase Auth dan Storage                                                                                              |
+| Validasi        | Zod di server untuk input tak tepercaya; UI boleh memberi validasi tambahan                                            |
+| Sinyal          | Meta Pixel, Meta CAPI, dan tabel event internal                                                                        |
+| Verifikasi      | Vitest, Testing Library, Playwright, database lokal; cakupan berdasarkan risiko                                        |
 
 Alur: browser membuka `/{slug-cabang}` → server membaca konten aktif melalui modul domain/Drizzle → halaman cabang menampilkan CTA `wa.me` final → ketika gate tracking aktif, interaksi membentuk canonical event → browser mengirim Pixel serta `POST /api/events` best-effort → server memvalidasi, menyimpan event idempotent, lalu mengirim Meta CAPI dengan timeout terbatas. Root deployment `/` merender slug cabang aktif yang dipilih dari CMS tanpa redirect maupun perubahan query URL. GTM dan pengiriman event browser ke GA4 tidak digunakan. Tabel domain tidak diakses langsung oleh browser.
 
@@ -63,6 +63,8 @@ Event kanonis memuat `eventId`, `eventName`, `eventTime`, `anonymousSessionId`, 
 ### Ulasan Google manual melalui Firecrawl (disetujui 24 September 2026)
 
 `src/modules/reviews` memakai `POST https://api.firecrawl.dev/v2/scrape` dengan JSON schema, `cache: no-store`, dan timeout 60 detik untuk satu URL Google Maps tervalidasi pada satu cabang. Tidak ada SDK baru, endpoint publik, cron, atau browser call ke Firecrawl. Hanya `technical_admin` dapat memicu import; `admin` dapat mengelola filter/pilihan/hide/urutan hasil, menyimpan perubahan tampilan secara batch, serta menghapus permanen review terpilih setelah konfirmasi browser. URL sumber dibatasi ke Google Maps atau Google Search dengan anchor review `#lrd=`, sedangkan avatar dibatasi ke CDN Google sebelum dirender. Extraction menyimpan teks/waktu asli dan terjemahan Indonesia yang terpisah; hash deduplikasi tetap memakai data sumber asli. Saat gagal, error tersanitasi disimpan pada source dan review lama dipertahankan. Renderer hanya membaca source aktif, review tidak hidden yang memiliki terjemahan Indonesia, memenuhi minimum rating, serta mode otomatis atau pilihan manual. Dua atau lebih kartu publik dimuat oleh komponen klien kecil sebagai carousel satu kartu per slide, autoplay tiga detik, swipe/scroll manual tanpa indikator pagination, dan penghentian pada interaksi, tab tersembunyi, atau reduced motion. Flex layout meregangkan setiap kartu ke tinggi kartu terpanjang sehingga isi lengkap tetap terbaca dan slide sejajar; carousel tidak membuat event tracking. URL sumber hanya digunakan untuk konfigurasi dan import CMS, bukan tautan publik setelah carousel.
+
+Konfigurasi pengambilan Firecrawl terpisah dari tampilan publik: `scrape_limit` hanya 10, 25, atau 50 (default 50), sedangkan `maximum_reviews` tetap membatasi kartu Link Bio 1–12. `scrape_year` opsional; jika terisi, hanya review dengan tanggal kalender pasti dari Firecrawl pada tahun itu yang dapat diimpor. Waktu relatif tidak pernah diubah menjadi tahun. Permintaan menjalankan aksi scroll terbatas sebelum ekstraksi; Firecrawl tetap dapat mengembalikan lebih sedikit dari target bila Google tidak memuat review tambahan.
 
 Cookie first-party `kgj_sid` menyimpan UUID acak dengan expiry bergulir 30 menit; atribusi lima UTM disimpan di cookie bertanda tangan. Cookie memakai `SameSite=Lax`, `Path=/`, dan `Secure` saat production. Tidak ada fingerprinting atau identitas lintas perangkat. UTM pertama yang tidak kosong dipertahankan; direct tidak menghapusnya; set UTM eksplisit berbeda memulai journey baru.
 

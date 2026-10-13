@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -306,6 +307,8 @@ export const branchReviewSources = pgTable(
     minimumRating: integer("minimum_rating").notNull().default(1),
     maximumReviews: integer("maximum_reviews").notNull().default(6),
     displayMode: text("display_mode").notNull().default("automatic"),
+    scrapeYear: integer("scrape_year"),
+    scrapeLimit: integer("scrape_limit").notNull().default(50),
     lastScrapedAt: timestamp("last_scraped_at", { withTimezone: true }),
     lastError: text("last_error"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -328,6 +331,14 @@ export const branchReviewSources = pgTable(
       "branch_review_sources_display_mode_check",
       sql`${table.displayMode} in ('automatic', 'manual')`,
     ),
+    check(
+      "branch_review_sources_scrape_year_check",
+      sql`${table.scrapeYear} is null or ${table.scrapeYear} between 2004 and 2100`,
+    ),
+    check(
+      "branch_review_sources_scrape_limit_check",
+      sql`${table.scrapeLimit} in (10, 25, 50)`,
+    ),
   ],
 ).enableRLS();
 
@@ -347,6 +358,7 @@ export const branchGoogleReviews = pgTable(
     relativeTimeId: text("relative_time_id"),
     reviewText: text("review_text").notNull(),
     reviewTextId: text("review_text_id"),
+    reviewedAt: date("reviewed_at"),
     sourceUrl: text("source_url").notNull(),
     isSelected: boolean("is_selected").notNull().default(false),
     isHidden: boolean("is_hidden").notNull().default(false),

@@ -35,6 +35,8 @@ type ActionState = {
     minimumRating: number;
     maximumReviews: number;
     displayMode: "automatic" | "manual";
+    scrapeYear: number | null;
+    scrapeLimit: number;
   };
 };
 
@@ -64,6 +66,8 @@ export async function saveBranchReviewSource(
     minimumRating: formData.get("minimumRating"),
     maximumReviews: formData.get("maximumReviews"),
     displayMode: formData.get("displayMode"),
+    scrapeYear: formData.get("scrapeYear"),
+    scrapeLimit: formData.get("scrapeLimit"),
   });
   if (!parsed.success) {
     return {
@@ -94,6 +98,8 @@ export async function saveBranchReviewSource(
         minimumRating: input.minimumRating,
         maximumReviews: input.maximumReviews,
         displayMode: input.displayMode,
+        scrapeYear: input.scrapeYear,
+        scrapeLimit: input.scrapeLimit,
         updatedAt: new Date(),
       };
       const id =
@@ -124,6 +130,8 @@ export async function saveBranchReviewSource(
             "minimumRating",
             "maximumReviews",
             "displayMode",
+            "scrapeYear",
+            "scrapeLimit",
           ],
         },
       });
@@ -143,6 +151,8 @@ export async function saveBranchReviewSource(
       minimumRating: input.minimumRating,
       maximumReviews: input.maximumReviews,
       displayMode: input.displayMode,
+      scrapeYear: input.scrapeYear,
+      scrapeLimit: input.scrapeLimit,
     },
   };
 }
@@ -177,7 +187,10 @@ export async function scrapeBranchGoogleReviews(
 
   let scraped;
   try {
-    scraped = await scrapeGoogleMapsReviews(source.sourceUrl);
+    scraped = await scrapeGoogleMapsReviews({
+      sourceUrl: source.sourceUrl,
+      limit: source.scrapeLimit,
+    });
   } catch (error) {
     const message =
       error instanceof FirecrawlReviewError
@@ -190,9 +203,14 @@ export async function scrapeBranchGoogleReviews(
     return { message, errors: {} };
   }
 
+  const reviewsForYear = source.scrapeYear
+    ? scraped.filter((review) =>
+        review.reviewedAt?.startsWith(`${source.scrapeYear}-`),
+      )
+    : scraped;
   const uniqueReviews = Array.from(
     new Map(
-      scraped.map((review) => [reviewSourceHash(review), review]),
+      reviewsForYear.map((review) => [reviewSourceHash(review), review]),
     ).entries(),
   );
   try {
@@ -225,6 +243,7 @@ export async function scrapeBranchGoogleReviews(
           relativeTimeId: review.relativeTimeId,
           reviewText: review.reviewText,
           reviewTextId: review.reviewTextId,
+          reviewedAt: review.reviewedAt ?? null,
           sourceUrl: source.sourceUrl,
           fetchedAt,
           updatedAt: fetchedAt,
@@ -257,7 +276,12 @@ export async function scrapeBranchGoogleReviews(
         action: "import",
         entityType: "branch_google_reviews",
         entityId: source.id,
-        changes: { branchId, importedCount: uniqueReviews.length },
+        changes: {
+          branchId,
+          importedCount: uniqueReviews.length,
+          fetchedCount: scraped.length,
+          filteredByYearCount: scraped.length - reviewsForYear.length,
+        },
       });
     });
   } catch {
@@ -269,7 +293,9 @@ export async function scrapeBranchGoogleReviews(
 
   revalidateReviewPages(branchId, branch);
   return {
-    message: `${uniqueReviews.length} review berhasil diambil dari Firecrawl.`,
+    message: source.scrapeYear
+      ? `${uniqueReviews.length} dari ${scraped.length} review disimpan untuk tahun ${source.scrapeYear}. Ulasan tanpa tanggal pasti atau dari tahun lain tidak diimpor.`
+      : `${uniqueReviews.length} dari ${scraped.length} review berhasil diambil dari Firecrawl.`,
     errors: {},
     ok: true,
   };

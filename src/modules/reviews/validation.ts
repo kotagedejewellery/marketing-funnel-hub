@@ -41,6 +41,23 @@ export const reviewSourceSchema = z.object({
     .regex(/^([1-9]|1[0-2])$/, "Pilih 1 sampai 12 review.")
     .transform(Number),
   displayMode: z.enum(["automatic", "manual"]),
+  scrapeYear: z
+    .string()
+    .trim()
+    .transform((value) => (value === "" ? null : Number(value)))
+    .refine(
+      (value) =>
+        value === null ||
+        (Number.isInteger(value) &&
+          value >= 2004 &&
+          value <= new Date().getUTCFullYear()),
+      "Masukkan tahun review antara 2004 dan tahun ini.",
+    ),
+  scrapeLimit: z
+    .enum(["10", "25", "50"], {
+      error: "Pilih jumlah review 10, 25, atau 50.",
+    })
+    .transform(Number),
 });
 
 const reviewDisplayChangeSchema = z.object({
@@ -95,6 +112,7 @@ const extractedReviewSchema = z.object({
   relativeTimeId: z.string().trim().min(1).max(160),
   reviewText: z.string().trim().min(1).max(4_000),
   reviewTextId: z.string().trim().min(1).max(5_000),
+  reviewedAt: z.iso.date().nullable().optional(),
 });
 
 export const extractedGoogleReviewsSchema = z.object({

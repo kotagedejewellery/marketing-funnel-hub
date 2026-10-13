@@ -10,6 +10,20 @@ This file defines the working rules for AI coding agents and human developers.
 
 ---
 
+## Mandatory Skill Use
+
+1. Before every software-engineering task, select the narrowest relevant global
+   Matt Pocock skill, read its complete `SKILL.md`, and follow its workflow.
+   Add another skill only when the task has a distinct additional scope.
+2. For implementation, bug fixes, refactors, and code reviews, use Ponytail at
+   `full` level: map callers, tests, fixtures, configuration, and user risk;
+   then make the smallest complete change.
+3. Ponytail does not replace Graphify, Impeccable, validation, security,
+   accessibility, or proportionate testing. At handoff, state unchecked work
+   and remaining risk.
+
+---
+
 ## 1. Project North Star
 
 The product supports this funnel:
@@ -826,6 +840,26 @@ Do not add heavy client state management unless there is a concrete need.
 Launch targets on representative mobile throttling: p75 LCP <= 2.5s, p75 INP <=
 200ms, p75 CLS <= 0.1, and WCAG 2.2 AA.
 
+### Mandatory Performance Optimisation Rules
+
+1. Cache frequently read data when its freshness contract permits it, and
+   invalidate cache when its source changes.
+2. Use server-side pagination or load more for potentially large record sets.
+3. Lazy-load non-critical images, heavy components, modals, charts, and sections.
+4. Deliver images at their rendered size; prefer WebP/AVIF when supported,
+   compress media, and avoid unjustifiably large source files.
+5. Add database indexes only for proven `WHERE`, `JOIN`, `ORDER BY`, or search
+   access patterns.
+6. Avoid N+1 queries, repeated queries, and fetching unused columns or relations.
+7. Keep API responses limited to data rendered by the consumer.
+8. Deduplicate requests for the same data within one rendering flow.
+9. Use server-side cache or CDN for suitable public data and assets while keeping
+   private files protected.
+10. Keep JavaScript not required by the current page out of its initial bundle.
+11. Memoize only measured expensive calculations or renders.
+12. Move long-running export, bulk email, report generation, and large-file work
+    to background processing so primary requests remain responsive.
+
 ---
 
 ## 31. Environment Separation
@@ -1072,35 +1106,44 @@ Do not begin P1/P2 while P0 launch gate is failing.
 
 ---
 
-## 40. Agent Working Procedure
+## 40. Mandatory Agent Working Procedure
 
-Before coding:
+Before analysis, changes, or project commands:
 
-1. Read `AGENTS.md`.
-2. Read the three source-of-truth documents in `docs/` relevant to the task.
-3. Identify the relevant source-of-truth document.
-4. Inspect existing code before creating abstractions.
-5. Confirm the task fits P0 and an approved task plan.
-6. Identify affected module(s), schema, API, tracking, and tests.
+1. Read this complete `AGENTS.md`.
+2. Select and read the relevant global engineering skill under Mandatory Skill
+   Use.
+3. Update and/or query Graphify before understanding code or architecture. Read
+   raw source only when Graphify does not provide the needed context.
+4. Read the relevant source-of-truth documents in `docs/`; identify the binding
+   document and confirm the task fits P0 and the approved scope.
+5. For UI/UX work, use Impeccable and run `impeccable context` once per session
+   before changing the interface.
+6. When an ambiguity in instruction, data, or scope could materially change the
+   result, request clarification and wait before proceeding.
 
-During coding:
+During implementation:
 
-1. Make the smallest coherent change.
-2. Follow existing conventions.
-3. Preserve module boundaries.
-4. Add/update validation.
-5. Add/update only the tests justified by changed behavior and risk.
-6. Avoid unrelated refactors.
+1. Make the smallest coherent change that meets the approved acceptance criteria.
+2. Preserve module boundaries, validation, security, accessibility, and existing
+   project conventions.
+3. Keep work within the approved scope; do not add unrelated refactors,
+   initialisation, or improvements.
+4. Apply the performance rules in section 30 when they are relevant to the
+   changed access pattern or rendering path.
+5. After fixing a bug, trace its shared pattern across related components,
+   handlers, and flows; cover each applicable case and validate that the root
+   cause no longer exists elsewhere.
 
-After coding:
+After every project change:
 
-1. State the proposed verification scope (specific tests/checks and reason) and
-   obtain owner confirmation before running any tests.
-2. Run only the approved, relevant checks; defer feature-level testing until the
-   feature is complete when appropriate.
-3. Review migration changes if any.
-4. Update Graphify once after the completed change set.
-5. Summarize changes, checks actually run, deferred checks, and known limitations.
+1. Add or update proportionate tests for changed business rules, permissions,
+   calculations, and other relevant risks.
+2. State the proposed verification scope (specific checks and reason) and obtain
+   owner confirmation before running tests.
+3. Run only approved checks, review migrations when applicable, and update the
+   Graphify index once after the completed change set.
+4. Summarize changes, checks actually run, deferred work, and remaining risk.
 
 ---
 

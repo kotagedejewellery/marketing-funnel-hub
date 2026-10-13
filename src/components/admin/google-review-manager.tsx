@@ -23,6 +23,8 @@ type ReviewSourceValues = {
   minimumRating: number;
   maximumReviews: number;
   displayMode: "automatic" | "manual";
+  scrapeYear: number | null;
+  scrapeLimit: number;
 };
 
 type ReviewDisplayValues = Record<
@@ -48,6 +50,8 @@ function sourceValues(source: ReviewSource | null): ReviewSourceValues {
     minimumRating: source?.minimumRating ?? 4,
     maximumReviews: source?.maximumReviews ?? 6,
     displayMode: source?.displayMode === "manual" ? "manual" : "automatic",
+    scrapeYear: source?.scrapeYear ?? null,
+    scrapeLimit: source?.scrapeLimit ?? 50,
   };
 }
 
@@ -102,6 +106,10 @@ export function GoogleReviewManager({
       router.refresh();
     }
   }, [deleteState, displayState, router, scrapeState, sourceState]);
+
+  useEffect(() => {
+    if (sourceState.source) setSettings(sourceState.source);
+  }, [sourceState.source]);
 
   const changes = reviews
     .map((review) => ({
@@ -243,6 +251,69 @@ export function GoogleReviewManager({
               <option value="automatic">Otomatis sesuai filter</option>
               <option value="manual">Hanya yang dipilih</option>
             </select>
+          </label>
+        </div>
+        <div className="grid gap-5 rounded-xl bg-secondary p-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <p className="font-medium">Pengambilan Firecrawl</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Atur data yang ingin dikumpulkan. Pengaturan ini tidak mengubah
+              jumlah review yang tampil pada Link Bio.
+            </p>
+          </div>
+          <label className="font-medium">
+            Tahun review
+            <input
+              name="scrapeYear"
+              type="number"
+              min={2004}
+              max={new Date().getUTCFullYear()}
+              value={settings.scrapeYear ?? ""}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  scrapeYear:
+                    event.target.value === ""
+                      ? null
+                      : Number(event.target.value),
+                }))
+              }
+              placeholder="Semua tahun"
+              className={inputClass}
+            />
+            <span className="mt-2 block text-sm font-normal leading-6 text-muted-foreground">
+              Kosongkan untuk mengambil semua tahun. Saat diisi, hanya review
+              dengan tanggal pasti pada tahun tersebut yang diimpor.
+            </span>
+            {sourceState.errors.scrapeYear && (
+              <p role="alert" className="mt-2 text-sm text-destructive">
+                {sourceState.errors.scrapeYear}
+              </p>
+            )}
+          </label>
+          <label className="font-medium">
+            Target jumlah review
+            <select
+              name="scrapeLimit"
+              value={String(settings.scrapeLimit)}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  scrapeLimit: Number(event.target.value),
+                }))
+              }
+              className={inputClass}
+            >
+              {[10, 25, 50].map((count) => (
+                <option key={count} value={count}>
+                  Hingga {count} review
+                </option>
+              ))}
+            </select>
+            <span className="mt-2 block text-sm font-normal leading-6 text-muted-foreground">
+              Firecrawl dapat mengembalikan lebih sedikit jika Google tidak
+              memuat review tambahan.
+            </span>
           </label>
         </div>
         <label className="flex min-h-11 items-center gap-3 font-medium">
