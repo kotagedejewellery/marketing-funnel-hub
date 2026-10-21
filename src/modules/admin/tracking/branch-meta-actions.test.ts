@@ -41,6 +41,25 @@ function databaseFor(...results: unknown[][]) {
   };
 }
 
+function databaseForSave(...results: unknown[][]) {
+  const savedValues: Array<Record<string, unknown>> = [];
+  const mutation = (values: Record<string, unknown>) => {
+    savedValues.push(values);
+    return { where: vi.fn().mockResolvedValue(undefined) };
+  };
+  const transaction = {
+    update: vi.fn(() => ({ set: mutation })),
+    insert: vi.fn(() => ({ values: mutation })),
+  };
+  return {
+    database: {
+      select: vi.fn(() => readRows(results.shift() ?? [])),
+      transaction: vi.fn(async (callback) => callback(transaction)),
+    },
+    savedValues,
+  };
+}
+
 function formData(values: Record<string, string>) {
   const data = new FormData();
   for (const [key, value] of Object.entries(values)) data.set(key, value);
@@ -125,5 +144,100 @@ describe("saveBranchMetaTrackingConfig", () => {
 
     expect(result.errors.pageLoadMetaEvent).toBeTruthy();
     expect(mocks.getDatabase).not.toHaveBeenCalled();
+  });
+
+  it("keeps a configured test event code when a later save leaves its secret field blank", async () => {
+    const { database, savedValues } = databaseForSave(
+      [branch],
+      [
+        {
+          branchId: branch.id,
+          mode: "custom",
+          capiAccessTokenEncrypted: "encrypted-token",
+          capiTestEventCodeEncrypted: "encrypted-test-code",
+        },
+      ],
+    );
+    mocks.getDatabase.mockReturnValue(database);
+
+    const result = await saveBranchMetaTrackingConfig(
+      initialState,
+      formData({
+        branchId: branch.id,
+        mode: "custom",
+        pixelId: "123456",
+        datasetId: "123456",
+        capiAccessToken: "",
+        capiTestEventCode: "",
+        pageLoadMetaEvent: "PageView",
+        confirmCustomConfigRemoval: "false",
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(savedValues[0]).toMatchObject({
+      capiTestEventCodeEncrypted: "encrypted-test-code",
+    });
+  });
+
+  it("removes a configured test event code only when explicitly requested", async () => {
+    const { database, savedValues } = databaseForSave(
+      [branch],
+      [
+        {
+          branchId: branch.id,
+          mode: "custom",
+          capiAccessTokenEncrypted: "encrypted-token",
+          capiTestEventCodeEncrypted: "encrypted-test-code",
+        },
+      ],
+    );
+    mocks.getDatabase.mockReturnValue(database);
+
+    const result = await saveBranchMetaTrackingConfig(
+      initialState,
+      formData({
+        branchId: branch.id,
+        mode: "custom",
+        pixelId: "123456",
+        datasetId: "123456",
+        capiAccessToken: "",
+        capiTestEventCode: "",
+        clearCapiTestEventCode: "true",
+        pageLoadMetaEvent: "PageView",
+        confirmCustomConfigRemoval: "false",
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(savedValues[0]).toMatchObject({
+      capiTestEventCodeEncrypted: null,
+    });
+  });
+
+  it("encrypts a replacement test event code before storing it", async () => {
+    const { database, savedValues } = databaseForSave([branch], []);
+    mocks.getDatabase.mockReturnValue(database);
+    mocks.encryptMetaCapiToken.mockReturnValue("encrypted-replacement-code");
+
+    const result = await saveBranchMetaTrackingConfig(
+      initialState,
+      formData({
+        branchId: branch.id,
+        mode: "custom",
+        pixelId: "123456",
+        datasetId: "123456",
+        capiAccessToken: "1234567890123456",
+        capiTestEventCode: "TEST123",
+        pageLoadMetaEvent: "PageView",
+        confirmCustomConfigRemoval: "false",
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(mocks.encryptMetaCapiToken).toHaveBeenCalledWith("TEST123");
+    expect(savedValues[0]).toMatchObject({
+      capiTestEventCodeEncrypted: "encrypted-replacement-code",
+    });
   });
 });

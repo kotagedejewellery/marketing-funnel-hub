@@ -73,6 +73,8 @@ Migrasi `0014_branch_meta_tracking_configs` menambah `branch_meta_tracking_confi
 
 Migrasi `0015_meta_page_load_event` menambah `page_load_meta_event?` dengan CHECK daftar standar: `PageView`, `ViewContent`, `AddToCart`, `AddToWishlist`, `InitiateCheckout`, `AddPaymentInfo`, `Purchase`, `Lead`, `CompleteRegistration`, atau `Contact`. Nilai `NULL` berarti tidak meneruskan page load ke Meta; event custom tidak dapat disimpan. Backfill mengubah `page_view_enabled=true` menjadi `PageView` dan `false` menjadi `NULL`, sehingga konfigurasi lama tidak berubah. Kolom lama tetap dipelihara sebagai indikator kompatibilitas dan selalu disimpan selaras dengan nilai baru; resolver provider hanya membaca `page_load_meta_event`. Event internal tetap `PageView`, sedangkan Pixel dan CAPI menerima nama provider yang dipilih memakai `event_id` sama.
 
+Migrasi `0016_branch_meta_test_event_code` menambah `capi_test_event_code_encrypted?`. Kode uji Meta bersifat opsional, tersimpan terenkripsi, tidak pernah menjadi DTO browser atau audit log, dan hanya disertakan server pada payload CAPI sebagai `test_event_code`. Nilai kosong berarti pengiriman produksi normal; mode `disabled` selalu menghapusnya.
+
 ## Aturan baca dan integritas
 
 ### Ekstensi ulasan Google manual melalui Firecrawl (disetujui 24 September 2026)

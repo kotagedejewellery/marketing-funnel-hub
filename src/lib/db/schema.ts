@@ -212,6 +212,7 @@ export const branchMetaTrackingConfigs = pgTable(
     pixelId: text("pixel_id"),
     datasetId: text("dataset_id"),
     capiAccessTokenEncrypted: text("capi_access_token_encrypted"),
+    capiTestEventCodeEncrypted: text("capi_test_event_code_encrypted"),
     pageViewEnabled: boolean("page_view_enabled").notNull().default(true),
     pageLoadMetaEvent: text("page_load_meta_event"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -228,7 +229,7 @@ export const branchMetaTrackingConfigs = pgTable(
     ),
     check(
       "branch_meta_tracking_configs_custom_values_check",
-      sql`(${table.mode} = 'custom' and ${table.pixelId} is not null and ${table.datasetId} is not null and ${table.capiAccessTokenEncrypted} is not null) or (${table.mode} <> 'custom' and ${table.pixelId} is null and ${table.datasetId} is null and ${table.capiAccessTokenEncrypted} is null)`,
+      sql`(${table.mode} = 'custom' and ${table.pixelId} is not null and ${table.datasetId} is not null and ${table.capiAccessTokenEncrypted} is not null) or (${table.mode} = 'inherit' and ${table.pixelId} is null and ${table.datasetId} is null and ${table.capiAccessTokenEncrypted} is null) or (${table.mode} = 'disabled' and ${table.pixelId} is null and ${table.datasetId} is null and ${table.capiAccessTokenEncrypted} is null and ${table.capiTestEventCodeEncrypted} is null)`,
     ),
     check(
       "branch_meta_tracking_configs_page_load_meta_event_check",

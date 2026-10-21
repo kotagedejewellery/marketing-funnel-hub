@@ -167,4 +167,32 @@ describe("Meta CAPI adapter", () => {
       fetchMock.mockRestore();
     }
   });
+
+  it("adds an optional branch test code only to the CAPI payload", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    try {
+      await sendMetaCapi(
+        event,
+        resolved,
+        request,
+        { fbp: "fb.1.test" },
+        {
+          pixelId: "123456",
+          pageLoadMetaEvent: "PageView",
+          datasetId: "123456",
+          capiAccessToken: "test-token-not-for-network",
+          capiTestEventCode: "TEST123",
+        },
+      );
+
+      const requestBody = JSON.parse(
+        String(fetchMock.mock.calls[0]?.[1]?.body),
+      ) as { test_event_code?: string };
+      expect(requestBody.test_event_code).toBe("TEST123");
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
 });

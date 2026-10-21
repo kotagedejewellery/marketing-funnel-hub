@@ -122,6 +122,8 @@ export async function getBranchPageSettings(id: string) {
         pixelId: branchMetaTrackingConfigs.pixelId,
         datasetId: branchMetaTrackingConfigs.datasetId,
         capiTokenConfigured: branchMetaTrackingConfigs.capiAccessTokenEncrypted,
+        testEventCodeConfigured:
+          branchMetaTrackingConfigs.capiTestEventCodeEncrypted,
         pageLoadMetaEvent: branchMetaTrackingConfigs.pageLoadMetaEvent,
       })
       .from(branchMetaTrackingConfigs)
@@ -175,6 +177,9 @@ export async function getBranchPageSettings(id: string) {
       pixelId: metaTrackingRows[0]?.pixelId ?? null,
       datasetId: metaTrackingRows[0]?.datasetId ?? null,
       capiTokenConfigured: Boolean(metaTrackingRows[0]?.capiTokenConfigured),
+      testEventCodeConfigured: Boolean(
+        metaTrackingRows[0]?.testEventCodeConfigured,
+      ),
       pageLoadMetaEvent: pageLoadMetaEventForConfig(
         metaTrackingRows[0] ?? null,
       ),

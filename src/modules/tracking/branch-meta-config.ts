@@ -19,6 +19,7 @@ type StoredConfig = {
   pixelId: string | null;
   datasetId: string | null;
   capiAccessTokenEncrypted: string | null;
+  capiTestEventCodeEncrypted?: string | null;
   pageLoadMetaEvent: string | null;
 };
 
@@ -30,6 +31,7 @@ export type BrowserMetaTrackingConfig = {
 export type ServerMetaTrackingConfig = BrowserMetaTrackingConfig & {
   datasetId: string | null;
   capiAccessToken: string | null;
+  capiTestEventCode?: string | null;
 };
 
 const reportedDecryptionFailures = new Set<string>();
@@ -118,6 +120,8 @@ export async function loadServerMetaTrackingConfig(
       datasetId: branchMetaTrackingConfigs.datasetId,
       capiAccessTokenEncrypted:
         branchMetaTrackingConfigs.capiAccessTokenEncrypted,
+      capiTestEventCodeEncrypted:
+        branchMetaTrackingConfigs.capiTestEventCodeEncrypted,
       pageLoadMetaEvent: branchMetaTrackingConfigs.pageLoadMetaEvent,
     })
     .from(branchMetaTrackingConfigs)
@@ -126,13 +130,21 @@ export async function loadServerMetaTrackingConfig(
 
   const browser = browserMetaTrackingConfig(config ?? null);
   if (config?.mode === "disabled") {
-    return { ...browser, datasetId: null, capiAccessToken: null };
+    return {
+      ...browser,
+      datasetId: null,
+      capiAccessToken: null,
+      capiTestEventCode: null,
+    };
   }
   if (config?.mode !== "custom") {
     return {
       ...browser,
       datasetId: serverEnv.META_CAPI_DATASET_ID ?? null,
       capiAccessToken: serverEnv.META_CAPI_ACCESS_TOKEN ?? null,
+      capiTestEventCode: config?.capiTestEventCodeEncrypted
+        ? decryptMetaCapiToken(config.capiTestEventCodeEncrypted)
+        : null,
     };
   }
 
@@ -142,6 +154,9 @@ export async function loadServerMetaTrackingConfig(
       datasetId: config.datasetId,
       capiAccessToken: config.capiAccessTokenEncrypted
         ? decryptMetaCapiToken(config.capiAccessTokenEncrypted)
+        : null,
+      capiTestEventCode: config.capiTestEventCodeEncrypted
+        ? decryptMetaCapiToken(config.capiTestEventCodeEncrypted)
         : null,
     };
   } catch {
@@ -153,6 +168,11 @@ export async function loadServerMetaTrackingConfig(
         category: "configuration",
       });
     }
-    return { ...browser, datasetId: null, capiAccessToken: null };
+    return {
+      ...browser,
+      datasetId: null,
+      capiAccessToken: null,
+      capiTestEventCode: null,
+    };
   }
 }

@@ -23,6 +23,8 @@ const branchMetaTrackingSchema = z.object({
   pixelId: z.string().trim(),
   datasetId: z.string().trim(),
   capiAccessToken: z.string().trim(),
+  capiTestEventCode: z.string().trim().max(200),
+  clearCapiTestEventCode: z.boolean(),
   pageLoadMetaEvent: z.enum(metaStandardEventNames).nullable(),
   confirmCustomConfigRemoval: z.boolean(),
 });
@@ -50,6 +52,8 @@ export async function saveBranchMetaTrackingConfig(
     pixelId: formData.get("pixelId") ?? "",
     datasetId: formData.get("datasetId") ?? "",
     capiAccessToken: formData.get("capiAccessToken") ?? "",
+    capiTestEventCode: formData.get("capiTestEventCode") ?? "",
+    clearCapiTestEventCode: formData.get("clearCapiTestEventCode") === "true",
     pageLoadMetaEvent: (formData.get("pageLoadMetaEvent") || null) as
       (typeof metaStandardEventNames)[number] | null,
     confirmCustomConfigRemoval:
@@ -63,6 +67,15 @@ export async function saveBranchMetaTrackingConfig(
   }
 
   const input = parsed.data;
+  if (input.clearCapiTestEventCode && input.capiTestEventCode) {
+    return {
+      message: "Periksa konfigurasi Meta.",
+      errors: {
+        capiTestEventCode:
+          "Masukkan kode baru atau pilih hapus, bukan keduanya.",
+      },
+    };
+  }
   const db = getDatabase();
   const [branch] = await db
     .select({ id: branches.id, slug: branches.slug })
@@ -77,6 +90,8 @@ export async function saveBranchMetaTrackingConfig(
       mode: branchMetaTrackingConfigs.mode,
       capiAccessTokenEncrypted:
         branchMetaTrackingConfigs.capiAccessTokenEncrypted,
+      capiTestEventCodeEncrypted:
+        branchMetaTrackingConfigs.capiTestEventCodeEncrypted,
     })
     .from(branchMetaTrackingConfigs)
     .where(eq(branchMetaTrackingConfigs.branchId, input.branchId))
@@ -111,12 +126,18 @@ export async function saveBranchMetaTrackingConfig(
   try {
     const values = await (async () => {
       const mode = input.mode as BranchMetaTrackingMode;
+      const capiTestEventCodeEncrypted = input.capiTestEventCode
+        ? encryptMetaCapiToken(input.capiTestEventCode)
+        : input.clearCapiTestEventCode
+          ? null
+          : (current?.capiTestEventCodeEncrypted ?? null);
       if (mode === "disabled") {
         return {
           mode,
           pixelId: null,
           datasetId: null,
           capiAccessTokenEncrypted: null,
+          capiTestEventCodeEncrypted: null,
           pageViewEnabled: false,
           pageLoadMetaEvent: null,
           updatedAt: new Date(),
@@ -128,6 +149,7 @@ export async function saveBranchMetaTrackingConfig(
           pixelId: null,
           datasetId: null,
           capiAccessTokenEncrypted: null,
+          capiTestEventCodeEncrypted,
           pageViewEnabled: Boolean(input.pageLoadMetaEvent),
           pageLoadMetaEvent: input.pageLoadMetaEvent,
           updatedAt: new Date(),
@@ -140,6 +162,7 @@ export async function saveBranchMetaTrackingConfig(
         capiAccessTokenEncrypted: input.capiAccessToken
           ? encryptMetaCapiToken(input.capiAccessToken)
           : current!.capiAccessTokenEncrypted,
+        capiTestEventCodeEncrypted,
         pageViewEnabled: Boolean(input.pageLoadMetaEvent),
         pageLoadMetaEvent: input.pageLoadMetaEvent,
         updatedAt: new Date(),
@@ -167,6 +190,9 @@ export async function saveBranchMetaTrackingConfig(
           pixelConfigured: input.mode === "custom",
           datasetConfigured: input.mode === "custom",
           capiTokenChanged: Boolean(input.capiAccessToken),
+          capiTestEventCodeConfigured: Boolean(
+            values.capiTestEventCodeEncrypted,
+          ),
           pageLoadMetaEvent: values.pageLoadMetaEvent,
         },
       });

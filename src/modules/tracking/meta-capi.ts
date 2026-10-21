@@ -21,6 +21,7 @@ export function metaPayload(
   request: Request,
   cookieValues: { fbp?: string; fbc?: string },
   metaEventName: string,
+  testEventCode?: string | null,
 ) {
   const forwardedIp = request.headers
     .get("x-forwarded-for")
@@ -40,6 +41,7 @@ export function metaPayload(
   if (Object.keys(userData).length === 0) return null;
 
   return {
+    ...(testEventCode && { test_event_code: testEventCode }),
     data: [
       {
         event_name: metaEventName,
@@ -96,6 +98,7 @@ export async function sendMetaCapi(
     request,
     cookieValues,
     metaEvent.name,
+    config?.capiTestEventCode,
   );
   if (!payload) return;
   const endpoint = `https://graph.facebook.com/v26.0/${datasetId}/events`;

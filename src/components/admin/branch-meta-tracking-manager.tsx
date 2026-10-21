@@ -16,6 +16,7 @@ type Settings = {
   pixelId: string | null;
   datasetId: string | null;
   capiTokenConfigured: boolean;
+  testEventCodeConfigured: boolean;
   pageLoadMetaEvent: (typeof metaStandardEventNames)[number] | null;
   globalConfigured: boolean;
   customCapiReady: boolean;
@@ -186,7 +187,7 @@ export function BranchMetaTrackingManager({
           {mode !== "disabled" && (
             <div>
               <label htmlFor="meta-page-load-event" className="font-medium">
-                Event Meta saat halaman dimuat
+                Nama event Meta saat Link Bio dibuka
               </label>
               <select
                 id="meta-page-load-event"
@@ -203,7 +204,9 @@ export function BranchMetaTrackingManager({
                 ))}
               </select>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Event internal tetap tercatat sebagai PageView.
+                Dikirim setiap Link Bio dibuka; ini tidak membuktikan tindakan
+                customer. Analytics internal tetap tercatat sebagai PageView.
+                Gunakan PageView untuk halaman ini.
               </p>
               {pageLoadMetaEvent && pageLoadMetaEvent !== "PageView" ? (
                 <p role="status" className="mt-2 text-sm text-amber-800">
@@ -216,6 +219,41 @@ export function BranchMetaTrackingManager({
                 </p>
               ) : null}
               <FieldError message={state.errors.pageLoadMetaEvent} />
+            </div>
+          )}
+          {mode !== "disabled" && (
+            <div>
+              <label htmlFor="meta-test-event-code" className="font-medium">
+                Test Event Code CAPI (opsional)
+              </label>
+              <input
+                id="meta-test-event-code"
+                name="capiTestEventCode"
+                type="password"
+                autoComplete="off"
+                className={inputClass}
+                placeholder={
+                  settings.testEventCodeConfigured
+                    ? "Kosongkan untuk mempertahankan kode tersimpan"
+                    : "Masukkan kode dari Meta Events Manager"
+                }
+              />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Hanya dikirim server ke CAPI sebagai test_event_code; tidak
+                dikirim ke Pixel atau pengunjung.
+              </p>
+              {settings.testEventCodeConfigured ? (
+                <label className="mt-3 flex items-center gap-2 text-sm font-medium">
+                  <input
+                    name="clearCapiTestEventCode"
+                    type="checkbox"
+                    value="true"
+                    className="size-4 accent-primary"
+                  />
+                  Hapus Test Event Code tersimpan
+                </label>
+              ) : null}
+              <FieldError message={state.errors.capiTestEventCode} />
             </div>
           )}
 
