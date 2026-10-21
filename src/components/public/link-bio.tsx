@@ -114,6 +114,7 @@ export function LinkBio({
             type: link.linkType as "secondary" | "social",
           }))}
           branch={content.pageBranch}
+          metaTracking={content.tracking}
         />
       )}
       <div className="kgj-public-content px-4 pt-6 pb-10 sm:px-6 sm:pt-8 sm:pb-12">

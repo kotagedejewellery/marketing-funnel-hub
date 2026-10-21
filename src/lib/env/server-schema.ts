@@ -23,6 +23,9 @@ const serverEnvironmentSchema = z
     SUPABASE_PUBLIC_ASSET_BUCKET: nonEmptyString,
     META_CAPI_DATASET_ID: optionalEnvironmentString(z.string().regex(/^\d+$/)),
     META_CAPI_ACCESS_TOKEN: optionalEnvironmentString(z.string().min(16)),
+    META_TRACKING_CONFIG_ENCRYPTION_KEY: optionalEnvironmentString(
+      z.string().regex(/^[a-f0-9]{64}$/i),
+    ),
     META_AD_ACCOUNT_ID: optionalEnvironmentString(
       z.string().regex(/^(act_)?\d+$/),
     ),
@@ -43,17 +46,27 @@ const serverEnvironmentSchema = z
 
     if (environment.TRACKING_ENABLED !== "true") return;
 
-    for (const variable of [
+    const globalMetaVariables = [
       "NEXT_PUBLIC_META_PIXEL_ID",
       "META_CAPI_DATASET_ID",
       "META_CAPI_ACCESS_TOKEN",
-    ] as const) {
-      if (!environment[variable]) {
-        context.addIssue({
-          code: "custom",
-          path: [variable],
-          message: "Required when tracking is enabled.",
-        });
+    ] as const;
+    const configuredGlobalVariables = globalMetaVariables.filter((variable) =>
+      Boolean(environment[variable]),
+    );
+    if (
+      configuredGlobalVariables.length > 0 &&
+      configuredGlobalVariables.length !== globalMetaVariables.length
+    ) {
+      for (const variable of globalMetaVariables) {
+        if (!environment[variable]) {
+          context.addIssue({
+            code: "custom",
+            path: [variable],
+            message:
+              "Configure all global Meta values together, or configure Meta per branch.",
+          });
+        }
       }
     }
   });

@@ -28,7 +28,7 @@ describe("environment contract", () => {
     expect(environment.TRACKING_ENABLED).toBe("false");
   });
 
-  it("requires Meta Pixel and CAPI, but not GTM, when tracking is enabled", () => {
+  it("accepts the complete global Meta fallback when tracking is enabled", () => {
     const environment = parseServerEnv({
       ...validServerEnvironment,
       TRACKING_ENABLED: "true",
@@ -38,6 +38,25 @@ describe("environment contract", () => {
     });
 
     expect(environment.TRACKING_ENABLED).toBe("true");
+  });
+
+  it("allows tracking when Meta is configured per branch", () => {
+    const environment = parseServerEnv({
+      ...validServerEnvironment,
+      TRACKING_ENABLED: "true",
+    });
+
+    expect(environment.META_CAPI_DATASET_ID).toBeUndefined();
+  });
+
+  it("rejects partial global Meta configuration", () => {
+    expect(() =>
+      parseServerEnv({
+        ...validServerEnvironment,
+        TRACKING_ENABLED: "true",
+        NEXT_PUBLIC_META_PIXEL_ID: "1234567890",
+      }),
+    ).toThrow(/META_CAPI/);
   });
 
   it("reports only invalid variable names without exposing supplied secrets", () => {

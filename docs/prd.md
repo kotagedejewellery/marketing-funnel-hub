@@ -10,7 +10,7 @@ Ganti Taplink dengan halaman link bio milik Kotagede Jewellery yang cepat, mudah
 
 - **Pengunjung:** menemukan kebutuhan/produk dan membuka WhatsApp cabang yang tepat.
 - **Marketing (`admin`):** mengelola konten, kampanye, produk, cabang, hubungan produk–cabang, CTA, tautan, dan melihat validasi event internal.
-- **Developer (`technical_admin`):** seluruh kemampuan admin serta pengelolaan profil admin dan diagnostik teknis; kredensial penyedia tidak tersedia di CMS.
+- **Developer (`technical_admin`):** seluruh kemampuan admin serta pengelolaan profil admin, diagnostik teknis, dan konfigurasi Meta per cabang; token penyedia tidak pernah ditampilkan kembali setelah disimpan.
 
 ## Alur dan pengalaman P0
 
@@ -30,7 +30,7 @@ Setiap section yang memiliki heading publik (`gallery`, `products`, `faq`, tauta
 
 ### Jarak dan pemisah section (disetujui 8 Oktober 2026)
 
-Setiap section publik selain footer memiliki pilihan jarak sesudah section: **Rapat**, **Normal**, atau **Lega**, serta opsi garis pemisah. Nilai template dipakai sampai cabang menyimpan susunan section sendiri; penyimpanan pertama menyalin seluruh pilihan tersebut ke cabang. Logo profil tetap pinned di atas tetapi memiliki pilihan jaraknya sendiri agar profil yang disembunyikan tidak menyisakan ruang. Section tidak aktif atau tanpa konten tidak merender jarak maupun pemisah. Tidak ada input pixel bebas, drag layout bebas, atau perubahan template/desain KGJ.
+Setiap section publik selain footer memiliki pilihan jarak sesudah section: **Rapat**, **Normal**, atau **Lega**, serta opsi garis pemisah. Nilai template dipakai sampai cabang menyimpan susunan section sendiri; penyimpanan pertama menyalin seluruh pilihan tersebut ke cabang. Logo profil tetap pinned di atas tetapi memiliki pilihan jaraknya sendiri agar profil yang disembunyikan tidak menyisakan ruang. Section tidak aktif atau tanpa konten tidak merender jarak maupun pemisah. Tidak ada drag layout bebas atau perubahan template/desain KGJ; konfigurasi Pixel/CAPI khusus cabang hanya tersedia bagi `technical_admin` dan mengikuti kontrak tracking.
 
 ### Ekstensi ulasan Google melalui Firecrawl (disetujui 24 September 2026)
 
@@ -71,6 +71,10 @@ Ekstensi ini menjadikan tiga event bisnis: `PageView`, `Contact`, dan `LinkClick
 ### Konvensi URL Meta Ads (disetujui 25 September 2026)
 
 Tidak ada identifier Meta tambahan yang dikumpulkan atau tabel baru. Untuk attribution yang terbaca sampai `Contact`, setiap destination URL Meta Ads harus mengisi UTM yang sudah didukung aplikasi: `utm_source=meta`, `utm_medium=paid_social`, `utm_campaign` untuk campaign, `utm_content` untuk ad set, dan `utm_term` untuk ad. Nilai tersebut harus diisi oleh konfigurasi Ads Manager sesuai identitas yang ingin dibaca Marketing; aplikasi menyimpannya sebagai teks attribution, tidak mengklaim atau memverifikasi bahwa nilai tersebut adalah ID resmi Meta. Detail event dan ekspor CSV menampilkan kelima UTM yang tersimpan. Konvensi ini berhenti di klik WhatsApp dan tidak membuat Lead, Purchase, CRM, atau pengiriman outcome penjualan ke Meta.
+
+### Konfigurasi Meta per cabang (disetujui 20 Oktober 2026)
+
+Setiap halaman cabang memiliki satu konfigurasi Meta dengan tiga mode: **ikuti global**, **khusus cabang**, atau **nonaktif**. Hanya `technical_admin` dapat menyimpan Pixel ID, CAPI Dataset ID, dan CAPI access token; token terenkripsi di database dan tidak pernah dikirim kembali ke browser, CMS, atau audit log. Mode global tetap memakai environment deployment sebagai fallback agar konfigurasi lama tidak berubah. Mode nonaktif hanya menghentikan pengiriman browser Pixel dan CAPI untuk cabang tersebut; event internal anonim tetap dicatat. Beralih dari konfigurasi khusus ke mode lain menghapus kredensial khusus dan wajib melalui konfirmasi eksplisit. CMS teknis hanya menampilkan status kesiapan tanpa nilai rahasia. Pada mode khusus cabang, admin teknis dapat memilih apakah PageView dikirim ke Meta. `Contact` CTA WhatsApp dan `LinkClick` tetap event kanonis tetap, bukan dropdown bebas untuk memilih Lead, Purchase, atau event lain di luar P0.
 
 ## Pengukuran dan privasi
 

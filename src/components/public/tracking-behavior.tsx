@@ -32,6 +32,7 @@ type Pixel = ((...args: unknown[]) => void) & {
 type ProviderWindow = Window & {
   fbq?: Pixel;
   _fbq?: Pixel;
+  __kgjMetaPixelIds?: Set<string>;
 };
 
 function loadProviderScript(id: string, src: string) {
@@ -43,39 +44,48 @@ function loadProviderScript(id: string, src: string) {
   document.head.append(script);
 }
 
-function activateProviders() {
-  if (clientEnv.NEXT_PUBLIC_APP_ENV !== "production") return;
+function activateProviders(metaPixelId: string | null) {
+  if (clientEnv.NEXT_PUBLIC_APP_ENV !== "production" || !metaPixelId)
+    return false;
   const browser = window as ProviderWindow;
-  const metaPixelId = clientEnv.NEXT_PUBLIC_META_PIXEL_ID;
-
-  if (metaPixelId) {
-    if (!browser.fbq) {
-      const pixel = ((...args: unknown[]) => {
-        if (pixel.callMethod) pixel.callMethod(...args);
-        else pixel.queue.push(args);
-      }) as Pixel;
-      pixel.queue = [];
-      pixel.loaded = true;
-      pixel.version = "2.0";
-      browser.fbq = pixel;
-      browser._fbq = pixel;
-      pixel("init", metaPixelId);
-      loadProviderScript(
-        "kgj-meta-pixel",
-        "https://connect.facebook.net/en_US/fbevents.js",
-      );
-    }
-    browser.fbq("consent", "grant");
+  if (!browser.fbq) {
+    const pixel = ((...args: unknown[]) => {
+      if (pixel.callMethod) pixel.callMethod(...args);
+      else pixel.queue.push(args);
+    }) as Pixel;
+    pixel.queue = [];
+    pixel.loaded = true;
+    pixel.version = "2.0";
+    browser.fbq = pixel;
+    browser._fbq = pixel;
+    loadProviderScript(
+      "kgj-meta-pixel",
+      "https://connect.facebook.net/en_US/fbevents.js",
+    );
   }
+  const initializedIds = (browser.__kgjMetaPixelIds ??= new Set());
+  if (!initializedIds.has(metaPixelId)) {
+    browser.fbq("init", metaPixelId);
+    initializedIds.add(metaPixelId);
+  }
+  browser.fbq("consent", "grant");
+  return true;
 }
 
-function sendEvent(event: CanonicalEvent) {
+function sendEvent(
+  event: CanonicalEvent,
+  metaTracking: { pixelId: string | null; shouldSendToMeta: boolean },
+) {
   const browser = window as ProviderWindow;
 
-  if (typeof browser.fbq === "function") {
+  if (
+    metaTracking.shouldSendToMeta &&
+    activateProviders(metaTracking.pixelId)
+  ) {
     try {
-      browser.fbq(
-        event.eventName === "LinkClick" ? "trackCustom" : "track",
+      browser.fbq!(
+        event.eventName === "LinkClick" ? "trackSingleCustom" : "trackSingle",
+        metaTracking.pixelId,
         event.eventName,
         {
           product_category: event.product?.category ?? null,
@@ -113,11 +123,13 @@ export function TrackingBehavior({
   products,
   links,
   branch,
+  metaTracking,
 }: {
   context: TrackingContext;
   products: TrackingProduct[];
   links: TrackingLink[];
   branch: { id: string; name: string };
+  metaTracking: { pixelId: string | null; pageViewEnabled: boolean };
 }) {
   const pageViewSent = useRef(false);
 
@@ -140,16 +152,21 @@ export function TrackingBehavior({
     }
 
     function pageView() {
-      activateProviders();
       if (pageViewSent.current) return;
       pageViewSent.current = true;
-      sendEvent({
-        ...baseEvent(),
-        eventName: "PageView",
-        product: null,
-        branch: null,
-        cta: null,
-      });
+      sendEvent(
+        {
+          ...baseEvent(),
+          eventName: "PageView",
+          product: null,
+          branch: null,
+          cta: null,
+        },
+        {
+          pixelId: metaTracking.pixelId,
+          shouldSendToMeta: metaTracking.pageViewEnabled,
+        },
+      );
     }
 
     function onClick(event: MouseEvent) {
@@ -158,14 +175,17 @@ export function TrackingBehavior({
       if (!anchor || !root?.contains(anchor)) return;
       const link = linksById.get(anchor.dataset.trackLinkId ?? "");
       if (link) {
-        sendEvent({
-          ...baseEvent(),
-          eventName: "LinkClick",
-          product: null,
-          branch,
-          cta: "link",
-          link,
-        });
+        sendEvent(
+          {
+            ...baseEvent(),
+            eventName: "LinkClick",
+            product: null,
+            branch,
+            cta: "link",
+            link,
+          },
+          { pixelId: metaTracking.pixelId, shouldSendToMeta: true },
+        );
         return;
       }
       const productCard = anchor.closest<HTMLElement>(
@@ -176,13 +196,16 @@ export function TrackingBehavior({
         (item) => item.id === anchor.dataset.trackBranchId,
       );
       if (!product || !productBranch) return;
-      sendEvent({
-        ...baseEvent(),
-        eventName: "Contact",
-        product: { id: product.id, category: product.slug },
-        branch: { id: productBranch.id, name: productBranch.name },
-        cta: "whatsapp",
-      });
+      sendEvent(
+        {
+          ...baseEvent(),
+          eventName: "Contact",
+          product: { id: product.id, category: product.slug },
+          branch: { id: productBranch.id, name: productBranch.name },
+          cta: "whatsapp",
+        },
+        { pixelId: metaTracking.pixelId, shouldSendToMeta: true },
+      );
     }
 
     pageView();
@@ -191,7 +214,7 @@ export function TrackingBehavior({
     return () => {
       root.removeEventListener("click", onClick);
     };
-  }, [branch, context, links, products]);
+  }, [branch, context, links, metaTracking, products]);
 
   return null;
 }

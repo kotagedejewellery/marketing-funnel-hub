@@ -6,6 +6,7 @@ import { getDatabase } from "@/lib/db/client";
 import { serverEnv } from "@/lib/env/server";
 import {
   branches,
+  branchMetaTrackingConfigs,
   branchGoogleReviews,
   branchReviewSources,
   campaigns,
@@ -21,6 +22,7 @@ import {
 import { branchPageTitle } from "./branch-title";
 import { publicAssetUrl, publicHref, resolveWhatsappCta } from "./links";
 import { resolveProfileVisibility } from "./profile-visibility";
+import { browserMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 
 const assetUrl = (path: string | null) =>
   publicAssetUrl(
@@ -156,6 +158,7 @@ async function loadScopedContent(
     activeLinks,
     activeSections,
     pageFaqs,
+    trackingConfigRows,
   ] = await Promise.all([
     db
       .select({
@@ -298,6 +301,15 @@ async function loadScopedContent(
       .from(faqs)
       .where(or(isNull(faqs.branchId), eq(faqs.branchId, branch.id)))
       .orderBy(asc(faqs.sortOrder), asc(faqs.id)),
+    db
+      .select({
+        mode: branchMetaTrackingConfigs.mode,
+        pixelId: branchMetaTrackingConfigs.pixelId,
+        pageViewEnabled: branchMetaTrackingConfigs.pageViewEnabled,
+      })
+      .from(branchMetaTrackingConfigs)
+      .where(eq(branchMetaTrackingConfigs.branchId, branch.id))
+      .limit(1),
   ]);
 
   const campaign = eligibleCampaigns[0];
@@ -330,6 +342,7 @@ async function loadScopedContent(
     .filter((faq) => faq.isActive)
     .map(({ id, question, answer }) => ({ id, question, answer }));
   const reviewSource = reviewSourceRows[0];
+  const tracking = browserMetaTrackingConfig(trackingConfigRows[0] ?? null);
   const visibleReviews = reviewSource?.isEnabled
     ? branchReviews
         .filter(
@@ -453,6 +466,7 @@ async function loadScopedContent(
         spacingAfter,
         showDivider,
       })),
+    tracking,
     pageBranch: { id: branch.id, name: branch.name, slug: branch.slug },
   };
 }

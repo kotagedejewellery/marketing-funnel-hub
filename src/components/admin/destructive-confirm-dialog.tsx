@@ -8,12 +8,20 @@ export function DestructiveConfirmDialog({
   pending,
   onClose,
   onConfirm,
+  title = `Hapus ${count} ulasan secara permanen?`,
+  description = "Ulasan yang dihapus tidak dapat dikembalikan. Pastikan hanya ulasan dummy atau yang memang tidak diperlukan yang dipilih.",
+  confirmLabel = `Hapus ${count} ulasan`,
+  pendingLabel = "Menghapus...",
 }: {
   open: boolean;
   count: number;
   pending: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  title?: string;
+  description?: string;
+  confirmLabel?: string;
+  pendingLabel?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -59,14 +67,13 @@ export function DestructiveConfirmDialog({
           </svg>
         </div>
         <h2 id={titleId} className="mt-5 font-serif text-2xl font-bold">
-          Hapus {count} ulasan secara permanen?
+          {title}
         </h2>
         <p
           id={descriptionId}
           className="mt-3 text-sm leading-6 text-muted-foreground"
         >
-          Ulasan yang dihapus tidak dapat dikembalikan. Pastikan hanya ulasan
-          dummy atau yang memang tidak diperlukan yang dipilih.
+          {description}
         </p>
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
@@ -85,7 +92,7 @@ export function DestructiveConfirmDialog({
             aria-busy={pending || undefined}
             className="min-h-11 rounded-full bg-destructive px-5 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50"
           >
-            {pending ? "Menghapus..." : `Hapus ${count} ulasan`}
+            {pending ? pendingLabel : confirmLabel}
           </button>
         </div>
       </div>

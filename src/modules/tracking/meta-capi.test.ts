@@ -72,4 +72,56 @@ describe("Meta CAPI adapter", () => {
       fetchMock.mockRestore();
     }
   });
+
+  it("does not fall back to global CAPI after a branch disables Meta", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    try {
+      await sendMetaCapi(
+        event,
+        resolved,
+        request,
+        { fbp: "fb.1.test" },
+        {
+          pixelId: null,
+          pageViewEnabled: false,
+          datasetId: null,
+          capiAccessToken: null,
+        },
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("respects a branch PageView setting without suppressing internal events", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    try {
+      await sendMetaCapi(
+        {
+          ...event,
+          eventName: "PageView",
+          product: null,
+          branch: null,
+          cta: null,
+        },
+        { product: null, branch: null, link: null },
+        request,
+        { fbp: "fb.1.test" },
+        {
+          pixelId: "123456",
+          pageViewEnabled: false,
+          datasetId: "123456",
+          capiAccessToken: "test-token-not-for-network",
+        },
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
 });

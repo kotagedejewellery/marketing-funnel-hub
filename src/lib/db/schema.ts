@@ -202,6 +202,36 @@ export const branches = pgTable(
   ],
 ).enableRLS();
 
+export const branchMetaTrackingConfigs = pgTable(
+  "branch_meta_tracking_configs",
+  {
+    branchId: uuid("branch_id")
+      .primaryKey()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    mode: text("mode").notNull().default("inherit"),
+    pixelId: text("pixel_id"),
+    datasetId: text("dataset_id"),
+    capiAccessTokenEncrypted: text("capi_access_token_encrypted"),
+    pageViewEnabled: boolean("page_view_enabled").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "branch_meta_tracking_configs_mode_check",
+      sql`${table.mode} in ('inherit', 'custom', 'disabled')`,
+    ),
+    check(
+      "branch_meta_tracking_configs_custom_values_check",
+      sql`(${table.mode} = 'custom' and ${table.pixelId} is not null and ${table.datasetId} is not null and ${table.capiAccessTokenEncrypted} is not null) or (${table.mode} <> 'custom' and ${table.pixelId} is null and ${table.datasetId} is null and ${table.capiAccessTokenEncrypted} is null)`,
+    ),
+  ],
+).enableRLS();
+
 export const productBranches = pgTable(
   "product_branches",
   {

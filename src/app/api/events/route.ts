@@ -9,6 +9,7 @@ import {
   canonicalEventSchema,
 } from "@/modules/tracking/event";
 import { sendMetaCapi } from "@/modules/tracking/meta-capi";
+import { loadServerMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 import {
   attributionCookieName,
   getTrackingContext,
@@ -194,10 +195,25 @@ export async function POST(request: Request) {
       status === "created" &&
       serverEnv.NEXT_PUBLIC_APP_ENV === "production"
     ) {
-      await sendMetaCapi(canonicalEvent, resolved, request, {
-        fbp: cookieStore.get("_fbp")?.value,
-        fbc: cookieStore.get("_fbc")?.value,
-      });
+      try {
+        const metaTracking = await loadServerMetaTrackingConfig(pageBranch.id);
+        await sendMetaCapi(
+          canonicalEvent,
+          resolved,
+          request,
+          {
+            fbp: cookieStore.get("_fbp")?.value,
+            fbc: cookieStore.get("_fbc")?.value,
+          },
+          metaTracking,
+        );
+      } catch {
+        console.error("Meta CAPI configuration failed", {
+          eventId: canonicalEvent.eventId,
+          provider: "meta_capi",
+          category: "configuration",
+        });
+      }
     }
     return Response.json({
       ok: true,

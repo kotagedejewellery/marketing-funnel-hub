@@ -57,4 +57,26 @@ describe("DestructiveConfirmDialog", () => {
     ).toHaveAttribute("aria-busy", "true");
     expect(screen.getByRole("button", { name: "Batal" })).toBeDisabled();
   });
+
+  it("accepts explicit copy for another irreversible configuration change", () => {
+    render(
+      <DestructiveConfirmDialog
+        open
+        count={1}
+        pending={false}
+        title="Hapus konfigurasi Meta khusus?"
+        description="Token yang dihapus harus dibuat ulang sebelum dapat digunakan."
+        confirmLabel="Hapus konfigurasi khusus"
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Hapus konfigurasi Meta khusus?" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Hapus konfigurasi khusus" }),
+    ).toBeVisible();
+  });
 });

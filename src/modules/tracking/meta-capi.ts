@@ -3,6 +3,7 @@ import "server-only";
 import { isIP } from "node:net";
 
 import { serverEnv } from "@/lib/env/server";
+import type { ServerMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 import type { CanonicalEvent } from "@/modules/tracking/event";
 import type { resolveEventContext } from "@/modules/tracking/store";
 
@@ -69,9 +70,14 @@ export async function sendMetaCapi(
   resolved: ResolvedContext,
   request: Request,
   cookieValues: { fbp?: string; fbc?: string },
+  config?: ServerMetaTrackingConfig,
 ) {
-  const datasetId = serverEnv.META_CAPI_DATASET_ID;
-  const accessToken = serverEnv.META_CAPI_ACCESS_TOKEN;
+  if (event.eventName === "PageView" && config?.pageViewEnabled === false)
+    return;
+  const datasetId = config ? config.datasetId : serverEnv.META_CAPI_DATASET_ID;
+  const accessToken = config
+    ? config.capiAccessToken
+    : serverEnv.META_CAPI_ACCESS_TOKEN;
 
   if (!datasetId || !accessToken) return;
 

@@ -3,9 +3,11 @@ import "server-only";
 import { asc, desc, eq, isNull } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
+import { serverEnv } from "@/lib/env/server";
 import {
   campaigns,
   branchGoogleReviews,
+  branchMetaTrackingConfigs,
   branchReviewSources,
   contentSections,
   faqs,
@@ -17,6 +19,7 @@ import {
 
 import { getBranch } from "./data";
 import { branchSectionKeys, branchSectionLabels } from "./page-validation";
+import { isMetaCapiTokenDecryptable } from "@/modules/tracking/branch-meta-config";
 
 function withSectionLabel<T extends { sectionKey: string; label: string }>(
   section: T,
@@ -54,6 +57,7 @@ export async function getBranchPageSettings(id: string) {
     branchReviews,
     productRows,
     assignmentRows,
+    metaTrackingRows,
   ] = await Promise.all([
     db
       .select()
@@ -109,6 +113,17 @@ export async function getBranchPageSettings(id: string) {
       })
       .from(productBranches)
       .where(eq(productBranches.branchId, branch.id)),
+    db
+      .select({
+        mode: branchMetaTrackingConfigs.mode,
+        pixelId: branchMetaTrackingConfigs.pixelId,
+        datasetId: branchMetaTrackingConfigs.datasetId,
+        capiTokenConfigured: branchMetaTrackingConfigs.capiAccessTokenEncrypted,
+        pageViewEnabled: branchMetaTrackingConfigs.pageViewEnabled,
+      })
+      .from(branchMetaTrackingConfigs)
+      .where(eq(branchMetaTrackingConfigs.branchId, branch.id))
+      .limit(1),
   ]);
   const assignmentByProductId = new Map(
     assignmentRows.map((row) => [row.productId, row]),
@@ -120,6 +135,12 @@ export async function getBranchPageSettings(id: string) {
         .from(faqs)
         .where(isNull(faqs.branchId))
         .orderBy(asc(faqs.sortOrder), asc(faqs.id));
+  const metaTrackingMode: "inherit" | "custom" | "disabled" =
+    metaTrackingRows[0]?.mode === "custom"
+      ? "custom"
+      : metaTrackingRows[0]?.mode === "disabled"
+        ? "disabled"
+        : "inherit";
   return {
     branch,
     sections: sections.map(withSectionLabel),
@@ -146,5 +167,23 @@ export async function getBranchPageSettings(id: string) {
           a.name.localeCompare(b.name)
         );
       }),
+    metaTracking: {
+      mode: metaTrackingMode,
+      pixelId: metaTrackingRows[0]?.pixelId ?? null,
+      datasetId: metaTrackingRows[0]?.datasetId ?? null,
+      capiTokenConfigured: Boolean(metaTrackingRows[0]?.capiTokenConfigured),
+      pageViewEnabled: metaTrackingRows[0]?.pageViewEnabled ?? true,
+      globalConfigured: Boolean(
+        serverEnv.NEXT_PUBLIC_META_PIXEL_ID &&
+        serverEnv.META_CAPI_DATASET_ID &&
+        serverEnv.META_CAPI_ACCESS_TOKEN,
+      ),
+      customCapiReady:
+        metaTrackingMode === "custom" &&
+        Boolean(metaTrackingRows[0]?.datasetId) &&
+        isMetaCapiTokenDecryptable(
+          metaTrackingRows[0]?.capiTokenConfigured ?? null,
+        ),
+    },
   };
 }

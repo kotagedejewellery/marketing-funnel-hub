@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BranchForm } from "@/components/admin/branch-form";
 import { BranchPageForm } from "@/components/admin/branch-page-form";
 import { BranchProductManager } from "@/components/admin/branch-product-manager";
+import { BranchMetaTrackingManager } from "@/components/admin/branch-meta-tracking-manager";
 import { BranchPublicUrl } from "@/components/admin/branch-public-url";
 import { FaqManager } from "@/components/admin/faq-manager";
 import { FormDialog } from "@/components/admin/form-dialog";
@@ -37,6 +38,7 @@ export default async function BranchLinkBioPage({
     faqs,
     inheritsFaqs,
     products,
+    metaTracking,
   } = await getBranchPageSettings((await params).id);
   const assetUrl = (path: string | null) =>
     publicAssetUrl(
@@ -201,6 +203,11 @@ export default async function BranchLinkBioPage({
             })}
           />
           <BranchProductManager branchId={branch.id} products={products} />
+          <BranchMetaTrackingManager
+            branchId={branch.id}
+            settings={metaTracking}
+            canManage={profile.role === "technical_admin"}
+          />
           <GoogleReviewManager
             key={[
               reviewSource?.updatedAt.getTime() ?? "new",

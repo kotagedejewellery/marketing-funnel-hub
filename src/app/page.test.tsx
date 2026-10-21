@@ -22,6 +22,7 @@ const emptyContent: PublicContent = {
   products: [],
   links: [],
   faqs: [],
+  tracking: { pixelId: null, pageViewEnabled: true },
   sections: [
     {
       sectionKey: "brand_header",
