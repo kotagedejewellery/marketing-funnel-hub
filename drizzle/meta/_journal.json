@@ -120,6 +120,20 @@
       "when": 1792908000000,
       "tag": "0016_branch_meta_test_event_code",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793000000000,
+      "tag": "0017_branch_meta_cta_event",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793100000000,
+      "tag": "0018_meta_page_load_pageview_only",
+      "breakpoints": true
     }
   ]
 }

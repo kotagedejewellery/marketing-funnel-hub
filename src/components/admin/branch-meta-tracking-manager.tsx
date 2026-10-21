@@ -9,15 +9,16 @@ import {
   saveBranchMetaTrackingConfig,
   type BranchMetaTrackingActionState,
 } from "@/modules/admin/tracking/branch-meta-actions";
-import { metaStandardEventNames } from "@/modules/tracking/meta-event";
+import { metaCtaEventNames } from "@/modules/tracking/meta-event";
 
 type Settings = {
   mode: "inherit" | "custom" | "disabled";
   pixelId: string | null;
-  datasetId: string | null;
   capiTokenConfigured: boolean;
   testEventCodeConfigured: boolean;
-  pageLoadMetaEvent: (typeof metaStandardEventNames)[number] | null;
+  capiAccessToken: string | null;
+  capiTestEventCode: string | null;
+  whatsappCtaMetaEvent: (typeof metaCtaEventNames)[number];
   globalConfigured: boolean;
   customCapiReady: boolean;
 };
@@ -34,7 +35,7 @@ function modeSummary(settings: Settings, canManage: boolean) {
     return "Menggunakan Pixel dan CAPI khusus cabang.";
   }
   if (canManage && !settings.globalConfigured)
-    return "Konfigurasi Meta global belum lengkap. Lengkapi Pixel ID, Dataset ID, dan token CAPI di environment server, atau gunakan konfigurasi khusus cabang.";
+    return "Konfigurasi Meta global belum lengkap. Lengkapi Pixel ID dan token CAPI di environment server, atau gunakan konfigurasi khusus cabang.";
   return "Mengikuti konfigurasi Meta global dari environment server.";
 }
 
@@ -49,12 +50,13 @@ export function BranchMetaTrackingManager({
 }) {
   const router = useRouter();
   const [mode, setMode] = useState(settings.mode);
-  const [pageLoadMetaEvent, setPageLoadMetaEvent] = useState(
-    settings.pageLoadMetaEvent ?? "",
+  const [whatsappCtaMetaEvent, setWhatsappCtaMetaEvent] = useState(
+    settings.whatsappCtaMetaEvent,
   );
   const [confirmRemoval, setConfirmRemoval] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const confirmationRef = useRef<HTMLInputElement>(null);
+  const testEventCodeRef = useRef<HTMLInputElement>(null);
   const confirmedRemoval = useRef(false);
   const [state, action, pending] = useActionState<
     BranchMetaTrackingActionState,
@@ -75,10 +77,10 @@ export function BranchMetaTrackingManager({
     <section className="rounded-2xl bg-card p-6 sm:p-8">
       <h2 className="font-serif text-2xl">Meta Pixel &amp; CAPI</h2>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {modeSummary({ ...settings, mode }, canManage)} Event internal halaman
-        tetap PageView; admin dapat memilih nama event standar yang diteruskan
-        ke Meta. Klik WhatsApp tetap memakai Contact dan tautan memakai
-        LinkClick.
+        {modeSummary({ ...settings, mode }, canManage)} Saat halaman dibuka,
+        Meta selalu menerima PageView. Admin dapat memilih event Meta khusus
+        untuk klik CTA WhatsApp; analytics internal tetap Contact dan tautan
+        biasa tetap LinkClick.
       </p>
       {!canManage ? (
         <p className="mt-4 text-sm font-medium text-muted-foreground">
@@ -146,39 +148,23 @@ export function BranchMetaTrackingManager({
                 <FieldError message={state.errors.pixelId} />
               </div>
               <div>
-                <label htmlFor="meta-dataset-id" className="font-medium">
-                  CAPI Dataset ID
-                </label>
-                <input
-                  id="meta-dataset-id"
-                  name="datasetId"
-                  inputMode="numeric"
-                  defaultValue={settings.datasetId ?? ""}
-                  className={inputClass}
-                  required
-                />
-                <FieldError message={state.errors.datasetId} />
-              </div>
-              <div>
                 <label htmlFor="meta-capi-token" className="font-medium">
                   CAPI access token
                 </label>
                 <input
                   id="meta-capi-token"
                   name="capiAccessToken"
-                  type="password"
-                  autoComplete="new-password"
+                  type="text"
+                  autoComplete="off"
+                  defaultValue={settings.capiAccessToken ?? ""}
                   className={inputClass}
                   required={!settings.capiTokenConfigured}
-                  placeholder={
-                    settings.capiTokenConfigured
-                      ? "Kosongkan untuk mempertahankan token tersimpan"
-                      : "Masukkan token CAPI"
-                  }
+                  placeholder="Masukkan token CAPI"
                 />
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Token hanya disimpan terenkripsi dan tidak dapat ditampilkan
-                  kembali.
+                  Nilai tetap terenkripsi saat disimpan. Sesuai pengaturan
+                  keamanan yang disetujui, nilainya hanya ditampilkan kepada
+                  technical admin.
                 </p>
                 <FieldError message={state.errors.capiAccessToken} />
               </div>
@@ -186,39 +172,44 @@ export function BranchMetaTrackingManager({
           )}
           {mode !== "disabled" && (
             <div>
-              <label htmlFor="meta-page-load-event" className="font-medium">
-                Nama event Meta saat Link Bio dibuka
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Saat Link Bio dibuka, Meta menerima PageView. Analytics internal
+                juga tercatat sebagai PageView.
+              </p>
+            </div>
+          )}
+          {mode !== "disabled" && (
+            <div>
+              <label htmlFor="meta-whatsapp-cta-event" className="font-medium">
+                Event Meta saat CTA WhatsApp diklik
               </label>
               <select
-                id="meta-page-load-event"
-                name="pageLoadMetaEvent"
-                value={pageLoadMetaEvent}
-                onChange={(event) => setPageLoadMetaEvent(event.target.value)}
+                id="meta-whatsapp-cta-event"
+                name="whatsappCtaMetaEvent"
+                value={whatsappCtaMetaEvent}
+                onChange={(event) =>
+                  setWhatsappCtaMetaEvent(
+                    event.target.value as (typeof metaCtaEventNames)[number],
+                  )
+                }
                 className={inputClass}
               >
-                <option value="">Tidak kirim event</option>
-                {metaStandardEventNames.map((eventName) => (
+                {metaCtaEventNames.map((eventName) => (
                   <option key={eventName} value={eventName}>
                     {eventName}
                   </option>
                 ))}
               </select>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Dikirim setiap Link Bio dibuka; ini tidak membuktikan tindakan
-                customer. Analytics internal tetap tercatat sebagai PageView.
-                Gunakan PageView untuk halaman ini.
+                Pilihan ini hanya dikirim ke Meta saat CTA WhatsApp diklik.
+                Analytics internal tetap mencatat Contact dan tautan biasa tetap
+                LinkClick.
               </p>
-              {pageLoadMetaEvent && pageLoadMetaEvent !== "PageView" ? (
-                <p role="status" className="mt-2 text-sm text-amber-800">
-                  {pageLoadMetaEvent} akan dikirim setiap halaman Link Bio
-                  dibuka. Ini hanya label event Meta, bukan tindakan nyata di
-                  sistem KGJ; jangan gunakan untuk optimasi konversi.
-                  {pageLoadMetaEvent === "Contact"
-                    ? " Klik WhatsApp tetap mengirim Contact terpisah."
-                    : ""}
-                </p>
-              ) : null}
-              <FieldError message={state.errors.pageLoadMetaEvent} />
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Pilih event yang benar-benar terjadi saat klik CTA. Jangan pilih
+                Purchase atau AddPaymentInfo bila pembayaran belum terjadi.
+              </p>
+              <FieldError message={state.errors.whatsappCtaMetaEvent} />
             </div>
           )}
           {mode !== "disabled" && (
@@ -229,18 +220,17 @@ export function BranchMetaTrackingManager({
               <input
                 id="meta-test-event-code"
                 name="capiTestEventCode"
-                type="password"
+                ref={testEventCodeRef}
+                type="text"
                 autoComplete="off"
+                defaultValue={settings.capiTestEventCode ?? ""}
                 className={inputClass}
-                placeholder={
-                  settings.testEventCodeConfigured
-                    ? "Kosongkan untuk mempertahankan kode tersimpan"
-                    : "Masukkan kode dari Meta Events Manager"
-                }
+                placeholder="Masukkan kode dari Meta Events Manager"
               />
               <p className="mt-2 text-sm text-muted-foreground">
                 Hanya dikirim server ke CAPI sebagai test_event_code; tidak
-                dikirim ke Pixel atau pengunjung.
+                dikirim ke Pixel atau halaman publik. Nilai hanya terlihat untuk
+                technical admin.
               </p>
               {settings.testEventCodeConfigured ? (
                 <label className="mt-3 flex items-center gap-2 text-sm font-medium">
@@ -249,6 +239,10 @@ export function BranchMetaTrackingManager({
                     type="checkbox"
                     value="true"
                     className="size-4 accent-primary"
+                    onChange={(event) => {
+                      if (event.target.checked && testEventCodeRef.current)
+                        testEventCodeRef.current.value = "";
+                    }}
                   />
                   Hapus Test Event Code tersimpan
                 </label>
@@ -274,7 +268,7 @@ export function BranchMetaTrackingManager({
         count={1}
         pending={pending}
         title="Hapus konfigurasi Meta khusus?"
-        description="Pixel ID, Dataset ID, dan token CAPI khusus cabang akan dihapus permanen. Anda harus memasukkan token baru jika ingin memakai konfigurasi khusus lagi."
+        description="Pixel ID dan token CAPI khusus cabang akan dihapus permanen. Anda harus memasukkan token baru jika ingin memakai konfigurasi khusus lagi."
         confirmLabel="Hapus konfigurasi khusus"
         pendingLabel="Menyimpan..."
         onClose={() => setConfirmRemoval(false)}

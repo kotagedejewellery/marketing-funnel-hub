@@ -5,10 +5,7 @@ import { isIP } from "node:net";
 import { serverEnv } from "@/lib/env/server";
 import type { ServerMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 import type { CanonicalEvent } from "@/modules/tracking/event";
-import {
-  resolveMetaProviderEvent,
-  type MetaStandardEventName,
-} from "@/modules/tracking/meta-event";
+import { resolveMetaProviderEvent } from "@/modules/tracking/meta-event";
 import type { resolveEventContext } from "@/modules/tracking/store";
 
 type ResolvedContext = NonNullable<
@@ -79,18 +76,19 @@ export async function sendMetaCapi(
   cookieValues: { fbp?: string; fbc?: string },
   config?: ServerMetaTrackingConfig,
 ) {
-  const datasetId = config ? config.datasetId : serverEnv.META_CAPI_DATASET_ID;
+  const dataSourceId = config
+    ? config.pixelId
+    : serverEnv.NEXT_PUBLIC_META_PIXEL_ID;
   const accessToken = config
     ? config.capiAccessToken
     : serverEnv.META_CAPI_ACCESS_TOKEN;
 
-  if (!datasetId || !accessToken) return;
+  if (!dataSourceId || !accessToken) return;
 
   const metaEvent = resolveMetaProviderEvent(
-    event.eventName,
-    config ? config.pageLoadMetaEvent : ("PageView" as MetaStandardEventName),
+    event,
+    config?.whatsappCtaMetaEvent ?? null,
   );
-  if (!metaEvent) return;
 
   const payload = metaPayload(
     event,
@@ -101,7 +99,7 @@ export async function sendMetaCapi(
     config?.capiTestEventCode,
   );
   if (!payload) return;
-  const endpoint = `https://graph.facebook.com/v26.0/${datasetId}/events`;
+  const endpoint = `https://graph.facebook.com/v26.0/${dataSourceId}/events`;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {

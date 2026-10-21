@@ -18,6 +18,7 @@ import { PagePreview } from "@/components/admin/page-preview";
 import { serverEnv } from "@/lib/env/server";
 import { getBranchPageSettings } from "@/modules/admin/branches/page-data";
 import { requireAdmin } from "@/modules/admin/access";
+import { getBranchMetaTrackingSecretsForTechnicalAdmin } from "@/modules/admin/tracking/branch-meta-secrets";
 import { publicAssetUrl } from "@/modules/public-content/links";
 
 export default async function BranchLinkBioPage({
@@ -26,6 +27,8 @@ export default async function BranchLinkBioPage({
   params: Promise<{ id: string }>;
 }) {
   const profile = await requireAdmin();
+  const { id } = await params;
+  const isTechnicalAdmin = profile.role === "technical_admin";
   const {
     branch,
     sections,
@@ -39,7 +42,10 @@ export default async function BranchLinkBioPage({
     inheritsFaqs,
     products,
     metaTracking,
-  } = await getBranchPageSettings((await params).id);
+  } = await getBranchPageSettings(id);
+  const metaSecrets = isTechnicalAdmin
+    ? await getBranchMetaTrackingSecretsForTechnicalAdmin(id)
+    : null;
   const assetUrl = (path: string | null) =>
     publicAssetUrl(
       serverEnv.NEXT_PUBLIC_SUPABASE_URL,
@@ -205,8 +211,12 @@ export default async function BranchLinkBioPage({
           <BranchProductManager branchId={branch.id} products={products} />
           <BranchMetaTrackingManager
             branchId={branch.id}
-            settings={metaTracking}
-            canManage={profile.role === "technical_admin"}
+            settings={{
+              ...metaTracking,
+              capiAccessToken: metaSecrets?.capiAccessToken ?? null,
+              capiTestEventCode: metaSecrets?.capiTestEventCode ?? null,
+            }}
+            canManage={isTechnicalAdmin}
           />
           <GoogleReviewManager
             key={[

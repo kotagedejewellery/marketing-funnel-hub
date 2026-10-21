@@ -15,6 +15,20 @@ export const metaStandardEventNames = [
 
 export type MetaStandardEventName = (typeof metaStandardEventNames)[number];
 
+export const metaCtaEventNames = [
+  "ViewContent",
+  "AddToCart",
+  "AddToWishlist",
+  "InitiateCheckout",
+  "AddPaymentInfo",
+  "Purchase",
+  "Lead",
+  "CompleteRegistration",
+  "Contact",
+] as const;
+
+export type MetaCtaEventName = (typeof metaCtaEventNames)[number];
+
 type MetaProviderEvent = {
   name: string;
   type: "standard" | "custom";
@@ -28,15 +42,25 @@ export function parseMetaStandardEventName(
     : null;
 }
 
+export function parseMetaCtaEventName(
+  value: string | null,
+): MetaCtaEventName | null {
+  return metaCtaEventNames.includes(value as MetaCtaEventName)
+    ? (value as MetaCtaEventName)
+    : null;
+}
+
 export function resolveMetaProviderEvent(
-  eventName: CanonicalEvent["eventName"],
-  pageLoadMetaEvent: MetaStandardEventName | null,
-): MetaProviderEvent | null {
-  if (eventName === "PageView") {
-    return pageLoadMetaEvent
-      ? { name: pageLoadMetaEvent, type: "standard" }
-      : null;
+  event: Pick<CanonicalEvent, "eventName" | "cta">,
+  whatsappCtaMetaEvent: MetaCtaEventName | null,
+): MetaProviderEvent {
+  if (event.eventName === "PageView")
+    return { name: "PageView", type: "standard" };
+  if (event.eventName === "Contact" && event.cta === "whatsapp") {
+    return {
+      name: whatsappCtaMetaEvent ?? "Contact",
+      type: "standard",
+    };
   }
-  if (eventName === "Contact") return { name: "Contact", type: "standard" };
   return { name: "LinkClick", type: "custom" };
 }

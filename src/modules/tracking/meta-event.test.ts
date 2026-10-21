@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { metaStandardEventNames, resolveMetaProviderEvent } from "./meta-event";
+import {
+  metaCtaEventNames,
+  metaStandardEventNames,
+  resolveMetaProviderEvent,
+} from "./meta-event";
 
 describe("Meta provider event mapping", () => {
-  it("allows only the approved standard page-load event names", () => {
+  it("allows only approved standard CTA event names", () => {
     expect(metaStandardEventNames).toEqual([
       "PageView",
       "ViewContent",
@@ -16,20 +20,33 @@ describe("Meta provider event mapping", () => {
       "CompleteRegistration",
       "Contact",
     ]);
+    expect(metaCtaEventNames).not.toContain("PageView");
   });
 
-  it("maps an internal page view to the selected standard Meta event", () => {
-    expect(resolveMetaProviderEvent("PageView", "ViewContent")).toEqual({
-      name: "ViewContent",
+  it("always maps an internal page view to Meta PageView", () => {
+    expect(
+      resolveMetaProviderEvent({ eventName: "PageView", cta: null }, "Lead"),
+    ).toEqual({
+      name: "PageView",
       type: "standard",
     });
   });
 
-  it("can suppress only the provider page-load event", () => {
-    expect(resolveMetaProviderEvent("PageView", null)).toBeNull();
-    expect(resolveMetaProviderEvent("Contact", null)).toEqual({
-      name: "Contact",
+  it("maps a WhatsApp CTA to its selected standard Meta event", () => {
+    expect(
+      resolveMetaProviderEvent(
+        { eventName: "Contact", cta: "whatsapp" },
+        "AddPaymentInfo",
+      ),
+    ).toEqual({
+      name: "AddPaymentInfo",
       type: "standard",
     });
+  });
+
+  it("keeps non-WhatsApp provider events canonical", () => {
+    expect(
+      resolveMetaProviderEvent({ eventName: "LinkClick", cta: "link" }, "Lead"),
+    ).toEqual({ name: "LinkClick", type: "custom" });
   });
 });

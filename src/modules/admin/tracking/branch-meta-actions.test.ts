@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getDatabase: vi.fn(),
   requireTechnicalAdmin: vi.fn(),
   encryptMetaCapiToken: vi.fn(),
+  encryptedMetaCapiTokenMatches: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock("@/modules/admin/access", () => ({
 }));
 vi.mock("@/modules/tracking/branch-meta-config", () => ({
   encryptMetaCapiToken: mocks.encryptMetaCapiToken,
+  encryptedMetaCapiTokenMatches: mocks.encryptedMetaCapiTokenMatches,
 }));
 
 import { saveBranchMetaTrackingConfig } from "./branch-meta-actions";
@@ -72,6 +74,7 @@ describe("saveBranchMetaTrackingConfig", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requireTechnicalAdmin.mockResolvedValue({ id: "admin-1" });
+    mocks.encryptedMetaCapiTokenMatches.mockReturnValue(false);
   });
 
   it("enforces the technical-admin boundary before reading configuration", async () => {
@@ -96,9 +99,8 @@ describe("saveBranchMetaTrackingConfig", () => {
         branchId: branch.id,
         mode: "inherit",
         pixelId: "",
-        datasetId: "",
         capiAccessToken: "",
-        pageLoadMetaEvent: "PageView",
+        whatsappCtaMetaEvent: "Contact",
         confirmCustomConfigRemoval: "false",
       }),
     );
@@ -117,9 +119,8 @@ describe("saveBranchMetaTrackingConfig", () => {
         branchId: branch.id,
         mode: "custom",
         pixelId: "123456",
-        datasetId: "123456",
         capiAccessToken: "short",
-        pageLoadMetaEvent: "PageView",
+        whatsappCtaMetaEvent: "Contact",
         confirmCustomConfigRemoval: "false",
       }),
     );
@@ -128,22 +129,44 @@ describe("saveBranchMetaTrackingConfig", () => {
     expect(database.transaction).not.toHaveBeenCalled();
   });
 
-  it("rejects a page-load event outside the approved standard-event list", async () => {
+  it("rejects a CTA event outside the approved standard-event list", async () => {
     const result = await saveBranchMetaTrackingConfig(
       initialState,
       formData({
         branchId: branch.id,
         mode: "inherit",
         pixelId: "",
-        datasetId: "",
         capiAccessToken: "",
-        pageLoadMetaEvent: "Custom",
+        whatsappCtaMetaEvent: "Custom",
         confirmCustomConfigRemoval: "false",
       }),
     );
 
-    expect(result.errors.pageLoadMetaEvent).toBeTruthy();
+    expect(result.errors.whatsappCtaMetaEvent).toBeTruthy();
     expect(mocks.getDatabase).not.toHaveBeenCalled();
+  });
+
+  it("saves a disabled configuration without a CTA event", async () => {
+    const { database, savedValues } = databaseForSave([branch], []);
+    mocks.getDatabase.mockReturnValue(database);
+
+    const result = await saveBranchMetaTrackingConfig(
+      initialState,
+      formData({
+        branchId: branch.id,
+        mode: "disabled",
+        pixelId: "",
+        capiAccessToken: "",
+        confirmCustomConfigRemoval: "false",
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(savedValues[0]).toMatchObject({
+      mode: "disabled",
+      ctaMetaEvent: null,
+      pageLoadMetaEvent: null,
+    });
   });
 
   it("keeps a configured test event code when a later save leaves its secret field blank", async () => {
@@ -166,10 +189,9 @@ describe("saveBranchMetaTrackingConfig", () => {
         branchId: branch.id,
         mode: "custom",
         pixelId: "123456",
-        datasetId: "123456",
         capiAccessToken: "",
         capiTestEventCode: "",
-        pageLoadMetaEvent: "PageView",
+        whatsappCtaMetaEvent: "Contact",
         confirmCustomConfigRemoval: "false",
       }),
     );
@@ -200,11 +222,10 @@ describe("saveBranchMetaTrackingConfig", () => {
         branchId: branch.id,
         mode: "custom",
         pixelId: "123456",
-        datasetId: "123456",
         capiAccessToken: "",
         capiTestEventCode: "",
         clearCapiTestEventCode: "true",
-        pageLoadMetaEvent: "PageView",
+        whatsappCtaMetaEvent: "Contact",
         confirmCustomConfigRemoval: "false",
       }),
     );
@@ -226,10 +247,9 @@ describe("saveBranchMetaTrackingConfig", () => {
         branchId: branch.id,
         mode: "custom",
         pixelId: "123456",
-        datasetId: "123456",
         capiAccessToken: "1234567890123456",
         capiTestEventCode: "TEST123",
-        pageLoadMetaEvent: "PageView",
+        whatsappCtaMetaEvent: "Lead",
         confirmCustomConfigRemoval: "false",
       }),
     );
@@ -238,6 +258,45 @@ describe("saveBranchMetaTrackingConfig", () => {
     expect(mocks.encryptMetaCapiToken).toHaveBeenCalledWith("TEST123");
     expect(savedValues[0]).toMatchObject({
       capiTestEventCodeEncrypted: "encrypted-replacement-code",
+      ctaMetaEvent: "Lead",
+      pageViewEnabled: true,
+      pageLoadMetaEvent: "PageView",
+    });
+  });
+
+  it("does not rewrite visible credentials that are unchanged", async () => {
+    const { database, savedValues } = databaseForSave(
+      [branch],
+      [
+        {
+          branchId: branch.id,
+          mode: "custom",
+          capiAccessTokenEncrypted: "encrypted-token",
+          capiTestEventCodeEncrypted: "encrypted-test-code",
+        },
+      ],
+    );
+    mocks.getDatabase.mockReturnValue(database);
+    mocks.encryptedMetaCapiTokenMatches.mockReturnValue(true);
+
+    const result = await saveBranchMetaTrackingConfig(
+      initialState,
+      formData({
+        branchId: branch.id,
+        mode: "custom",
+        pixelId: "123456",
+        capiAccessToken: "unchanged-token-value",
+        capiTestEventCode: "unchanged-test-code",
+        whatsappCtaMetaEvent: "Contact",
+        confirmCustomConfigRemoval: "false",
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(mocks.encryptMetaCapiToken).not.toHaveBeenCalled();
+    expect(savedValues[0]).toMatchObject({
+      capiAccessTokenEncrypted: "encrypted-token",
+      capiTestEventCodeEncrypted: "encrypted-test-code",
     });
   });
 });

@@ -33,7 +33,6 @@ describe("environment contract", () => {
       ...validServerEnvironment,
       TRACKING_ENABLED: "true",
       NEXT_PUBLIC_META_PIXEL_ID: "1234567890",
-      META_CAPI_DATASET_ID: "1234567890",
       META_CAPI_ACCESS_TOKEN: "test-meta-access-token",
     });
 
@@ -46,7 +45,7 @@ describe("environment contract", () => {
       TRACKING_ENABLED: "true",
     });
 
-    expect(environment.META_CAPI_DATASET_ID).toBeUndefined();
+    expect(environment.META_CAPI_ACCESS_TOKEN).toBeUndefined();
   });
 
   it("rejects partial global Meta configuration", () => {

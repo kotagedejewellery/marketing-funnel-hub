@@ -21,7 +21,6 @@ const serverEnvironmentSchema = z
       .min(16)
       .refine((value) => !value.startsWith("sb_publishable_")),
     SUPABASE_PUBLIC_ASSET_BUCKET: nonEmptyString,
-    META_CAPI_DATASET_ID: optionalEnvironmentString(z.string().regex(/^\d+$/)),
     META_CAPI_ACCESS_TOKEN: optionalEnvironmentString(z.string().min(16)),
     META_TRACKING_CONFIG_ENCRYPTION_KEY: optionalEnvironmentString(
       z.string().regex(/^[a-f0-9]{64}$/i),
@@ -48,7 +47,6 @@ const serverEnvironmentSchema = z
 
     const globalMetaVariables = [
       "NEXT_PUBLIC_META_PIXEL_ID",
-      "META_CAPI_DATASET_ID",
       "META_CAPI_ACCESS_TOKEN",
     ] as const;
     const configuredGlobalVariables = globalMetaVariables.filter((variable) =>

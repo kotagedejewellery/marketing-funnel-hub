@@ -8,8 +8,8 @@ import { getDatabase } from "@/lib/db/client";
 import { branchMetaTrackingConfigs } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import {
-  parseMetaStandardEventName,
-  type MetaStandardEventName,
+  parseMetaCtaEventName,
+  type MetaCtaEventName,
 } from "@/modules/tracking/meta-event";
 
 export type BranchMetaTrackingMode = "inherit" | "custom" | "disabled";
@@ -17,31 +17,29 @@ export type BranchMetaTrackingMode = "inherit" | "custom" | "disabled";
 type StoredConfig = {
   mode: string;
   pixelId: string | null;
-  datasetId: string | null;
   capiAccessTokenEncrypted: string | null;
   capiTestEventCodeEncrypted?: string | null;
-  pageLoadMetaEvent: string | null;
+  ctaMetaEvent: string | null;
 };
 
 export type BrowserMetaTrackingConfig = {
   pixelId: string | null;
-  pageLoadMetaEvent: MetaStandardEventName | null;
+  whatsappCtaMetaEvent: MetaCtaEventName | null;
 };
 
 export type ServerMetaTrackingConfig = BrowserMetaTrackingConfig & {
-  datasetId: string | null;
   capiAccessToken: string | null;
   capiTestEventCode?: string | null;
 };
 
 const reportedDecryptionFailures = new Set<string>();
 
-export function pageLoadMetaEventForConfig(
-  config: Pick<StoredConfig, "pageLoadMetaEvent"> | null,
-): MetaStandardEventName | null {
+export function whatsappCtaMetaEventForConfig(
+  config: Pick<StoredConfig, "ctaMetaEvent"> | null,
+): MetaCtaEventName {
   return config
-    ? parseMetaStandardEventName(config.pageLoadMetaEvent)
-    : "PageView";
+    ? (parseMetaCtaEventName(config.ctaMetaEvent) ?? "Contact")
+    : "Contact";
 }
 
 function encryptionKey() {
@@ -92,21 +90,33 @@ export function isMetaCapiTokenDecryptable(value: string | null) {
   }
 }
 
+export function encryptedMetaCapiTokenMatches(
+  encryptedValue: string | null,
+  plaintextValue: string,
+) {
+  if (!encryptedValue || !plaintextValue) return false;
+  try {
+    return decryptMetaCapiToken(encryptedValue) === plaintextValue;
+  } catch {
+    return false;
+  }
+}
+
 export function browserMetaTrackingConfig(
-  config: Pick<StoredConfig, "mode" | "pixelId" | "pageLoadMetaEvent"> | null,
+  config: Pick<StoredConfig, "mode" | "pixelId" | "ctaMetaEvent"> | null,
 ): BrowserMetaTrackingConfig {
   if (config?.mode === "disabled") {
-    return { pixelId: null, pageLoadMetaEvent: null };
+    return { pixelId: null, whatsappCtaMetaEvent: null };
   }
   if (config?.mode === "custom") {
     return {
       pixelId: config.pixelId,
-      pageLoadMetaEvent: parseMetaStandardEventName(config.pageLoadMetaEvent),
+      whatsappCtaMetaEvent: whatsappCtaMetaEventForConfig(config),
     };
   }
   return {
     pixelId: serverEnv.NEXT_PUBLIC_META_PIXEL_ID ?? null,
-    pageLoadMetaEvent: pageLoadMetaEventForConfig(config),
+    whatsappCtaMetaEvent: whatsappCtaMetaEventForConfig(config),
   };
 }
 
@@ -117,12 +127,11 @@ export async function loadServerMetaTrackingConfig(
     .select({
       mode: branchMetaTrackingConfigs.mode,
       pixelId: branchMetaTrackingConfigs.pixelId,
-      datasetId: branchMetaTrackingConfigs.datasetId,
       capiAccessTokenEncrypted:
         branchMetaTrackingConfigs.capiAccessTokenEncrypted,
       capiTestEventCodeEncrypted:
         branchMetaTrackingConfigs.capiTestEventCodeEncrypted,
-      pageLoadMetaEvent: branchMetaTrackingConfigs.pageLoadMetaEvent,
+      ctaMetaEvent: branchMetaTrackingConfigs.ctaMetaEvent,
     })
     .from(branchMetaTrackingConfigs)
     .where(eq(branchMetaTrackingConfigs.branchId, branchId))
@@ -132,7 +141,6 @@ export async function loadServerMetaTrackingConfig(
   if (config?.mode === "disabled") {
     return {
       ...browser,
-      datasetId: null,
       capiAccessToken: null,
       capiTestEventCode: null,
     };
@@ -140,7 +148,6 @@ export async function loadServerMetaTrackingConfig(
   if (config?.mode !== "custom") {
     return {
       ...browser,
-      datasetId: serverEnv.META_CAPI_DATASET_ID ?? null,
       capiAccessToken: serverEnv.META_CAPI_ACCESS_TOKEN ?? null,
       capiTestEventCode: config?.capiTestEventCodeEncrypted
         ? decryptMetaCapiToken(config.capiTestEventCodeEncrypted)
@@ -151,7 +158,6 @@ export async function loadServerMetaTrackingConfig(
   try {
     return {
       ...browser,
-      datasetId: config.datasetId,
       capiAccessToken: config.capiAccessTokenEncrypted
         ? decryptMetaCapiToken(config.capiAccessTokenEncrypted)
         : null,
@@ -170,7 +176,6 @@ export async function loadServerMetaTrackingConfig(
     }
     return {
       ...browser,
-      datasetId: null,
       capiAccessToken: null,
       capiTestEventCode: null,
     };

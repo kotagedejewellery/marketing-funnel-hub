@@ -22,7 +22,7 @@ const emptyContent: PublicContent = {
   products: [],
   links: [],
   faqs: [],
-  tracking: { pixelId: null, pageLoadMetaEvent: "PageView" },
+  tracking: { pixelId: null, whatsappCtaMetaEvent: null },
   sections: [
     {
       sectionKey: "brand_header",

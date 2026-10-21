@@ -80,8 +80,8 @@ function sendEvent(
 ) {
   const browser = window as ProviderWindow;
   const metaEvent = resolveMetaProviderEvent(
-    event.eventName,
-    metaTracking.pageLoadMetaEvent,
+    event,
+    metaTracking.whatsappCtaMetaEvent,
   );
 
   if (metaEvent && activateProviders(metaTracking.pixelId)) {

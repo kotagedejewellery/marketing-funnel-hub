@@ -11,21 +11,21 @@ import {
   branchMetaTrackingConfigs,
 } from "@/lib/db/schema";
 import {
+  encryptedMetaCapiTokenMatches,
   encryptMetaCapiToken,
   type BranchMetaTrackingMode,
 } from "@/modules/tracking/branch-meta-config";
-import { metaStandardEventNames } from "@/modules/tracking/meta-event";
+import { metaCtaEventNames } from "@/modules/tracking/meta-event";
 import { requireTechnicalAdmin } from "@/modules/admin/access";
 
 const branchMetaTrackingSchema = z.object({
   branchId: z.uuid(),
   mode: z.enum(["inherit", "custom", "disabled"]),
   pixelId: z.string().trim(),
-  datasetId: z.string().trim(),
   capiAccessToken: z.string().trim(),
   capiTestEventCode: z.string().trim().max(200),
   clearCapiTestEventCode: z.boolean(),
-  pageLoadMetaEvent: z.enum(metaStandardEventNames).nullable(),
+  whatsappCtaMetaEvent: z.enum(metaCtaEventNames).optional(),
   confirmCustomConfigRemoval: z.boolean(),
 });
 
@@ -50,12 +50,10 @@ export async function saveBranchMetaTrackingConfig(
     branchId: formData.get("branchId"),
     mode: formData.get("mode"),
     pixelId: formData.get("pixelId") ?? "",
-    datasetId: formData.get("datasetId") ?? "",
     capiAccessToken: formData.get("capiAccessToken") ?? "",
     capiTestEventCode: formData.get("capiTestEventCode") ?? "",
     clearCapiTestEventCode: formData.get("clearCapiTestEventCode") === "true",
-    pageLoadMetaEvent: (formData.get("pageLoadMetaEvent") || null) as
-      (typeof metaStandardEventNames)[number] | null,
+    whatsappCtaMetaEvent: formData.get("whatsappCtaMetaEvent") ?? undefined,
     confirmCustomConfigRemoval:
       formData.get("confirmCustomConfigRemoval") === "true",
   });
@@ -67,6 +65,14 @@ export async function saveBranchMetaTrackingConfig(
   }
 
   const input = parsed.data;
+  if (input.mode !== "disabled" && !input.whatsappCtaMetaEvent) {
+    return {
+      message: "Periksa konfigurasi Meta.",
+      errors: {
+        whatsappCtaMetaEvent: "Pilih event Meta untuk CTA WhatsApp.",
+      },
+    };
+  }
   if (input.clearCapiTestEventCode && input.capiTestEventCode) {
     return {
       message: "Periksa konfigurasi Meta.",
@@ -101,8 +107,6 @@ export async function saveBranchMetaTrackingConfig(
     const errors: Record<string, string> = {};
     if (!/^\d+$/.test(input.pixelId))
       errors.pixelId = "Pixel ID harus berupa angka.";
-    if (!/^\d+$/.test(input.datasetId))
-      errors.datasetId = "Dataset ID harus berupa angka.";
     if (!input.capiAccessToken && !current?.capiAccessTokenEncrypted)
       errors.capiAccessToken = "Masukkan token CAPI untuk konfigurasi baru.";
     if (input.capiAccessToken && input.capiAccessToken.length < 16)
@@ -126,8 +130,14 @@ export async function saveBranchMetaTrackingConfig(
   try {
     const values = await (async () => {
       const mode = input.mode as BranchMetaTrackingMode;
+      const whatsappCtaMetaEvent = input.whatsappCtaMetaEvent ?? "Contact";
       const capiTestEventCodeEncrypted = input.capiTestEventCode
-        ? encryptMetaCapiToken(input.capiTestEventCode)
+        ? encryptedMetaCapiTokenMatches(
+            current?.capiTestEventCodeEncrypted ?? null,
+            input.capiTestEventCode,
+          )
+          ? current!.capiTestEventCodeEncrypted
+          : encryptMetaCapiToken(input.capiTestEventCode)
         : input.clearCapiTestEventCode
           ? null
           : (current?.capiTestEventCodeEncrypted ?? null);
@@ -140,6 +150,7 @@ export async function saveBranchMetaTrackingConfig(
           capiTestEventCodeEncrypted: null,
           pageViewEnabled: false,
           pageLoadMetaEvent: null,
+          ctaMetaEvent: null,
           updatedAt: new Date(),
         };
       }
@@ -150,21 +161,30 @@ export async function saveBranchMetaTrackingConfig(
           datasetId: null,
           capiAccessTokenEncrypted: null,
           capiTestEventCodeEncrypted,
-          pageViewEnabled: Boolean(input.pageLoadMetaEvent),
-          pageLoadMetaEvent: input.pageLoadMetaEvent,
+          pageViewEnabled: true,
+          pageLoadMetaEvent: "PageView",
+          ctaMetaEvent: whatsappCtaMetaEvent,
           updatedAt: new Date(),
         };
       }
       return {
         mode,
         pixelId: input.pixelId,
-        datasetId: input.datasetId,
+        // Meta CAPI uses the Pixel/data-source ID. Keep the legacy column in
+        // sync until it can be removed through a separate data migration.
+        datasetId: input.pixelId,
         capiAccessTokenEncrypted: input.capiAccessToken
-          ? encryptMetaCapiToken(input.capiAccessToken)
+          ? encryptedMetaCapiTokenMatches(
+              current?.capiAccessTokenEncrypted ?? null,
+              input.capiAccessToken,
+            )
+            ? current!.capiAccessTokenEncrypted
+            : encryptMetaCapiToken(input.capiAccessToken)
           : current!.capiAccessTokenEncrypted,
         capiTestEventCodeEncrypted,
-        pageViewEnabled: Boolean(input.pageLoadMetaEvent),
-        pageLoadMetaEvent: input.pageLoadMetaEvent,
+        pageViewEnabled: true,
+        pageLoadMetaEvent: "PageView",
+        ctaMetaEvent: whatsappCtaMetaEvent,
         updatedAt: new Date(),
       };
     })();
@@ -188,12 +208,14 @@ export async function saveBranchMetaTrackingConfig(
         changes: {
           mode: input.mode,
           pixelConfigured: input.mode === "custom",
-          datasetConfigured: input.mode === "custom",
-          capiTokenChanged: Boolean(input.capiAccessToken),
+          capiTokenChanged:
+            input.mode === "custom" &&
+            values.capiAccessTokenEncrypted !==
+              (current?.capiAccessTokenEncrypted ?? null),
           capiTestEventCodeConfigured: Boolean(
             values.capiTestEventCodeEncrypted,
           ),
-          pageLoadMetaEvent: values.pageLoadMetaEvent,
+          whatsappCtaMetaEvent: values.ctaMetaEvent,
         },
       });
     });

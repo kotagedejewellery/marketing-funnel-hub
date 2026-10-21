@@ -11,42 +11,37 @@ vi.mock("@/lib/env/server", () => ({
 
 import {
   browserMetaTrackingConfig,
+  encryptedMetaCapiTokenMatches,
   encryptMetaCapiToken,
   isMetaCapiTokenDecryptable,
-  pageLoadMetaEventForConfig,
 } from "./branch-meta-config";
 
 describe("branch Meta tracking configuration", () => {
   it("uses the global pixel when a branch inherits configuration", () => {
     expect(browserMetaTrackingConfig(null)).toEqual({
       pixelId: "987654321",
-      pageLoadMetaEvent: "PageView",
+      whatsappCtaMetaEvent: "Contact",
     });
   });
 
-  it("preserves an explicit no-page-load-event choice", () => {
-    expect(pageLoadMetaEventForConfig(null)).toBe("PageView");
-    expect(pageLoadMetaEventForConfig({ pageLoadMetaEvent: null })).toBeNull();
-  });
-
-  it("allows a branch to stop only the Meta page-load event while retaining the global pixel", () => {
+  it("uses Contact for legacy configurations without a CTA selection", () => {
     expect(
       browserMetaTrackingConfig({
         mode: "inherit",
         pixelId: null,
-        pageLoadMetaEvent: null,
+        ctaMetaEvent: null,
       }),
-    ).toEqual({ pixelId: "987654321", pageLoadMetaEvent: null });
+    ).toEqual({ pixelId: "987654321", whatsappCtaMetaEvent: "Contact" });
   });
 
-  it("keeps a branch custom pixel and its selected page-load event", () => {
+  it("keeps a branch custom pixel and its selected WhatsApp CTA event", () => {
     expect(
       browserMetaTrackingConfig({
         mode: "custom",
         pixelId: "123456789",
-        pageLoadMetaEvent: "ViewContent",
+        ctaMetaEvent: "Lead",
       }),
-    ).toEqual({ pixelId: "123456789", pageLoadMetaEvent: "ViewContent" });
+    ).toEqual({ pixelId: "123456789", whatsappCtaMetaEvent: "Lead" });
   });
 
   it("does not expose a pixel when Meta is disabled for a branch", () => {
@@ -54,9 +49,9 @@ describe("branch Meta tracking configuration", () => {
       browserMetaTrackingConfig({
         mode: "disabled",
         pixelId: null,
-        pageLoadMetaEvent: "PageView",
+        ctaMetaEvent: "Contact",
       }),
-    ).toEqual({ pixelId: null, pageLoadMetaEvent: null });
+    ).toEqual({ pixelId: null, whatsappCtaMetaEvent: null });
   });
 
   it("detects whether a stored CAPI token can still be decrypted", () => {
@@ -73,5 +68,17 @@ describe("branch Meta tracking configuration", () => {
     expect(isMetaCapiTokenDecryptable(encrypted)).toBe(true);
     expect(isMetaCapiTokenDecryptable(tampered)).toBe(false);
     expect(isMetaCapiTokenDecryptable(null)).toBe(false);
+  });
+
+  it("recognizes a visible credential without re-encrypting it", () => {
+    const encrypted = encryptMetaCapiToken("test-token-not-for-network");
+
+    expect(
+      encryptedMetaCapiTokenMatches(encrypted, "test-token-not-for-network"),
+    ).toBe(true);
+    expect(encryptedMetaCapiTokenMatches(encrypted, "another-token")).toBe(
+      false,
+    );
+    expect(encryptedMetaCapiTokenMatches(null, "another-token")).toBe(false);
   });
 });

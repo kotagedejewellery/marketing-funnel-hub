@@ -21,7 +21,7 @@ import { getBranch } from "./data";
 import { branchSectionKeys, branchSectionLabels } from "./page-validation";
 import {
   isMetaCapiTokenDecryptable,
-  pageLoadMetaEventForConfig,
+  whatsappCtaMetaEventForConfig,
 } from "@/modules/tracking/branch-meta-config";
 
 function withSectionLabel<T extends { sectionKey: string; label: string }>(
@@ -120,11 +120,10 @@ export async function getBranchPageSettings(id: string) {
       .select({
         mode: branchMetaTrackingConfigs.mode,
         pixelId: branchMetaTrackingConfigs.pixelId,
-        datasetId: branchMetaTrackingConfigs.datasetId,
         capiTokenConfigured: branchMetaTrackingConfigs.capiAccessTokenEncrypted,
         testEventCodeConfigured:
           branchMetaTrackingConfigs.capiTestEventCodeEncrypted,
-        pageLoadMetaEvent: branchMetaTrackingConfigs.pageLoadMetaEvent,
+        ctaMetaEvent: branchMetaTrackingConfigs.ctaMetaEvent,
       })
       .from(branchMetaTrackingConfigs)
       .where(eq(branchMetaTrackingConfigs.branchId, branch.id))
@@ -175,22 +174,19 @@ export async function getBranchPageSettings(id: string) {
     metaTracking: {
       mode: metaTrackingMode,
       pixelId: metaTrackingRows[0]?.pixelId ?? null,
-      datasetId: metaTrackingRows[0]?.datasetId ?? null,
       capiTokenConfigured: Boolean(metaTrackingRows[0]?.capiTokenConfigured),
       testEventCodeConfigured: Boolean(
         metaTrackingRows[0]?.testEventCodeConfigured,
       ),
-      pageLoadMetaEvent: pageLoadMetaEventForConfig(
+      whatsappCtaMetaEvent: whatsappCtaMetaEventForConfig(
         metaTrackingRows[0] ?? null,
       ),
       globalConfigured: Boolean(
-        serverEnv.NEXT_PUBLIC_META_PIXEL_ID &&
-        serverEnv.META_CAPI_DATASET_ID &&
-        serverEnv.META_CAPI_ACCESS_TOKEN,
+        serverEnv.NEXT_PUBLIC_META_PIXEL_ID && serverEnv.META_CAPI_ACCESS_TOKEN,
       ),
       customCapiReady:
         metaTrackingMode === "custom" &&
-        Boolean(metaTrackingRows[0]?.datasetId) &&
+        Boolean(metaTrackingRows[0]?.pixelId) &&
         isMetaCapiTokenDecryptable(
           metaTrackingRows[0]?.capiTokenConfigured ?? null,
         ),

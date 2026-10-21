@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/env/server", () => ({
   serverEnv: {
     NEXT_PUBLIC_SITE_URL: "https://kgj.example",
-    META_CAPI_DATASET_ID: "123456",
+    NEXT_PUBLIC_META_PIXEL_ID: "123456",
     META_CAPI_ACCESS_TOKEN: "test-token-not-for-network",
   },
 }));
@@ -91,8 +91,7 @@ describe("Meta CAPI adapter", () => {
         { fbp: "fb.1.test" },
         {
           pixelId: null,
-          pageLoadMetaEvent: null,
-          datasetId: null,
+          whatsappCtaMetaEvent: null,
           capiAccessToken: null,
         },
       );
@@ -102,36 +101,7 @@ describe("Meta CAPI adapter", () => {
     }
   });
 
-  it("does not send a page load when its Meta event is disabled", async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(null, { status: 200 }));
-    try {
-      await sendMetaCapi(
-        {
-          ...event,
-          eventName: "PageView",
-          product: null,
-          branch: null,
-          cta: null,
-        },
-        { product: null, branch: null, link: null },
-        request,
-        { fbp: "fb.1.test" },
-        {
-          pixelId: "123456",
-          pageLoadMetaEvent: null,
-          datasetId: "123456",
-          capiAccessToken: "test-token-not-for-network",
-        },
-      );
-      expect(fetchMock).not.toHaveBeenCalled();
-    } finally {
-      fetchMock.mockRestore();
-    }
-  });
-
-  it("maps a page load to the configured standard Meta event", async () => {
+  it("always maps a page load to Meta PageView", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response(null, { status: 200 }));
@@ -150,8 +120,7 @@ describe("Meta CAPI adapter", () => {
         { fbp: "fb.1.test" },
         {
           pixelId: "123456",
-          pageLoadMetaEvent: "ViewContent",
-          datasetId: "123456",
+          whatsappCtaMetaEvent: "Lead",
           capiAccessToken: "test-token-not-for-network",
         },
       );
@@ -161,7 +130,36 @@ describe("Meta CAPI adapter", () => {
       ) as { data: Array<{ event_id: string; event_name: string }> };
       expect(requestBody.data[0]).toMatchObject({
         event_id: pageView.eventId,
-        event_name: "ViewContent",
+        event_name: "PageView",
+      });
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("maps a WhatsApp Contact to the selected CAPI event", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    try {
+      await sendMetaCapi(
+        event,
+        resolved,
+        request,
+        { fbp: "fb.1.test" },
+        {
+          pixelId: "123456",
+          whatsappCtaMetaEvent: "AddPaymentInfo",
+          capiAccessToken: "test-token-not-for-network",
+        },
+      );
+
+      const requestBody = JSON.parse(
+        String(fetchMock.mock.calls[0]?.[1]?.body),
+      ) as { data: Array<{ event_id: string; event_name: string }> };
+      expect(requestBody.data[0]).toMatchObject({
+        event_id: event.eventId,
+        event_name: "AddPaymentInfo",
       });
     } finally {
       fetchMock.mockRestore();
@@ -180,8 +178,7 @@ describe("Meta CAPI adapter", () => {
         { fbp: "fb.1.test" },
         {
           pixelId: "123456",
-          pageLoadMetaEvent: "PageView",
-          datasetId: "123456",
+          whatsappCtaMetaEvent: "Contact",
           capiAccessToken: "test-token-not-for-network",
           capiTestEventCode: "TEST123",
         },
@@ -191,6 +188,21 @@ describe("Meta CAPI adapter", () => {
         String(fetchMock.mock.calls[0]?.[1]?.body),
       ) as { test_event_code?: string };
       expect(requestBody.test_event_code).toBe("TEST123");
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("uses the Pixel ID as the global CAPI data source", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    try {
+      await sendMetaCapi(event, resolved, request, { fbp: "fb.1.test" });
+
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(
+        "https://graph.facebook.com/v26.0/123456/events",
+      );
     } finally {
       fetchMock.mockRestore();
     }

@@ -38,8 +38,12 @@ silently redefine a documented requirement in code.
 - Preserve canonical event names, attribution, event identity/deduplication,
   product-to-branch rules, and permission boundaries. For a related change,
   read the applicable source document first.
-- Secrets and privileged credentials stay server-side and out of logs, browser
-  bundles, CMS fields, and commits.
+- Secrets and privileged credentials stay server-side and out of logs, public
+  browser bundles, audit records, and commits. The owner explicitly approved
+  one exception on 21 October 2026: the CMS may decrypt and render a branch
+  CAPI access token and Test Event Code only to an authenticated
+  `technical_admin`; never render either value to public visitors or another
+  admin role.
 
 ## Mandatory Working Rules
 

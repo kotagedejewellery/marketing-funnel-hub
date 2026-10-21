@@ -213,6 +213,7 @@ export const branchMetaTrackingConfigs = pgTable(
     datasetId: text("dataset_id"),
     capiAccessTokenEncrypted: text("capi_access_token_encrypted"),
     capiTestEventCodeEncrypted: text("capi_test_event_code_encrypted"),
+    ctaMetaEvent: text("cta_meta_event"),
     pageViewEnabled: boolean("page_view_enabled").notNull().default(true),
     pageLoadMetaEvent: text("page_load_meta_event"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -233,7 +234,11 @@ export const branchMetaTrackingConfigs = pgTable(
     ),
     check(
       "branch_meta_tracking_configs_page_load_meta_event_check",
-      sql`${table.pageLoadMetaEvent} is null or ${table.pageLoadMetaEvent} in ('PageView', 'ViewContent', 'AddToCart', 'AddToWishlist', 'InitiateCheckout', 'AddPaymentInfo', 'Purchase', 'Lead', 'CompleteRegistration', 'Contact')`,
+      sql`${table.pageLoadMetaEvent} is null or ${table.pageLoadMetaEvent} = 'PageView'`,
+    ),
+    check(
+      "branch_meta_tracking_configs_cta_meta_event_check",
+      sql`${table.ctaMetaEvent} is null or ${table.ctaMetaEvent} in ('ViewContent', 'AddToCart', 'AddToWishlist', 'InitiateCheckout', 'AddPaymentInfo', 'Purchase', 'Lead', 'CompleteRegistration', 'Contact')`,
     ),
   ],
 ).enableRLS();

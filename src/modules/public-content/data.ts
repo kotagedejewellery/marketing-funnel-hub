@@ -305,7 +305,7 @@ async function loadScopedContent(
       .select({
         mode: branchMetaTrackingConfigs.mode,
         pixelId: branchMetaTrackingConfigs.pixelId,
-        pageLoadMetaEvent: branchMetaTrackingConfigs.pageLoadMetaEvent,
+        ctaMetaEvent: branchMetaTrackingConfigs.ctaMetaEvent,
       })
       .from(branchMetaTrackingConfigs)
       .where(eq(branchMetaTrackingConfigs.branchId, branch.id))

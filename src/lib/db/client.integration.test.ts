@@ -68,4 +68,20 @@ describe("Drizzle database client", () => {
       await connection.close();
     }
   });
+
+  it("restricts Meta page-load configuration to PageView", async () => {
+    const connection = createDatabaseClient(process.env.DATABASE_URL);
+
+    try {
+      const rows = await connection.db.execute(sql`
+        select pg_get_constraintdef(constraint_info.oid) as definition
+        from pg_constraint as constraint_info
+        where constraint_info.conname =
+          'branch_meta_tracking_configs_page_load_meta_event_check'
+      `);
+      expect(rows[0]?.definition).toContain("'PageView'::text");
+    } finally {
+      await connection.close();
+    }
+  });
 });
