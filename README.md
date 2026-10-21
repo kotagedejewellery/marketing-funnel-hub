@@ -146,10 +146,12 @@ headers.
 
 ### Deploy melalui GitHub Actions
 
-`.github/workflows/deploy.yml` hanya melakukan deploy setelah workflow `CI`
+`.github/workflows/ci.yml` hanya melakukan deploy setelah workflow `CI`
 untuk push ke `main` selesai sukses. Ia tersambung ke VPS melalui SSH, checkout
 SHA yang telah diuji, lalu membangun ulang dan menjalankan
-`compose.production.yml`; deploy tidak dapat saling tumpang tindih. Tambahkan
+`compose.production.yml`; deploy tidak dapat saling tumpang tindih. Perintah
+SSH diberi batas 20 menit karena build image pada VPS dapat melampaui batas
+default action 10 menit. Tambahkan
 secret repository berikut di GitHub sebelum push ke `main`:
 
 ```text
