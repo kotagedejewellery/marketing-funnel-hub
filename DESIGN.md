@@ -105,13 +105,14 @@ Charcoal anchors the hierarchy, warm ivory keeps the canvas quiet, and bronze ma
 
 ## Typography
 
-**Display and heading font:** Bricolage Grotesque, provided by `next/font/google`; **body and label font:** Manrope. Both fall back to the system sans stack. The pairing makes short headings expressive while operational labels and longer text stay plain to scan.
+**Public Link Bio:** Inter, provided by `next/font/google`, is used for every rendered text role: display, heading, CTA, body, and label, with a system sans fallback. **Admin CMS:** Bricolage Grotesque remains the display font, while Manrope remains the body and label font. Both retain the system sans fallback.
 
-- **Display** (`typography.display`): reserved for prominent editorial headings; the compact public profile uses the smaller headline scale.
-- **Headline** (`typography.headline`): section and dashboard headings; responsive headings enlarge at the `sm` breakpoint.
-- **Title** (`typography.title`): product, campaign, and panel headings.
-- **Body** (`typography.body`): introduction, descriptions, and explanatory text; muted when subordinate.
-- **Label** (`typography.label`): actions and card labels; bold without all-caps styling.
+- **Public Link Bio:** Inter applies within `.kgj-public` to every text role, including display and heading utilities used by CTA cards, reviews, FAQ, galleries, and the profile.
+- **Display** (`typography.display`): reserved for prominent editorial headings in the admin CMS; use Bricolage Grotesque.
+- **Headline** (`typography.headline`): section and dashboard headings in the admin CMS; responsive headings enlarge at the `sm` breakpoint and use Bricolage Grotesque.
+- **Title** (`typography.title`): product, campaign, and panel headings in the admin CMS; use Bricolage Grotesque.
+- **Body** (`typography.body`): introduction, descriptions, and explanatory text in the admin CMS; use Manrope and mute it when subordinate.
+- **Label** (`typography.label`): actions and card labels in the admin CMS; use Manrope, bold without all-caps styling.
 
 ## Layout
 

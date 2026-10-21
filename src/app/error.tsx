@@ -2,7 +2,7 @@
 
 export default function PublicPageError({ reset }: { reset: () => void }) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-start justify-center px-6 py-16">
+    <main className="kgj-public mx-auto flex min-h-screen max-w-xl flex-col items-start justify-center px-6 py-16">
       <p className="mb-4 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
         Kotagede Jewellery
       </p>
