@@ -9,13 +9,14 @@ import {
   saveBranchMetaTrackingConfig,
   type BranchMetaTrackingActionState,
 } from "@/modules/admin/tracking/branch-meta-actions";
+import { metaStandardEventNames } from "@/modules/tracking/meta-event";
 
 type Settings = {
   mode: "inherit" | "custom" | "disabled";
   pixelId: string | null;
   datasetId: string | null;
   capiTokenConfigured: boolean;
-  pageViewEnabled: boolean;
+  pageLoadMetaEvent: (typeof metaStandardEventNames)[number] | null;
   globalConfigured: boolean;
   customCapiReady: boolean;
 };
@@ -47,6 +48,9 @@ export function BranchMetaTrackingManager({
 }) {
   const router = useRouter();
   const [mode, setMode] = useState(settings.mode);
+  const [pageLoadMetaEvent, setPageLoadMetaEvent] = useState(
+    settings.pageLoadMetaEvent ?? "",
+  );
   const [confirmRemoval, setConfirmRemoval] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const confirmationRef = useRef<HTMLInputElement>(null);
@@ -70,8 +74,9 @@ export function BranchMetaTrackingManager({
     <section className="rounded-2xl bg-card p-6 sm:p-8">
       <h2 className="font-serif text-2xl">Meta Pixel &amp; CAPI</h2>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {modeSummary({ ...settings, mode }, canManage)} PageView dapat diatur
-        per cabang; klik WhatsApp tetap memakai event Contact dan tautan memakai
+        {modeSummary({ ...settings, mode }, canManage)} Event internal halaman
+        tetap PageView; admin dapat memilih nama event standar yang diteruskan
+        ke Meta. Klik WhatsApp tetap memakai Contact dan tautan memakai
         LinkClick.
       </p>
       {!canManage ? (
@@ -179,15 +184,39 @@ export function BranchMetaTrackingManager({
             </>
           )}
           {mode !== "disabled" && (
-            <label className="flex min-h-11 items-center gap-3 font-medium">
-              <input
-                type="checkbox"
-                name="pageViewEnabled"
-                defaultChecked={settings.pageViewEnabled}
-                className="size-5 accent-primary"
-              />
-              Kirim event PageView ke Meta untuk cabang ini
-            </label>
+            <div>
+              <label htmlFor="meta-page-load-event" className="font-medium">
+                Event Meta saat halaman dimuat
+              </label>
+              <select
+                id="meta-page-load-event"
+                name="pageLoadMetaEvent"
+                value={pageLoadMetaEvent}
+                onChange={(event) => setPageLoadMetaEvent(event.target.value)}
+                className={inputClass}
+              >
+                <option value="">Tidak kirim event</option>
+                {metaStandardEventNames.map((eventName) => (
+                  <option key={eventName} value={eventName}>
+                    {eventName}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Event internal tetap tercatat sebagai PageView.
+              </p>
+              {pageLoadMetaEvent && pageLoadMetaEvent !== "PageView" ? (
+                <p role="status" className="mt-2 text-sm text-amber-800">
+                  {pageLoadMetaEvent} akan dikirim setiap halaman Link Bio
+                  dibuka. Ini hanya label event Meta, bukan tindakan nyata di
+                  sistem KGJ; jangan gunakan untuk optimasi konversi.
+                  {pageLoadMetaEvent === "Contact"
+                    ? " Klik WhatsApp tetap mengirim Contact terpisah."
+                    : ""}
+                </p>
+              ) : null}
+              <FieldError message={state.errors.pageLoadMetaEvent} />
+            </div>
           )}
 
           <FormFeedback state={state} pending={pending} />

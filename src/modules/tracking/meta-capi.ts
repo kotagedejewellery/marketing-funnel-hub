@@ -5,6 +5,10 @@ import { isIP } from "node:net";
 import { serverEnv } from "@/lib/env/server";
 import type { ServerMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 import type { CanonicalEvent } from "@/modules/tracking/event";
+import {
+  resolveMetaProviderEvent,
+  type MetaStandardEventName,
+} from "@/modules/tracking/meta-event";
 import type { resolveEventContext } from "@/modules/tracking/store";
 
 type ResolvedContext = NonNullable<
@@ -16,6 +20,7 @@ export function metaPayload(
   resolved: ResolvedContext,
   request: Request,
   cookieValues: { fbp?: string; fbc?: string },
+  metaEventName: string,
 ) {
   const forwardedIp = request.headers
     .get("x-forwarded-for")
@@ -37,7 +42,7 @@ export function metaPayload(
   return {
     data: [
       {
-        event_name: event.eventName,
+        event_name: metaEventName,
         event_id: event.eventId,
         event_time: Math.floor(Date.parse(event.eventTime) / 1000),
         action_source: "website",
@@ -72,8 +77,6 @@ export async function sendMetaCapi(
   cookieValues: { fbp?: string; fbc?: string },
   config?: ServerMetaTrackingConfig,
 ) {
-  if (event.eventName === "PageView" && config?.pageViewEnabled === false)
-    return;
   const datasetId = config ? config.datasetId : serverEnv.META_CAPI_DATASET_ID;
   const accessToken = config
     ? config.capiAccessToken
@@ -81,7 +84,19 @@ export async function sendMetaCapi(
 
   if (!datasetId || !accessToken) return;
 
-  const payload = metaPayload(event, resolved, request, cookieValues);
+  const metaEvent = resolveMetaProviderEvent(
+    event.eventName,
+    config ? config.pageLoadMetaEvent : ("PageView" as MetaStandardEventName),
+  );
+  if (!metaEvent) return;
+
+  const payload = metaPayload(
+    event,
+    resolved,
+    request,
+    cookieValues,
+    metaEvent.name,
+  );
   if (!payload) return;
   const endpoint = `https://graph.facebook.com/v26.0/${datasetId}/events`;
 

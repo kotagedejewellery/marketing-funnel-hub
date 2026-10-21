@@ -79,7 +79,7 @@ describe("saveBranchMetaTrackingConfig", () => {
         pixelId: "",
         datasetId: "",
         capiAccessToken: "",
-        pageViewEnabled: "on",
+        pageLoadMetaEvent: "PageView",
         confirmCustomConfigRemoval: "false",
       }),
     );
@@ -100,12 +100,30 @@ describe("saveBranchMetaTrackingConfig", () => {
         pixelId: "123456",
         datasetId: "123456",
         capiAccessToken: "short",
-        pageViewEnabled: "on",
+        pageLoadMetaEvent: "PageView",
         confirmCustomConfigRemoval: "false",
       }),
     );
 
     expect(result.errors.capiAccessToken).toMatch(/minimal terdiri dari 16/);
     expect(database.transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a page-load event outside the approved standard-event list", async () => {
+    const result = await saveBranchMetaTrackingConfig(
+      initialState,
+      formData({
+        branchId: branch.id,
+        mode: "inherit",
+        pixelId: "",
+        datasetId: "",
+        capiAccessToken: "",
+        pageLoadMetaEvent: "Custom",
+        confirmCustomConfigRemoval: "false",
+      }),
+    );
+
+    expect(result.errors.pageLoadMetaEvent).toBeTruthy();
+    expect(mocks.getDatabase).not.toHaveBeenCalled();
   });
 });

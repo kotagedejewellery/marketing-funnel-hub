@@ -14,6 +14,7 @@ import {
   encryptMetaCapiToken,
   type BranchMetaTrackingMode,
 } from "@/modules/tracking/branch-meta-config";
+import { metaStandardEventNames } from "@/modules/tracking/meta-event";
 import { requireTechnicalAdmin } from "@/modules/admin/access";
 
 const branchMetaTrackingSchema = z.object({
@@ -22,7 +23,7 @@ const branchMetaTrackingSchema = z.object({
   pixelId: z.string().trim(),
   datasetId: z.string().trim(),
   capiAccessToken: z.string().trim(),
-  pageViewEnabled: z.boolean(),
+  pageLoadMetaEvent: z.enum(metaStandardEventNames).nullable(),
   confirmCustomConfigRemoval: z.boolean(),
 });
 
@@ -49,7 +50,8 @@ export async function saveBranchMetaTrackingConfig(
     pixelId: formData.get("pixelId") ?? "",
     datasetId: formData.get("datasetId") ?? "",
     capiAccessToken: formData.get("capiAccessToken") ?? "",
-    pageViewEnabled: formData.get("pageViewEnabled") === "on",
+    pageLoadMetaEvent: (formData.get("pageLoadMetaEvent") || null) as
+      (typeof metaStandardEventNames)[number] | null,
     confirmCustomConfigRemoval:
       formData.get("confirmCustomConfigRemoval") === "true",
   });
@@ -109,13 +111,25 @@ export async function saveBranchMetaTrackingConfig(
   try {
     const values = await (async () => {
       const mode = input.mode as BranchMetaTrackingMode;
-      if (mode !== "custom") {
+      if (mode === "disabled") {
         return {
           mode,
           pixelId: null,
           datasetId: null,
           capiAccessTokenEncrypted: null,
-          pageViewEnabled: mode === "disabled" ? false : input.pageViewEnabled,
+          pageViewEnabled: false,
+          pageLoadMetaEvent: null,
+          updatedAt: new Date(),
+        };
+      }
+      if (mode === "inherit") {
+        return {
+          mode,
+          pixelId: null,
+          datasetId: null,
+          capiAccessTokenEncrypted: null,
+          pageViewEnabled: Boolean(input.pageLoadMetaEvent),
+          pageLoadMetaEvent: input.pageLoadMetaEvent,
           updatedAt: new Date(),
         };
       }
@@ -126,7 +140,8 @@ export async function saveBranchMetaTrackingConfig(
         capiAccessTokenEncrypted: input.capiAccessToken
           ? encryptMetaCapiToken(input.capiAccessToken)
           : current!.capiAccessTokenEncrypted,
-        pageViewEnabled: input.pageViewEnabled,
+        pageViewEnabled: Boolean(input.pageLoadMetaEvent),
+        pageLoadMetaEvent: input.pageLoadMetaEvent,
         updatedAt: new Date(),
       };
     })();
@@ -152,7 +167,7 @@ export async function saveBranchMetaTrackingConfig(
           pixelConfigured: input.mode === "custom",
           datasetConfigured: input.mode === "custom",
           capiTokenChanged: Boolean(input.capiAccessToken),
-          pageViewEnabled: values.pageViewEnabled,
+          pageLoadMetaEvent: values.pageLoadMetaEvent,
         },
       });
     });

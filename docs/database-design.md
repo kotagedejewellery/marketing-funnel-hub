@@ -71,6 +71,8 @@ Analytics membaca events dan branches; ekspor CSV mencatat satu audit log `entit
 
 Migrasi `0014_branch_meta_tracking_configs` menambah `branch_meta_tracking_configs` dengan `branch_id` sebagai PK/FK `branches.id` `ON DELETE RESTRICT`, `mode` (`inherit`/`custom`/`disabled`), `pixel_id?`, `dataset_id?`, `capi_access_token_encrypted?`, `page_view_enabled`, dan timestamp. CHECK database mewajibkan tiga nilai konfigurasi khusus bersama-sama pada mode `custom`, dan bernilai `NULL` pada mode lain. Tidak ada token plaintext dalam tabel, audit, DTO browser, atau log. Tidak ada event, attribution, identity, atau data customer baru. Satu baris yang belum ada diperlakukan sebagai `inherit`; `disabled` hanya menghentikan provider Meta, bukan pencatatan event internal.
 
+Migrasi `0015_meta_page_load_event` menambah `page_load_meta_event?` dengan CHECK daftar standar: `PageView`, `ViewContent`, `AddToCart`, `AddToWishlist`, `InitiateCheckout`, `AddPaymentInfo`, `Purchase`, `Lead`, `CompleteRegistration`, atau `Contact`. Nilai `NULL` berarti tidak meneruskan page load ke Meta; event custom tidak dapat disimpan. Backfill mengubah `page_view_enabled=true` menjadi `PageView` dan `false` menjadi `NULL`, sehingga konfigurasi lama tidak berubah. Kolom lama tetap dipelihara sebagai indikator kompatibilitas dan selalu disimpan selaras dengan nilai baru; resolver provider hanya membaca `page_load_meta_event`. Event internal tetap `PageView`, sedangkan Pixel dan CAPI menerima nama provider yang dipilih memakai `event_id` sama.
+
 ## Aturan baca dan integritas
 
 ### Ekstensi ulasan Google manual melalui Firecrawl (disetujui 24 September 2026)

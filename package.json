@@ -22,7 +22,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "drizzle-kit migrate",
+    "db:migrate:local": "node --import ./scripts/drizzle-userinfo-shim.mjs ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:migrate:live": "node --env-file=.env.live.local ./node_modules/drizzle-kit/bin.cjs migrate --config=drizzle.live.config.ts"
   },
   "dependencies": {

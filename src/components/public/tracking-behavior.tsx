@@ -3,7 +3,9 @@
 import { useEffect, useRef } from "react";
 
 import { clientEnv } from "@/lib/env/client";
+import type { BrowserMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 import type { CanonicalEvent } from "@/modules/tracking/event";
+import { resolveMetaProviderEvent } from "@/modules/tracking/meta-event";
 
 export type TrackingContext = Pick<
   CanonicalEvent,
@@ -74,19 +76,20 @@ function activateProviders(metaPixelId: string | null) {
 
 function sendEvent(
   event: CanonicalEvent,
-  metaTracking: { pixelId: string | null; shouldSendToMeta: boolean },
+  metaTracking: BrowserMetaTrackingConfig,
 ) {
   const browser = window as ProviderWindow;
+  const metaEvent = resolveMetaProviderEvent(
+    event.eventName,
+    metaTracking.pageLoadMetaEvent,
+  );
 
-  if (
-    metaTracking.shouldSendToMeta &&
-    activateProviders(metaTracking.pixelId)
-  ) {
+  if (metaEvent && activateProviders(metaTracking.pixelId)) {
     try {
       browser.fbq!(
-        event.eventName === "LinkClick" ? "trackSingleCustom" : "trackSingle",
+        metaEvent.type === "custom" ? "trackSingleCustom" : "trackSingle",
         metaTracking.pixelId,
-        event.eventName,
+        metaEvent.name,
         {
           product_category: event.product?.category ?? null,
           branch: event.branch?.name ?? null,
@@ -129,7 +132,7 @@ export function TrackingBehavior({
   products: TrackingProduct[];
   links: TrackingLink[];
   branch: { id: string; name: string };
-  metaTracking: { pixelId: string | null; pageViewEnabled: boolean };
+  metaTracking: BrowserMetaTrackingConfig;
 }) {
   const pageViewSent = useRef(false);
 
@@ -162,10 +165,7 @@ export function TrackingBehavior({
           branch: null,
           cta: null,
         },
-        {
-          pixelId: metaTracking.pixelId,
-          shouldSendToMeta: metaTracking.pageViewEnabled,
-        },
+        metaTracking,
       );
     }
 
@@ -184,7 +184,7 @@ export function TrackingBehavior({
             cta: "link",
             link,
           },
-          { pixelId: metaTracking.pixelId, shouldSendToMeta: true },
+          metaTracking,
         );
         return;
       }
@@ -204,7 +204,7 @@ export function TrackingBehavior({
           branch: { id: productBranch.id, name: productBranch.name },
           cta: "whatsapp",
         },
-        { pixelId: metaTracking.pixelId, shouldSendToMeta: true },
+        metaTracking,
       );
     }
 

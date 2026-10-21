@@ -13,34 +13,40 @@ import {
   browserMetaTrackingConfig,
   encryptMetaCapiToken,
   isMetaCapiTokenDecryptable,
+  pageLoadMetaEventForConfig,
 } from "./branch-meta-config";
 
 describe("branch Meta tracking configuration", () => {
   it("uses the global pixel when a branch inherits configuration", () => {
     expect(browserMetaTrackingConfig(null)).toEqual({
       pixelId: "987654321",
-      pageViewEnabled: true,
+      pageLoadMetaEvent: "PageView",
     });
   });
 
-  it("allows a branch to stop only PageView while retaining the global pixel", () => {
+  it("preserves an explicit no-page-load-event choice", () => {
+    expect(pageLoadMetaEventForConfig(null)).toBe("PageView");
+    expect(pageLoadMetaEventForConfig({ pageLoadMetaEvent: null })).toBeNull();
+  });
+
+  it("allows a branch to stop only the Meta page-load event while retaining the global pixel", () => {
     expect(
       browserMetaTrackingConfig({
         mode: "inherit",
         pixelId: null,
-        pageViewEnabled: false,
+        pageLoadMetaEvent: null,
       }),
-    ).toEqual({ pixelId: "987654321", pageViewEnabled: false });
+    ).toEqual({ pixelId: "987654321", pageLoadMetaEvent: null });
   });
 
-  it("keeps a branch custom pixel and its PageView preference", () => {
+  it("keeps a branch custom pixel and its selected page-load event", () => {
     expect(
       browserMetaTrackingConfig({
         mode: "custom",
         pixelId: "123456789",
-        pageViewEnabled: false,
+        pageLoadMetaEvent: "ViewContent",
       }),
-    ).toEqual({ pixelId: "123456789", pageViewEnabled: false });
+    ).toEqual({ pixelId: "123456789", pageLoadMetaEvent: "ViewContent" });
   });
 
   it("does not expose a pixel when Meta is disabled for a branch", () => {
@@ -48,9 +54,9 @@ describe("branch Meta tracking configuration", () => {
       browserMetaTrackingConfig({
         mode: "disabled",
         pixelId: null,
-        pageViewEnabled: true,
+        pageLoadMetaEvent: "PageView",
       }),
-    ).toEqual({ pixelId: null, pageViewEnabled: false });
+    ).toEqual({ pixelId: null, pageLoadMetaEvent: null });
   });
 
   it("detects whether a stored CAPI token can still be decrypted", () => {

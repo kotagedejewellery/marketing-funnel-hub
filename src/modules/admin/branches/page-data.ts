@@ -19,7 +19,10 @@ import {
 
 import { getBranch } from "./data";
 import { branchSectionKeys, branchSectionLabels } from "./page-validation";
-import { isMetaCapiTokenDecryptable } from "@/modules/tracking/branch-meta-config";
+import {
+  isMetaCapiTokenDecryptable,
+  pageLoadMetaEventForConfig,
+} from "@/modules/tracking/branch-meta-config";
 
 function withSectionLabel<T extends { sectionKey: string; label: string }>(
   section: T,
@@ -119,7 +122,7 @@ export async function getBranchPageSettings(id: string) {
         pixelId: branchMetaTrackingConfigs.pixelId,
         datasetId: branchMetaTrackingConfigs.datasetId,
         capiTokenConfigured: branchMetaTrackingConfigs.capiAccessTokenEncrypted,
-        pageViewEnabled: branchMetaTrackingConfigs.pageViewEnabled,
+        pageLoadMetaEvent: branchMetaTrackingConfigs.pageLoadMetaEvent,
       })
       .from(branchMetaTrackingConfigs)
       .where(eq(branchMetaTrackingConfigs.branchId, branch.id))
@@ -172,7 +175,9 @@ export async function getBranchPageSettings(id: string) {
       pixelId: metaTrackingRows[0]?.pixelId ?? null,
       datasetId: metaTrackingRows[0]?.datasetId ?? null,
       capiTokenConfigured: Boolean(metaTrackingRows[0]?.capiTokenConfigured),
-      pageViewEnabled: metaTrackingRows[0]?.pageViewEnabled ?? true,
+      pageLoadMetaEvent: pageLoadMetaEventForConfig(
+        metaTrackingRows[0] ?? null,
+      ),
       globalConfigured: Boolean(
         serverEnv.NEXT_PUBLIC_META_PIXEL_ID &&
         serverEnv.META_CAPI_DATASET_ID &&

@@ -7,6 +7,10 @@ import { eq } from "drizzle-orm";
 import { getDatabase } from "@/lib/db/client";
 import { branchMetaTrackingConfigs } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
+import {
+  parseMetaStandardEventName,
+  type MetaStandardEventName,
+} from "@/modules/tracking/meta-event";
 
 export type BranchMetaTrackingMode = "inherit" | "custom" | "disabled";
 
@@ -15,12 +19,12 @@ type StoredConfig = {
   pixelId: string | null;
   datasetId: string | null;
   capiAccessTokenEncrypted: string | null;
-  pageViewEnabled: boolean;
+  pageLoadMetaEvent: string | null;
 };
 
 export type BrowserMetaTrackingConfig = {
   pixelId: string | null;
-  pageViewEnabled: boolean;
+  pageLoadMetaEvent: MetaStandardEventName | null;
 };
 
 export type ServerMetaTrackingConfig = BrowserMetaTrackingConfig & {
@@ -29,6 +33,14 @@ export type ServerMetaTrackingConfig = BrowserMetaTrackingConfig & {
 };
 
 const reportedDecryptionFailures = new Set<string>();
+
+export function pageLoadMetaEventForConfig(
+  config: Pick<StoredConfig, "pageLoadMetaEvent"> | null,
+): MetaStandardEventName | null {
+  return config
+    ? parseMetaStandardEventName(config.pageLoadMetaEvent)
+    : "PageView";
+}
 
 function encryptionKey() {
   const value = serverEnv.META_TRACKING_CONFIG_ENCRYPTION_KEY;
@@ -79,20 +91,20 @@ export function isMetaCapiTokenDecryptable(value: string | null) {
 }
 
 export function browserMetaTrackingConfig(
-  config: Pick<StoredConfig, "mode" | "pixelId" | "pageViewEnabled"> | null,
+  config: Pick<StoredConfig, "mode" | "pixelId" | "pageLoadMetaEvent"> | null,
 ): BrowserMetaTrackingConfig {
   if (config?.mode === "disabled") {
-    return { pixelId: null, pageViewEnabled: false };
+    return { pixelId: null, pageLoadMetaEvent: null };
   }
   if (config?.mode === "custom") {
     return {
       pixelId: config.pixelId,
-      pageViewEnabled: config.pageViewEnabled,
+      pageLoadMetaEvent: parseMetaStandardEventName(config.pageLoadMetaEvent),
     };
   }
   return {
     pixelId: serverEnv.NEXT_PUBLIC_META_PIXEL_ID ?? null,
-    pageViewEnabled: config?.pageViewEnabled ?? true,
+    pageLoadMetaEvent: pageLoadMetaEventForConfig(config),
   };
 }
 
@@ -106,7 +118,7 @@ export async function loadServerMetaTrackingConfig(
       datasetId: branchMetaTrackingConfigs.datasetId,
       capiAccessTokenEncrypted:
         branchMetaTrackingConfigs.capiAccessTokenEncrypted,
-      pageViewEnabled: branchMetaTrackingConfigs.pageViewEnabled,
+      pageLoadMetaEvent: branchMetaTrackingConfigs.pageLoadMetaEvent,
     })
     .from(branchMetaTrackingConfigs)
     .where(eq(branchMetaTrackingConfigs.branchId, branchId))

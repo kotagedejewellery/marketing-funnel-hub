@@ -45,7 +45,13 @@ const request = new Request("https://kgj.example/api/events", {
 
 describe("Meta CAPI adapter", () => {
   it("reuses the canonical event ID and maps authoritative product and branch context", () => {
-    const payload = metaPayload(event, resolved, request, { fbp: "fb.1.test" });
+    const payload = metaPayload(
+      event,
+      resolved,
+      request,
+      { fbp: "fb.1.test" },
+      "Contact",
+    );
     expect(payload?.data[0]).toMatchObject({
       event_name: "Contact",
       event_id: event.eventId,
@@ -85,7 +91,7 @@ describe("Meta CAPI adapter", () => {
         { fbp: "fb.1.test" },
         {
           pixelId: null,
-          pageViewEnabled: false,
+          pageLoadMetaEvent: null,
           datasetId: null,
           capiAccessToken: null,
         },
@@ -96,7 +102,7 @@ describe("Meta CAPI adapter", () => {
     }
   });
 
-  it("respects a branch PageView setting without suppressing internal events", async () => {
+  it("does not send a page load when its Meta event is disabled", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response(null, { status: 200 }));
@@ -114,12 +120,49 @@ describe("Meta CAPI adapter", () => {
         { fbp: "fb.1.test" },
         {
           pixelId: "123456",
-          pageViewEnabled: false,
+          pageLoadMetaEvent: null,
           datasetId: "123456",
           capiAccessToken: "test-token-not-for-network",
         },
       );
       expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("maps a page load to the configured standard Meta event", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    const pageView = {
+      ...event,
+      eventName: "PageView" as const,
+      product: null,
+      branch: null,
+      cta: null,
+    };
+    try {
+      await sendMetaCapi(
+        pageView,
+        { product: null, branch: null, link: null },
+        request,
+        { fbp: "fb.1.test" },
+        {
+          pixelId: "123456",
+          pageLoadMetaEvent: "ViewContent",
+          datasetId: "123456",
+          capiAccessToken: "test-token-not-for-network",
+        },
+      );
+
+      const requestBody = JSON.parse(
+        String(fetchMock.mock.calls[0]?.[1]?.body),
+      ) as { data: Array<{ event_id: string; event_name: string }> };
+      expect(requestBody.data[0]).toMatchObject({
+        event_id: pageView.eventId,
+        event_name: "ViewContent",
+      });
     } finally {
       fetchMock.mockRestore();
     }
