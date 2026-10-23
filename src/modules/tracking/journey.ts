@@ -11,8 +11,11 @@ import type { TrackingContext } from "@/components/public/tracking-behavior";
 
 export const sessionCookieName = "kgj_sid";
 export const attributionCookieName = "kgj_attr";
+export const externalIdCookieName = "kgj_eid";
 export const trackingContextHeaderName = "x-kgj-tracking-context";
-const maxAge = 30 * 60;
+const sessionMaxAge = 30 * 60;
+const externalIdMaxAge = 180 * 24 * 60 * 60;
+const fbcMaxAge = 90 * 24 * 60 * 60;
 const keys = [
   "utmSource",
   "utmMedium",
@@ -75,6 +78,7 @@ function explicitUtms(search: URLSearchParams): Utms | null {
 export function getTrackingContext(
   sessionId: string | undefined,
   attributionCookie: string | undefined,
+  externalId?: string,
 ): TrackingContext | null {
   if (!z.uuid().safeParse(sessionId).success) return null;
   const utms = readUtms(attributionCookie, sessionId!);
@@ -82,6 +86,7 @@ export function getTrackingContext(
   if (attributionCookie && !utms) return null;
   return {
     anonymousSessionId: sessionId!,
+    metaExternalId: z.uuid().safeParse(externalId).success ? externalId! : null,
     attribution: {
       source: utms?.utmSource ?? null,
       campaign: utms?.utmCampaign ?? null,
@@ -96,9 +101,11 @@ export function parseTrackingContextHeader(value: string | null) {
     const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
     const sessionId = z.uuid().safeParse(parsed.anonymousSessionId);
     const utms = utmsSchema.safeParse(parsed.attribution);
-    if (!sessionId.success || !utms.success) return null;
+    const externalId = z.uuid().nullable().safeParse(parsed.metaExternalId);
+    if (!sessionId.success || !utms.success || !externalId.success) return null;
     return {
       anonymousSessionId: sessionId.data,
+      metaExternalId: externalId.data,
       attribution: {
         source: utms.data.utmSource,
         campaign: utms.data.utmCampaign,
@@ -126,14 +133,19 @@ export function updatePublicJourney(request: NextRequest) {
     sessionId = randomUUID();
   }
   const utms = explicit ?? previous;
-  const options = {
+  const externalId = request.cookies.get(externalIdCookieName)?.value;
+  const metaExternalId = z.uuid().safeParse(externalId).success
+    ? externalId!
+    : randomUUID();
+  const sessionOptions = {
     httpOnly: true,
     secure: serverEnv.NEXT_PUBLIC_APP_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
-    maxAge,
+    maxAge: sessionMaxAge,
   };
   request.cookies.set(sessionCookieName, sessionId);
+  request.cookies.set(externalIdCookieName, metaExternalId);
   if (utms)
     request.cookies.set(attributionCookieName, encodeUtms(utms, sessionId));
   else request.cookies.delete(attributionCookieName);
@@ -141,6 +153,7 @@ export function updatePublicJourney(request: NextRequest) {
   const context = getTrackingContext(
     sessionId,
     utms ? encodeUtms(utms, sessionId) : undefined,
+    metaExternalId,
   );
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(
@@ -148,18 +161,34 @@ export function updatePublicJourney(request: NextRequest) {
     Buffer.from(
       JSON.stringify({
         anonymousSessionId: context?.anonymousSessionId,
+        metaExternalId: context?.metaExternalId,
         attribution: utms ?? Object.fromEntries(keys.map((key) => [key, null])),
       }),
     ).toString("base64url"),
   );
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.cookies.set(sessionCookieName, sessionId, options);
+  response.cookies.set(sessionCookieName, sessionId, sessionOptions);
+  response.cookies.set(externalIdCookieName, metaExternalId, {
+    ...sessionOptions,
+    maxAge: externalIdMaxAge,
+  });
   if (utms)
     response.cookies.set(
       attributionCookieName,
       encodeUtms(utms, sessionId),
-      options,
+      sessionOptions,
     );
   else if (signed) response.cookies.delete(attributionCookieName);
+
+  const fbclid = request.nextUrl.searchParams.get("fbclid")?.trim();
+  if (fbclid && /^[A-Za-z0-9_-]{1,512}$/.test(fbclid)) {
+    response.cookies.set("_fbc", `fb.1.${Date.now()}.${fbclid}`, {
+      httpOnly: false,
+      secure: serverEnv.NEXT_PUBLIC_APP_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: fbcMaxAge,
+    });
+  }
   return response;
 }

@@ -49,14 +49,21 @@ describe("Meta CAPI adapter", () => {
       event,
       resolved,
       request,
-      { fbp: "fb.1.test" },
+      {
+        fbp: "fb.1.test",
+        externalId: "2ad5c767-2f2c-4d45-a790-b3ddc47e9d16",
+      },
       "Contact",
     );
     expect(payload?.data[0]).toMatchObject({
       event_name: "Contact",
       event_id: event.eventId,
       action_source: "website",
-      user_data: { fbp: "fb.1.test", client_user_agent: "Test Browser" },
+      user_data: {
+        fbp: "fb.1.test",
+        external_id: "2ad5c767-2f2c-4d45-a790-b3ddc47e9d16",
+        client_user_agent: "Test Browser",
+      },
       custom_data: {
         content_category: "wedding-ring",
         branch: "Surabaya",
@@ -64,6 +71,17 @@ describe("Meta CAPI adapter", () => {
       },
     });
     expect(JSON.stringify(payload)).not.toContain(event.anonymousSessionId);
+  });
+
+  it("does not use an invalid external identifier", () => {
+    const payload = metaPayload(
+      event,
+      resolved,
+      request,
+      { externalId: "not-a-uuid" },
+      "Contact",
+    );
+    expect(payload?.data[0].user_data).not.toHaveProperty("external_id");
   });
 
   it("does not send when there is no approved matching data", async () => {

@@ -10,7 +10,7 @@ import { resolveMetaProviderEvent } from "@/modules/tracking/meta-event";
 export type TrackingContext = Pick<
   CanonicalEvent,
   "anonymousSessionId" | "attribution"
->;
+> & { metaExternalId: string | null };
 
 type TrackingProduct = {
   id: string;
@@ -46,7 +46,10 @@ function loadProviderScript(id: string, src: string) {
   document.head.append(script);
 }
 
-function activateProviders(metaPixelId: string | null) {
+function activateProviders(
+  metaPixelId: string | null,
+  metaExternalId: string | null,
+) {
   if (clientEnv.NEXT_PUBLIC_APP_ENV !== "production" || !metaPixelId)
     return false;
   const browser = window as ProviderWindow;
@@ -67,16 +70,48 @@ function activateProviders(metaPixelId: string | null) {
   }
   const initializedIds = (browser.__kgjMetaPixelIds ??= new Set());
   if (!initializedIds.has(metaPixelId)) {
-    browser.fbq("init", metaPixelId);
+    if (metaExternalId)
+      browser.fbq("init", metaPixelId, { external_id: metaExternalId });
+    else browser.fbq("init", metaPixelId);
     initializedIds.add(metaPixelId);
   }
   browser.fbq("consent", "grant");
   return true;
 }
 
+function hasCookie(name: string) {
+  return document.cookie
+    .split("; ")
+    .some((cookie) => cookie.startsWith(`${name}=`));
+}
+
+function sendInternalEvent(event: CanonicalEvent) {
+  try {
+    void fetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(event),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // Internal event failure must not change a WhatsApp click.
+  }
+}
+
+function sendPageViewAfterPixel(event: CanonicalEvent, attempts = 10) {
+  if (hasCookie("_fbp") || attempts === 0) {
+    sendInternalEvent(event);
+    return;
+  }
+  // shortcut: wait at most 500 ms; a provider outage must not delay PageView indefinitely.
+  window.setTimeout(() => sendPageViewAfterPixel(event, attempts - 1), 50);
+}
+
 function sendEvent(
   event: CanonicalEvent,
   metaTracking: BrowserMetaTrackingConfig,
+  metaExternalId: string | null,
 ) {
   const browser = window as ProviderWindow;
   const metaEvent = resolveMetaProviderEvent(
@@ -84,7 +119,9 @@ function sendEvent(
     metaTracking.whatsappCtaMetaEvent,
   );
 
-  if (metaEvent && activateProviders(metaTracking.pixelId)) {
+  const metaPixelActive =
+    metaEvent && activateProviders(metaTracking.pixelId, metaExternalId);
+  if (metaPixelActive) {
     try {
       browser.fbq!(
         metaEvent.type === "custom" ? "trackSingleCustom" : "trackSingle",
@@ -108,17 +145,9 @@ function sendEvent(
     }
   }
 
-  try {
-    void fetch("/api/events", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify(event),
-      keepalive: true,
-    }).catch(() => {});
-  } catch {
-    // Internal event failure must not change a WhatsApp click.
-  }
+  if (event.eventName === "PageView" && metaPixelActive && !hasCookie("_fbp"))
+    sendPageViewAfterPixel(event);
+  else sendInternalEvent(event);
 }
 
 export function TrackingBehavior({
@@ -166,6 +195,7 @@ export function TrackingBehavior({
           cta: null,
         },
         metaTracking,
+        context.metaExternalId,
       );
     }
 
@@ -185,6 +215,7 @@ export function TrackingBehavior({
             link,
           },
           metaTracking,
+          context.metaExternalId,
         );
         return;
       }
@@ -205,6 +236,7 @@ export function TrackingBehavior({
           cta: "whatsapp",
         },
         metaTracking,
+        context.metaExternalId,
       );
     }
 

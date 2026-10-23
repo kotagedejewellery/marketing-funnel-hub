@@ -7,6 +7,7 @@ import { LinkBio } from "@/components/public/link-bio";
 import { serverEnv } from "@/lib/env/server";
 import {
   attributionCookieName,
+  externalIdCookieName,
   getTrackingContext,
   parseTrackingContextHeader,
   sessionCookieName,
@@ -27,6 +28,7 @@ export async function renderBranchLinkBio(slug: string) {
       ? (getTrackingContext(
           cookieStore.get(sessionCookieName)?.value,
           cookieStore.get(attributionCookieName)?.value,
+          cookieStore.get(externalIdCookieName)?.value,
         ) ??
         parseTrackingContextHeader(
           (await headers()).get(trackingContextHeaderName),

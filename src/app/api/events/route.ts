@@ -12,6 +12,7 @@ import { sendMetaCapi } from "@/modules/tracking/meta-capi";
 import { loadServerMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 import {
   attributionCookieName,
+  externalIdCookieName,
   getTrackingContext,
   sessionCookieName,
 } from "@/modules/tracking/journey";
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
   const context = getTrackingContext(
     cookieStore.get(sessionCookieName)?.value,
     cookieStore.get(attributionCookieName)?.value,
+    cookieStore.get(externalIdCookieName)?.value,
   );
   if (!context)
     return error(403, "INVALID_SESSION", "Tracking session is invalid.");
@@ -204,6 +206,7 @@ export async function POST(request: Request) {
           {
             fbp: cookieStore.get("_fbp")?.value,
             fbc: cookieStore.get("_fbc")?.value,
+            externalId: cookieStore.get(externalIdCookieName)?.value,
           },
           metaTracking,
         );

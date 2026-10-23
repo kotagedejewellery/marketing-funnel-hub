@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isIP } from "node:net";
+import * as z from "zod";
 
 import { serverEnv } from "@/lib/env/server";
 import type { ServerMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
@@ -11,12 +12,13 @@ import type { resolveEventContext } from "@/modules/tracking/store";
 type ResolvedContext = NonNullable<
   Awaited<ReturnType<typeof resolveEventContext>>
 >;
+type MetaCookieValues = { fbp?: string; fbc?: string; externalId?: string };
 
 export function metaPayload(
   event: CanonicalEvent,
   resolved: ResolvedContext,
   request: Request,
-  cookieValues: { fbp?: string; fbc?: string },
+  cookieValues: MetaCookieValues,
   metaEventName: string,
   testEventCode?: string | null,
 ) {
@@ -34,6 +36,9 @@ export function metaPayload(
       cookieValues.fbp.length <= 200 && { fbp: cookieValues.fbp }),
     ...(cookieValues.fbc &&
       cookieValues.fbc.length <= 200 && { fbc: cookieValues.fbc }),
+    ...(z.uuid().safeParse(cookieValues.externalId).success && {
+      external_id: cookieValues.externalId,
+    }),
   };
   if (Object.keys(userData).length === 0) return null;
 
@@ -73,7 +78,7 @@ export async function sendMetaCapi(
   event: CanonicalEvent,
   resolved: ResolvedContext,
   request: Request,
-  cookieValues: { fbp?: string; fbc?: string },
+  cookieValues: MetaCookieValues,
   config?: ServerMetaTrackingConfig,
 ) {
   const dataSourceId = config
