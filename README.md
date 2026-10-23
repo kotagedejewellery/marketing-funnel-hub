@@ -7,10 +7,18 @@ first-party events.
 
 ## Current status
 
-The repository contains the P0 application and its three consolidated source-of-truth
-documents. Supabase Local has the ten approved application tables, RLS/grants,
-settings/section seed, and two Storage buckets. See `tasks/` for implementation
-status; the summary below records the earlier foundation milestones only.
+The repository contains the implemented P0 application and its source-of-truth
+documents. The public funnel is **Link Bio → product interest → branch
+WhatsApp**; its canonical events are `PageView`, `Contact`, and `LinkClick`.
+Supabase Local provides the approved application schema, RLS/grants, seed data,
+and Storage buckets.
+
+The owner manages production deployment, DNS, secrets, live migrations, WAF/rate
+limits, retention scheduling, and provider-account verification. A successful
+build or CI run does not prove that Meta received or deduplicated production
+events; verify that explicitly in Meta Events Manager after deployment.
+
+### Historical foundation notes
 
 - T0-01 repository/Git baseline: complete (user-managed)
 - T0-02 toolchain pinning: complete
@@ -166,6 +174,38 @@ Checkout repository pada VPS harus sudah berada di
 `.env.production` yang telah diisi. Workflow sengaja tidak menjalankan migrasi
 database; jalankan dan setujui migrasi live secara terpisah sebelum deploy kode
 yang membutuhkannya.
+
+## Meta tracking release checklist
+
+Before setting `TRACKING_ENABLED=true` in production:
+
+1. In CMS, set a public privacy-policy URL that explains automatic Meta Pixel,
+   CAPI, and pseudonymous first-party cookie processing.
+2. Configure each branch as **inherit global**, **custom**, or **disabled**. A
+   technical admin may save a branch Pixel ID, CAPI token, optional Test Event
+   Code, and one standard Meta event for the WhatsApp CTA. The page-load event
+   is always `PageView`.
+3. For global fallback, set both `NEXT_PUBLIC_META_PIXEL_ID` and
+   `META_CAPI_ACCESS_TOKEN`. When using custom branch CAPI credentials, also
+   set server-only `META_TRACKING_CONFIG_ENCRYPTION_KEY` to 64 hexadecimal
+   characters. Do not add a separate CAPI Dataset ID.
+4. Deploy the application, then enable `TRACKING_ENABLED=true`. No database
+   migration is required for pseudonymous Advanced Matching.
+
+When tracking is enabled, the application sends the same `event_id` to Pixel
+and CAPI for deduplication. It forwards `_fbp` when Meta Pixel has created it,
+creates `_fbc` from a valid `fbclid` landing URL, and creates a 180-day
+first-party random UUID cookie (`kgj_eid`) as Meta `external_id`. These values
+are pseudonymous transport data: they are not stored in internal events,
+database tables, audit records, or ordinary logs.
+
+To verify production, enter an optional Test Event Code in the branch CMS,
+open a Link Bio destination URL from Meta (or one with a valid `fbclid`), then
+click a WhatsApp CTA. In Meta Test Events, confirm browser and server copies
+of `PageView` and CTA event share an `event_id`; confirm `_fbp`, `_fbc` where
+available, and `external_id` in CAPI parameters. Meta controls delivery,
+deduplication status, and Event Match Quality, so those results cannot be
+proven by a local build alone.
 
 ## Documentation
 
