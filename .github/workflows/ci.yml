@@ -57,8 +57,68 @@ jobs:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
     steps:
+      - name: Check VPS SSH
+        id: ssh_probe_1
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 1m
+          command_timeout: 1m
+          script: "true"
+      - name: Wait before SSH retry
+        if: steps.ssh_probe_1.outcome == 'failure'
+        run: sleep 15
+      - name: Retry VPS SSH
+        id: ssh_probe_2
+        if: steps.ssh_probe_1.outcome == 'failure'
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 1m
+          command_timeout: 1m
+          script: "true"
+      - name: Wait before final SSH retry
+        if: >-
+          steps.ssh_probe_1.outcome == 'failure' &&
+          steps.ssh_probe_2.outcome == 'failure'
+        run: sleep 15
+      - name: Retry VPS SSH once more
+        id: ssh_probe_3
+        if: >-
+          steps.ssh_probe_1.outcome == 'failure' &&
+          steps.ssh_probe_2.outcome == 'failure'
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 1m
+          command_timeout: 1m
+          script: "true"
+      - name: Fail when VPS SSH remains unavailable
+        if: >-
+          steps.ssh_probe_1.outcome == 'failure' &&
+          steps.ssh_probe_2.outcome == 'failure' &&
+          steps.ssh_probe_3.outcome == 'failure'
+        run: |
+          echo "::error::VPS menutup koneksi SSH pada tiga percobaan. Periksa sshd, firewall, dan kapasitas VPS."
+          exit 1
       - name: Deploy tested revision to VPS
+        if: >-
+          steps.ssh_probe_1.outcome == 'success' ||
+          steps.ssh_probe_2.outcome == 'success' ||
+          steps.ssh_probe_3.outcome == 'success'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
