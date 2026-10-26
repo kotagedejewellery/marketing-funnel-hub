@@ -126,22 +126,24 @@ the application runtime environment.
 
 ## Docker production
 
-An owner-managed VPS can run the same production application through
-`Dockerfile` and `compose.production.yml`; this is separate from Supabase
-Local and does not start when Docker Desktop starts. The image uses Next.js
-standalone output and mounts `.env.production` only as a BuildKit secret while
-building, then supplies the same ignored file to the running container.
+An owner-managed VPS runs the published production image through
+`compose.production.yml`; this is separate from Supabase Local and does not
+start when Docker Desktop starts. The image uses Next.js standalone output.
+GitHub Actions builds and publishes the image; the VPS only pulls its immutable
+SHA tag and supplies its ignored `.env.production` at runtime.
 
 On the VPS, copy `.env.live.example` to ignored `.env.production`, set
 `NEXT_PUBLIC_SITE_URL=https://link.kotagedejewellery.com`, fill the internal
 `DATABASE_URL` with the `supabase-db` password, create the external Traefik
 network named `proxy`, and ensure the self-hosted Supabase network is named
 `supabase_default`. Traefik must have `web`, `websecure`, and the `letsencrypt`
-certificate resolver. Point the domain's DNS record to the VPS, run reviewed
-live migrations separately, then run:
+certificate resolver. Point the domain's DNS record to the VPS and run reviewed
+live migrations separately. Normal deployment is performed by GitHub Actions;
+for an approved manual recovery, use the exact published image SHA:
 
 ```bash
-docker compose -f compose.production.yml up -d --build
+APP_IMAGE=ghcr.io/kotagedejewellery/marketing-funnel-hub:<git-sha> \
+  docker compose -f compose.production.yml up -d --no-build
 ```
 
 Do not put `DATABASE_LIVE_MIGRATION_URL` or `DATABASE_MIGRATION_URL` in
@@ -154,19 +156,33 @@ headers.
 
 ### Deploy melalui GitHub Actions
 
-`.github/workflows/ci.yml` hanya melakukan deploy setelah workflow `CI`
-untuk push ke `main` selesai sukses. Ia tersambung ke VPS melalui SSH, checkout
-SHA yang telah diuji, lalu membangun ulang dan menjalankan
-`compose.production.yml`; deploy tidak dapat saling tumpang tindih. Perintah
-SSH diberi batas 20 menit karena build image pada VPS dapat melampaui batas
-default action 10 menit. Tambahkan
-secret repository berikut di GitHub sebelum push ke `main`:
+`.github/workflows/ci.yml` hanya melakukan deploy setelah quality gate untuk
+push ke `main` sukses. Ia membangun image untuk SHA tersebut pada GitHub runner,
+menyimpannya sebagai package private GHCR, lalu tersambung ke VPS melalui SSH
+untuk menarik dan menjalankan image yang sama. VPS tidak menjalankan `pnpm`,
+`next build`, atau `docker compose build`; deploy tidak dapat saling tumpang
+tindih. Tambahkan secret repository berikut di GitHub sebelum push ke `main`:
 
 ```text
 VPS_HOST
 VPS_USER
 VPS_SSH_KEY
+DOCKER_BUILD_ENV
+GHCR_USERNAME
+GHCR_PULL_TOKEN
 ```
+
+`DOCKER_BUILD_ENV` adalah isi runtime `.env.production` production, disimpan
+sebagai multiline secret tanpa tanda kutip. Ia hanya dipasang sebagai BuildKit
+secret ketika image dibuat dan tidak disalin ke image. Jaga nilainya selaras
+dengan `.env.production` di VPS, terutama semua `NEXT_PUBLIC_*`; jangan masukkan
+`DATABASE_LIVE_MIGRATION_URL` atau kredensial migrasi. `GHCR_USERNAME` adalah
+akun GitHub pembuat token. `GHCR_PULL_TOKEN` adalah personal access token
+**classic** akun tersebut dengan scope `read:packages` dan akses baca ke package
+`kotagedejewellery/marketing-funnel-hub`; token dipakai hanya saat VPS menarik
+image lalu langsung di-logout. Workflow memakai
+`GITHUB_TOKEN` dan izin `packages: write` untuk menerbitkan image. Bila kebijakan
+organisasi menolak penerbitan, izinkan workflow repository membuat package GHCR.
 
 Checkout repository pada VPS harus sudah berada di
 `/opt/apps/sistem-marketing-funnel/marketing-funnel-hub`, memiliki remote

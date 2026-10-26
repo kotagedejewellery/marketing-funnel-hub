@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   quality:
@@ -53,8 +54,44 @@ jobs:
         if: always() && steps.supabase_start.outcome == 'success'
         run: supabase stop --no-backup
 
-  deploy:
+  publish-image:
     needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and publish immutable production image
+        env:
+          DOCKER_BUILD_ENV: ${{ secrets.DOCKER_BUILD_ENV }}
+          GHCR_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/kotagedejewellery/marketing-funnel-hub:${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$DOCKER_BUILD_ENV" ]; then
+            echo "::error::Set the DOCKER_BUILD_ENV GitHub secret before publishing a production image."
+            exit 1
+          fi
+
+          umask 077
+          printf '%s' "$DOCKER_BUILD_ENV" > .env.production
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username '${{ github.actor }}' --password-stdin
+
+          docker buildx build \
+            --file Dockerfile \
+            --tag "$IMAGE" \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --secret id=app_env,src=.env.production \
+            --push \
+            .
+
+  deploy:
+    needs: [quality, publish-image]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     concurrency:
@@ -120,11 +157,16 @@ jobs:
           steps.ssh_probe_2.outcome == 'success' ||
           steps.ssh_probe_3.outcome == 'success'
         uses: appleboy/ssh-action@v1
+        env:
+          APP_IMAGE: ghcr.io/kotagedejewellery/marketing-funnel-hub:${{ github.sha }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          command_timeout: 20m
+          command_timeout: 10m
+          envs: APP_IMAGE,GHCR_USERNAME,GHCR_PULL_TOKEN
           script: |
             set -euo pipefail
             revision='${{ github.sha }}'
@@ -144,7 +186,16 @@ jobs:
               exit 1
             fi
 
-            docker compose -f compose.production.yml build
-            docker compose -f compose.production.yml up -d --force-recreate
+            if [ -z "${GHCR_USERNAME:-}" ] || [ -z "${GHCR_PULL_TOKEN:-}" ]; then
+              echo "Deployment dibatalkan: GHCR_USERNAME atau GHCR_PULL_TOKEN belum diatur."
+              exit 1
+            fi
+
+            export APP_IMAGE
+            printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
+            trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+
+            docker compose -f compose.production.yml pull app
+            docker compose -f compose.production.yml up -d --no-build --force-recreate app
             docker compose -f compose.production.yml ps
             echo "Deployment selesai pada $revision"

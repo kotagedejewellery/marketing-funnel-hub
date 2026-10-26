@@ -2,11 +2,7 @@ name: marketing-funnel-hub
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      secrets:
-        - app_env
+    image: ${APP_IMAGE:?Set APP_IMAGE to the immutable GHCR image tag before deploying.}
 
     restart: unless-stopped
 
@@ -32,10 +28,6 @@ services:
       - traefik.http.middlewares.kgj-link-bio-https.redirectscheme.scheme=https
 
       - traefik.http.services.kgj-link-bio.loadbalancer.server.port=3000
-
-secrets:
-  app_env:
-    file: .env.production
 
 networks:
   proxy:
