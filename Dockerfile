@@ -11,7 +11,8 @@ RUN apk add --no-cache libc6-compat \
 
 FROM base AS dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=kgj-link-bio-pnpm-store,target=/pnpm/store,sharing=locked \
+  pnpm install --frozen-lockfile --store-dir=/pnpm/store
 
 FROM base AS builder
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -19,7 +20,8 @@ COPY . .
 RUN mkdir -p public
 
 # The live environment is mounted only while Next.js embeds public variables.
-RUN --mount=type=secret,id=app_env,target=/app/.env.production \
+RUN --mount=type=cache,id=kgj-link-bio-next-cache,target=/app/.next/cache,sharing=locked \
+  --mount=type=secret,id=app_env,target=/app/.env.production \
   pnpm build
 
 FROM node:24-alpine AS runner
