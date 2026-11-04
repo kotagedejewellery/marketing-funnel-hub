@@ -13,7 +13,11 @@ vi.mock("@/lib/env/server", () => ({
 
 import { hashAdminPassword, verifyAdminPassword } from "./auth";
 
-const scrypt = promisify(scryptCallback);
+const scrypt = promisify(scryptCallback) as (
+  password: string | Buffer,
+  salt: string | Buffer,
+  keyLength: number,
+) => Promise<Buffer>;
 
 describe("internal admin passwords", () => {
   it("verifies only the password used to create the scrypt hash", async () => {
