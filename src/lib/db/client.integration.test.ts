@@ -18,7 +18,7 @@ describe("Drizzle database client", () => {
   });
 
   it("connects to the local PostgreSQL database through Drizzle", async () => {
-    const connection = createDatabaseClient(process.env.DATABASE_URL);
+    const connection = createDatabaseClient(process.env.DATABASE_URL, false);
 
     try {
       const rows = await connection.db.execute(sql`select 1 as connected`);
@@ -28,8 +28,8 @@ describe("Drizzle database client", () => {
     }
   });
 
-  it("has the ten approved P0 tables and approved extension tables", async () => {
-    const connection = createDatabaseClient(process.env.DATABASE_URL);
+  it("has the domain tables and internal admin-session table", async () => {
+    const connection = createDatabaseClient(process.env.DATABASE_URL, false);
 
     try {
       const rows = await connection.db.execute(sql`
@@ -40,17 +40,18 @@ describe("Drizzle database client", () => {
             'admin_profiles', 'site_settings', 'content_sections', 'campaigns',
             'products', 'branches', 'product_branches', 'links', 'faqs',
             'gallery_items', 'branch_review_sources', 'branch_google_reviews',
-            'branch_meta_tracking_configs', 'events', 'audit_logs'
+            'branch_meta_tracking_configs', 'events', 'audit_logs',
+            'admin_sessions'
           )
       `);
-      expect(rows[0]?.table_count).toBe(15);
+      expect(rows[0]?.table_count).toBe(16);
     } finally {
       await connection.close();
     }
   });
 
-  it("enables RLS and denies direct browser-role reads", async () => {
-    const connection = createDatabaseClient(process.env.DATABASE_URL);
+  it("enables RLS and grants access only through the application policy", async () => {
+    const connection = createDatabaseClient(process.env.DATABASE_URL, false);
 
     try {
       const rows = await connection.db.execute(sql`
@@ -60,17 +61,47 @@ describe("Drizzle database client", () => {
         where schema_info.nspname = 'public'
           and table_info.relkind = 'r'
           and table_info.relrowsecurity
-          and not has_table_privilege('anon', table_info.oid, 'SELECT')
-          and not has_table_privilege('authenticated', table_info.oid, 'SELECT')
+          and exists (
+            select 1
+            from pg_policies as policy_info
+            where policy_info.schemaname = 'public'
+              and policy_info.tablename = table_info.relname
+              and policy_info.policyname = 'kgj_app_access'
+              and 'kgj_app' = any(policy_info.roles)
+          )
+          and (
+            select count(distinct privilege_info.privilege_type)
+            from aclexplode(
+              coalesce(table_info.relacl, acldefault('r', table_info.relowner))
+            ) as privilege_info
+            where privilege_info.grantee = (
+              select oid from pg_roles where rolname = 'kgj_app'
+            )
+              and privilege_info.privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+          ) = 4
+          and not exists (
+            select 1
+            from aclexplode(
+              coalesce(table_info.relacl, acldefault('r', table_info.relowner))
+            ) as public_privilege
+            where public_privilege.grantee = 0
+              and public_privilege.privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+          )
+          and table_info.relname in (
+            'admin_profiles', 'admin_sessions', 'site_settings', 'content_sections',
+            'campaigns', 'products', 'branches', 'product_branches', 'links',
+            'faqs', 'gallery_items', 'branch_review_sources', 'branch_google_reviews',
+            'branch_meta_tracking_configs', 'events', 'audit_logs'
+          )
       `);
-      expect(rows[0]?.protected_tables).toBe(15);
+      expect(rows[0]?.protected_tables).toBe(16);
     } finally {
       await connection.close();
     }
   });
 
   it("restricts Meta page-load configuration to PageView", async () => {
-    const connection = createDatabaseClient(process.env.DATABASE_URL);
+    const connection = createDatabaseClient(process.env.DATABASE_URL, false);
 
     try {
       const rows = await connection.db.execute(sql`

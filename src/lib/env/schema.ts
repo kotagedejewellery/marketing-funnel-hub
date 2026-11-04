@@ -22,12 +22,6 @@ export function optionalEnvironmentString<T extends z.ZodType<string>>(
 export const publicEnvironmentShape = {
   NEXT_PUBLIC_APP_ENV: environmentName,
   NEXT_PUBLIC_SITE_URL: webUrl,
-  NEXT_PUBLIC_SUPABASE_URL: webUrl,
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z
-    .string()
-    .trim()
-    .min(16)
-    .refine((value) => !value.startsWith("sb_secret_")),
   NEXT_PUBLIC_META_PIXEL_ID: optionalEnvironmentString(
     z.string().regex(/^\d+$/),
   ),
@@ -37,16 +31,12 @@ export function requireHttpsOutsideLocal(
   environment: {
     NEXT_PUBLIC_APP_ENV: z.infer<typeof environmentName>;
     NEXT_PUBLIC_SITE_URL: string;
-    NEXT_PUBLIC_SUPABASE_URL: string;
   },
   context: z.RefinementCtx,
 ) {
   if (environment.NEXT_PUBLIC_APP_ENV === "local") return;
 
-  for (const variable of [
-    "NEXT_PUBLIC_SITE_URL",
-    "NEXT_PUBLIC_SUPABASE_URL",
-  ] as const) {
+  for (const variable of ["NEXT_PUBLIC_SITE_URL"] as const) {
     let protocol: string;
     try {
       protocol = new URL(environment[variable]).protocol;

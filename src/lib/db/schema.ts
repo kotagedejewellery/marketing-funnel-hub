@@ -20,6 +20,8 @@ export const adminProfiles = pgTable(
   "admin_profiles",
   {
     id: uuid("id").primaryKey(),
+    email: text("email").notNull().unique(),
+    passwordHash: text("password_hash"),
     displayName: text("display_name"),
     role: text("role").notNull(),
     isActive: boolean("is_active").notNull().default(true),
@@ -34,6 +36,27 @@ export const adminProfiles = pgTable(
     check(
       "admin_profiles_role_check",
       sql`${table.role} in ('admin', 'technical_admin')`,
+    ),
+  ],
+).enableRLS();
+
+export const adminSessions = pgTable(
+  "admin_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    adminId: uuid("admin_id")
+      .notNull()
+      .references(() => adminProfiles.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("admin_sessions_admin_expires_idx").on(
+      table.adminId,
+      table.expiresAt,
     ),
   ],
 ).enableRLS();

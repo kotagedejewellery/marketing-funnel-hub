@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import * as z from "zod";
 
-import { createBrowserAuth } from "@/lib/supabase/client";
-
 const loginSchema = z.object({
   email: z.email("Masukkan alamat email yang valid."),
   password: z.string().min(1, "Masukkan kata sandi."),
@@ -42,11 +40,16 @@ export function LoginForm() {
 
     setPending(true);
     try {
-      const { error: authError } = await createBrowserAuth().signInWithPassword(
-        result.data,
-      );
-      if (authError) {
-        setError("Email atau kata sandi tidak sesuai.");
+      const response = await fetch("/api/admin/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(result.data),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        setError(body?.message ?? "Email atau kata sandi tidak sesuai.");
         return;
       }
       router.replace("/admin");

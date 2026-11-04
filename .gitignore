@@ -13,6 +13,9 @@
 /playwright-report/
 /test-results/
 /blob-report/
+/.media/
+/.media-test/
+/.media-e2e/
 
 # TypeScript and lint caches
 *.tsbuildinfo

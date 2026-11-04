@@ -1,93 +1,119 @@
 # Database Design — KGJ Marketing Funnel Hub
 
-**Status:** model P0 disetujui; schema lokal mencakup ekstensi per cabang, FAQ, dan galeri cabang independen, sedangkan migrasi live tetap menunggu persetujuan; implementasi schema ada di `src/lib/db/schema.ts` dan migrasi `drizzle/` · **Acuan:** brief bisnis v1.0 (14 September 2026) serta keputusan data proyek · **Diperbarui:** 24 September 2026
+**Status:** PostgreSQL mandiri disetujui untuk target VPS 1. Source schema:
+`src/lib/db/schema.ts`. Baseline target baru:
+`drizzle-standalone/0000_standalone_baseline.sql`.
 
-Brief PDF meminta kategori produk, cabang, CMS, atribusi, dan tracking, tetapi tidak menetapkan tabel. Desain berikut adalah keputusan proyek untuk memenuhi brief tanpa menambah CRM. Lihat [PRD](prd.md) untuk makna bisnis dan [System Architecture](system-architecture.md) untuk akses/API.
+Dokumen ini menjelaskan schema target saat ini. Folder `drizzle/` dan `supabase/`
+adalah arsip migrasi lama; keduanya tidak boleh diterapkan pada PostgreSQL
+mandiri.
 
-## Konvensi dan relasi
+## Prinsip data
 
-PostgreSQL/Supabase; nama kolom `snake_case`, PK UUID, waktu `timestamptz` UTC, perubahan schema melalui migrasi Drizzle. Semua tabel aplikasi memakai RLS; akses browser `anon`/`authenticated` ke tabel domain ditolak, sedangkan modul server memakai role aplikasi minimum. Kolom `created_at`/`updated_at` pada tabel konten memakai `timestamptz` (event dan audit append-only hanya `created_at`). `is_active` untuk perubahan rutin, bukan hard delete.
+- PostgreSQL 17 adalah satu-satunya database aplikasi.
+- Browser tidak memiliki kredensial database. Modul server menggunakan role
+  runtime minimum `kgj_app` dengan RLS pada semua tabel aplikasi.
+- UUID adalah primary key. Timestamp memakai `timestamptz` UTC.
+- Perubahan rutin memakai `is_active`, bukan penghapusan permanen.
+- Media tidak disimpan sebagai binary database. Kolom `*_path` menyimpan path
+  relatif ke volume media aplikasi.
+- Migrasi selalu forward-only. Tidak ada reset, truncate, atau seed destruktif
+  dalam build, startup, Docker Compose, maupun workflow deploy.
 
-`auth.users` ↔ `admin_profiles` (ID sama, relasi identitas logis); `products` M:N `branches` melalui `product_branches`; `events` dapat merujuk produk/cabang; `audit_logs` dapat merujuk profil admin. Tidak ada tabel `sessions`, `attribution`, `customers`, `leads`, `orders`, atau `sales` di P0.
+## Tabel aplikasi
 
-## Sepuluh tabel P0
+| Tabel | Tujuan dan aturan utama |
+| --- | --- |
+| `admin_profiles` | Akun CMS: UUID, email unik, hash password `scrypt`, nama tampilan, role `admin`/`technical_admin`, serta status aktif. |
+| `admin_sessions` | Sesi opaque: hash token unik, expiry, dan FK cascade ke profil. Token plaintext hanya di cookie `HttpOnly`. |
+| `site_settings` | Satu baris pengaturan/template KGJ, termasuk cabang Link Bio utama. |
+| `content_sections` | Susunan section bersama atau per cabang, visibilitas, jarak, divider, dan judul publik. |
+| `branches` | Nama, slug unik, nomor WhatsApp, profil override, logo, status, dan urutan cabang. |
+| `products` | Kategori produk bersama; slug adalah kategori tracking yang stabil. |
+| `product_branches` | Assignment produk–cabang yang unik, override CTA/pesan, status, dan urutan. |
+| `campaigns` | Kampanye scope cabang, gambar banner, periode, URL, status, dan urutan. |
+| `links` | Tautan sekunder/sosial per cabang dengan status dan urutan. |
+| `faqs` | FAQ bersama atau per cabang, dengan fallback template pada pembacaan publik. |
+| `gallery_items` | Gambar galeri wajib milik satu cabang; tidak memiliki CTA atau hubungan produk. |
+| `branch_review_sources` | Satu konfigurasi sumber ulasan Google/Firecrawl per cabang. |
+| `branch_google_reviews` | Ulasan hasil import, terjemahan, status tampilan, pilihan manual, dan urutan. |
+| `branch_meta_tracking_configs` | Konfigurasi Meta per cabang. Token CAPI dan Test Event Code terenkripsi. |
+| `events` | Event internal anonim/pseudonim `PageView`, `Contact`, dan `LinkClick`, termasuk attribution dan snapshot historis. |
+| `audit_logs` | Audit mutation tersanitasi tanpa credential, token, atau data customer. |
 
-| Tabel              | Kolom inti dan aturan                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `admin_profiles`   | `id` UUID PK = Auth user ID, `display_name?`, `role` ∈ `admin`/`technical_admin`, `is_active`; timestamp konten. Hanya profil aktif berhak masuk CMS.                                                                                                                                                                                                                                           |
-| `site_settings`    | Satu baris dengan `id = 00000000-0000-0000-0000-000000000001` (CHECK), `site_name`, `headline?`, `introduction?`, default visibilitas `show_profile_name`/`show_headline`/`show_introduction`, `logo_path?`, `default_whatsapp_message`, `default_cta_label`, `privacy_url?`, `default_link_bio_branch_id?` (FK RESTRICT ke cabang); timestamp konten. Tautan sosial tidak diduplikasi di sini. |
-| `content_sections` | `id`, `branch_id?` (null = susunan bersama/bawaan), `section_key` unik per scope, `label`, `public_title?`, `sort_order` default 0, `is_active`, `spacing_after` ∈ `compact`/`normal`/`relaxed` (default `normal`), `show_divider` (default false); timestamp konten.                                                                                                                           |
-| `campaigns`        | `id`, `branch_id?` (null = data global lama, tidak dibaca halaman publik), `name`, `title?`, `description?`, `banner_path?`, `target_url?`, `active_from?`, `active_until?`, `is_active`, `sort_order`; timestamp konten. Jika kedua tanggal ada, `active_until > active_from`.                                                                                                                 |
-| `products`         | `id`, `name`, `slug` unik, `description?`, `image_path?` legacy, `is_active`, `sort_order`; timestamp konten. Satu baris = kategori/kebutuhan, bukan SKU; `slug` adalah `product_category` stabil.                                                                                                                                                                                              |
-| `branches`         | `id`, `name`, `slug` unik, `whatsapp_number` wajib dalam format kode negara (`^[1-9][0-9]{7,14}$`), `cta_label?`, override halaman `profile_name?`, `headline?`, `introduction?`, nullable override visibilitas `show_profile_name`/`show_headline`/`show_introduction`, `logo_path?`, `is_active`, `sort_order`; timestamp konten.                                                             |
-| `product_branches` | `id`, `product_id` FK, `branch_id` FK, `display_name?`, `description?`, `image_path?`/`show_image` legacy, `whatsapp_message_template?`, `cta_label?`, `is_active`, `sort_order`; timestamp konten; kombinasi (`product_id`, `branch_id`) unik.                                                                                                                                                 |
-| `links`            | `id`, `branch_id?` (null = data global lama, tidak dibaca halaman publik), `label`, `url`, `link_type` ∈ `secondary`/`social`, `platform?`, `icon_key?`, `is_active`, `sort_order`; timestamp konten. Semua tautan sosial/sekunder ada di sini.                                                                                                                                                 |
-| `events`           | `id` UUID PK, `event_id` teks unik, `anonymous_session_id`, `event_name`, `event_time`, `page_url?`, `product_id?`, `branch_id?`, snapshot `product_category?`/`branch_name?`, `cta?`, `source?`, `campaign?`, lima `utm_*?`, `metadata?` JSONB, `created_at`.                                                                                                                                  |
-| `audit_logs`       | `id`, `admin_id?` FK, `action`, `entity_type`, `entity_id?`, `changes?` JSONB tersanitasi, `created_at`. Aksi utama: create/update/activate/deactivate/assign/unassign.                                                                                                                                                                                                                         |
+`site_settings.id` memakai UUID singleton
+`00000000-0000-0000-0000-000000000001`. FK konten memakai `RESTRICT` untuk
+menjaga histori, kecuali sesi admin yang cascade bila profil dihapus.
 
-`?` berarti nullable. Semua `id` adalah UUID; `sort_order` integer dan `is_active` boolean. Primary key default acak, kecuali `admin_profiles.id` mengikuti Auth dan `site_settings.id` tetap. Path gambar adalah referensi Supabase Storage, bukan binary database.
+## Integritas dan pembacaan
 
-### Scope halaman per cabang (disetujui 22 September 2026; diterapkan lokal)
+- `branches.slug`, `products.slug`, email admin, token sesi, dan `events.event_id`
+  unik.
+- Assignment (`product_id`, `branch_id`) unik. Section unik per scope cabang.
+- CTA publik hanya muncul bila cabang, produk, dan assignment semuanya aktif.
+- Root Link Bio membaca `site_settings.default_link_bio_branch_id`; cabang
+  tidak aktif tidak boleh dipilih sebagai root atau dirender publik.
+- Event memakai snapshot nama/kategori agar histori tetap terbaca ketika konten
+  dinonaktifkan. Event tidak menyimpan PII customer.
+- Konfigurasi Meta mode `custom` harus lengkap; mode `disabled` menghapus
+  credential khusus. Page load provider selalu `PageView`; event CTA tersimpan
+  terpisah dan harus berasal dari daftar standar yang disetujui.
 
-Tidak ada tabel baru untuk perubahan URL. `branch_id` nullable pada `content_sections`, `campaigns`, dan `links` menentukan scope konten: ID cabang untuk `/{slug}`. `NULL` pada section adalah susunan bersama/bawaan; `NULL` pada kampanye/tautan adalah data lama yang tetap tersimpan tetapi tidak ditampilkan pada Link Bio cabang. `site_settings.default_link_bio_branch_id` memilih satu cabang aktif yang kontennya dirender pada root deployment tanpa mengubah URL; bila `NULL`, root menggunakan fallback login CMS. FK ke `branches.id` memakai `ON DELETE RESTRICT`; baris lama tetap `NULL`. Keunikan lama `content_sections.section_key` diganti dua unique index parsial: satu untuk `(section_key)` ketika `branch_id IS NULL`, satu untuk `(branch_id, section_key)` ketika `branch_id IS NOT NULL`. Ini mencegah duplikasi section pada satu scope tanpa melarang nama section sama di cabang lain. Index scope dan urutan disediakan untuk baca halaman.
+Index pada schema mendukung daftar aktif/urut per cabang, scope/urut section,
+serta akses event berdasarkan waktu, nama event, sesi, produk, cabang, tautan,
+UTM, device, dan negara. Index baru hanya ditambahkan berdasarkan access pattern
+yang terbukti.
 
-`branches.profile_name/headline/introduction/logo_path` yang kosong memakai nilai `site_settings`; `profile_name` fallback merangkai nama merek dan cabang tanpa mengubah identitas operasional cabang. Override visibilitas cabang yang `NULL` memakai nilai boolean template dari `site_settings`; `false` menyembunyikan elemen tanpa menghapus copy. `site_settings.default_link_bio_branch_id` hanya boleh dipilih dari cabang aktif di aksi server dan cabang tersebut tidak dapat dinonaktifkan sebelum pilihan utama diganti. `product_branches.display_name/description` yang kosong memakai nilai `products`, tetapi `products.slug` tetap kategori kanonis untuk tracking. Kolom `products.image_path`, `product_branches.image_path`, dan `product_branches.show_image` dipertahankan sementara sebagai data legacy dan tidak lagi menjadi sumber galeri publik maupun kontrol CMS. Pada halaman cabang, hanya assignment aktif ke cabang aktif dan produk aktif yang tampil sebagai CTA. Nomor WhatsApp tetap hanya dari `branches.whatsapp_number`. Ulasan pelanggan belum memiliki model data pada tahap ini.
+## Role dan RLS
 
-Kampanye dan tautan dipilih tepat dalam scope cabang, tanpa fallback ke scope global. Kampanye tetap maksimal satu sesuai urutan dan periode existing. Section cabang, jika belum ada satu pun baris scoped, memakai section bersama; setelah Marketing menyimpan set section cabang, hanya baris scoped yang dipakai sehingga seluruh section dapat diatur independen. Event baru menyimpan `page_url` dengan path kanonis `/{slug}`; event lama berpath `/b/{slug}` tetap sebagai histori. Constraint tiga event dan FK historis tidak berubah. Semua tabel tetap RLS dengan akses domain hanya dari modul server.
+Baseline membuat role `kgj_app` dan policy `kgj_app_access` pada 16 tabel.
+Container PostgreSQL membuat login role itu dari `POSTGRES_APP_PASSWORD` saat
+volume baru pertama kali diinisialisasi. Runtime memakai `DATABASE_URL` dengan
+role tersebut; URL owner PostgreSQL hanya untuk migrasi yang disetujui.
 
-Editor halaman memperjelas data bawaan versus data khusus cabang tanpa mengubah model tabel. `products` tetap menyimpan jenis produk bersama dan slug kategori kanonis, sedangkan `product_branches` hanya dikelola dalam editor Halaman Link Bio cabang untuk memilih produk, mengurutkan, mengaktifkan, dan menyimpan override cabang. Keduanya dikelola secara kontekstual dari panel Tombol WhatsApp; tabel `products` tidak memerlukan halaman navigasi terpisah. Data inti `branches`—termasuk nama, slug, nomor WhatsApp, urutan, dan status—juga dikelola dari alur Halaman Link Bio; tidak ada entitas pusat atau tabel cabang kedua. **Standar & Template KGJ** (route `/admin/settings`) hanya memasok fallback identitas, pesan, section, dan FAQ; kampanye/tautan lama dengan `branch_id IS NULL` tidak otomatis disalin. Penyederhanaan kepemilikan UI ini tidak menambah kolom atau memerlukan migrasi data.
+Semua query domain tetap berasal dari modul server Drizzle. Tidak ada grant
+browser role, direct REST database, atau public database port.
 
-### Penyesuaian heading dan logo profil (disetujui 24 September 2026)
+## Media
 
-`content_sections` menambahkan `public_title?` untuk copy heading publik. Nilai `NULL` berarti heading tidak dirender; `label` tetap nama teknis untuk CMS. `section_key` `profile_logo` ditambahkan ke setiap susunan global dan susunan scoped yang telah ada. Ia mengikuti `is_active`, tetapi renderer memperlakukannya sebagai section pinned sebelum section terurut lain sehingga perpindahan/penyembunyian profil tidak dapat memindahkan logo dari posisi teratas. Migrasi mengisi judul bawaan yang sekarang dirender untuk galeri, daftar produk, FAQ, tautan tambahan, dan media sosial; section tanpa heading publik memakai `NULL`. Tidak ada tabel, relasi, atau constraint event baru.
+Unggahan melalui CMS divalidasi untuk ukuran, MIME, dan isi JPEG/PNG/WebP.
+Nama file UUID baru mencegah penimpaan file lama. File disimpan pada volume
+`media-data` di production atau `.media` lokal; route `/media/*` hanya melayani
+ekstensi gambar tersebut dengan cache publik. Database menyimpan path relatif,
+misalnya `gallery/<branch-id>/<uuid>.webp`.
 
-Kolom `sort_order` pada tabel konten tetap integer internal. Pembuatan baris melalui CMS memakai `MAX(sort_order) + 1` pada scope daftar terkait, edit biasa mempertahankan nilai, dan pemindahan daftar menormalisasi posisi menjadi urutan berurutan mulai dari nol. Scope tautan juga dipisahkan menurut `link_type`; jenis produk bersama tidak diurutkan langsung untuk publik karena urutan CTA berasal dari `product_branches.sort_order` per cabang. Perubahan perilaku UI ini tidak mengubah schema atau memerlukan migrasi.
+Sebelum cutover, setiap object sumber harus disalin ke volume media target pada
+path relatif yang sama. Data database tidak diubah hanya untuk mengganti lokasi
+penyimpanan file.
 
-### Preferensi jarak section (disetujui 8 Oktober 2026)
+## Migrasi dan cutover
 
-Migrasi `0012_section_layout_preferences` menambah `spacing_after` dan `show_divider` pada `content_sections`. CHECK database membatasi jarak ke tiga preset; tidak ada nilai pixel atau CSS yang disimpan. Nilai default `normal` dan `false` menjaga semua susunan yang sudah ada. Kedua nilai mengikuti scope `branch_id`: cabang yang belum memiliki baris scoped tetap membaca template, sementara simpan pertama di CMS menyalin preferensi bersama bersama judul, urutan, dan status section. Footer tidak memakai kontrol layout pada renderer, dan section kosong/nonaktif tidak menghasilkan pemisah maupun ruang.
+`drizzle-standalone/0000_standalone_baseline.sql` hanya untuk target PostgreSQL
+baru dan kosong. Jangan menerapkannya di database yang sudah berisi schema atau
+data aplikasi.
 
-### Ekstensi FAQ (disetujui 22 September 2026)
+Cutover dari Supabase self-hosted adalah operasi pemilik terpisah:
 
-Tambahkan tabel konten `faqs`: `id` UUID PK, `branch_id?` FK `branches.id` dengan `ON DELETE RESTRICT`, `question`, `answer`, `sort_order` default 0, `is_active` default true, serta `created_at`/`updated_at` `timestamptz`. `NULL` berarti FAQ bersama/bawaan, bukan konten root deployment. Delapan FAQ awal dimasukkan pada migrasi; tidak dimasukkan ke `supabase/seed.sql` karena seed Supabase berjalan sebelum migrasi Drizzle. Untuk cabang tanpa baris FAQ sendiri, baca baris aktif bersama; setelah cabang menyalin daftar bersama, baca hanya baris aktif scoped. Baris FAQ nonaktif tetap dihitung sebagai kepemilikan scope sehingga seluruh FAQ cabang dapat disembunyikan. Index scope+urutan disediakan. RLS dan grant role aplikasi mengikuti tabel konten lain; `anon`/`authenticated` tidak mendapat akses domain langsung. Ini adalah tabel ekstensi setelah sepuluh tabel P0, bukan perubahan semantik event.
+1. Buat dan verifikasi backup PostgreSQL sumber, target, serta semua file media.
+2. Ekspor schema/data sumber dan impor ke target dengan mapping yang telah
+   ditinjau pada [runbook cutover](runbooks/standalone-vps-cutover.md); jangan
+   reset atau truncate sumber maupun target berisi data.
+3. Salin media dengan path yang sama, lalu bandingkan jumlah data, FK, aset,
+   cabang root, serta konfigurasi Meta sebelum cutover.
+4. Buat ulang kata sandi admin CMS karena hash Supabase Auth tidak digunakan.
+5. Pertahankan backup sampai smoke check Link Bio, CMS, upload media, Meta, dan
+   CTA WhatsApp berhasil; cleanup hanya atas persetujuan pemilik setelah periode
+   rollback.
 
-### Ekstensi galeri cabang independen (disetujui 23 September 2026)
+Migrasi live selalu dijalankan manual dan eksplisit sebelum deploy kode yang
+membutuhkannya, menggunakan service Compose profile `migration` dengan URL
+owner terpisah. GitHub Actions, Dockerfile runtime, dan startup aplikasi tidak
+pernah menjalankannya. Deploy memeriksa keberadaan schema minimum dan gagal
+aman bila target belum dimigrasikan.
 
-Tambahkan tabel `gallery_items`: `id` UUID PK, `branch_id` wajib FK `branches.id` dengan `ON DELETE RESTRICT`, `image_path` wajib, `title?`, `description?`, `alt_text` wajib, `sort_order` default 0, `is_active` default true, serta `created_at`/`updated_at` `timestamptz`. Galeri tidak memiliki `product_id`, URL CTA, label CTA, atau pesan WhatsApp. Index `branch_id + is_active + sort_order` mendukung pembacaan publik. RLS dan grant role aplikasi mengikuti tabel konten lain; `anon`/`authenticated` tidak mendapat akses langsung. Migrasi awal menyalin setiap gambar assignment yang sebelumnya eligible ke item milik cabang dengan nama produk sebagai judul/teks alternatif agar konten publik lama tidak hilang. Kolom gambar produk/assignment lama dipertahankan tetapi tidak dibaca oleh galeri baru. Ini adalah tabel ekstensi kedua setelah sepuluh tabel P0, sehingga schema aplikasi memiliki dua belas tabel termasuk `faqs`.
+## Retensi
 
-### Analytics event internal (disetujui 25 September 2026)
-
-Analytics hanya membaca tabel `events` dan `branches`; tidak ada tabel, kolom, index, maupun migrasi baru. Filter waktu memakai `events.event_time`; filter cabang memakai `events.page_url` yang sudah dinormalisasi saat ingest agar `PageView` tetap mematuhi CHECK tanpa foreign key cabang. Index event yang ada cukup untuk rentang awal maksimal 366 hari; kebutuhan index gabungan baru dievaluasi berdasarkan volume nyata, bukan ditambahkan spekulatif.
-
-`PageView` tetap merupakan volume pembukaan mentah dan refresh menghasilkan baris event baru. Peringkat sumber, kampanye, perangkat, browser, negara, dan kota membaca hanya `PageView` lalu mengelompokkan `anonymous_session_id`, sehingga satu sesi hanya menambah satu nilai pada tiap kategori. Kota baru lolos tampil bila kategori yang sama mempunyai sekurangnya lima event; angka yang dirender tetap jumlah sesi. Perilaku baca ini tidak mengubah event, indeks, retensi, maupun schema.
-
-### Ekstensi schema Analytics (disetujui 25 September 2026)
-
-Migrasi `0008_analytics_scope_extension` menambah `events.link_id?` (FK `links.id` restrict), snapshot `link_label?`/`link_type?`, dan kategori `device_type?`, `browser_family?`, `country_code?`, serta `city?`. Ia juga mengganti CHECK konteks: `LinkClick` wajib tanpa produk, dengan cabang/snapshot cabang, tautan/snapshot label-jenis, dan `cta='link'`; event lain wajib tidak memiliki kolom tautan. Device dibatasi `mobile`/`tablet`/`desktop`/`other`, browser `Chrome`/`Safari`/`Firefox`/`Edge`/`Other`, dan negara dua huruf kapital. Index baru: link+waktu, device+waktu, dan negara+waktu. Tidak ada tabel baru atau penyimpanan IP/user-agent mentah.
-
-Analytics membaca events dan branches; ekspor CSV mencatat satu audit log `entity_type='analytics_events'` tanpa isi event dan dibatasi 10.000 baris. Query detail/ekspor menggunakan `event_time`, page URL cabang ternormalisasi, serta filter detail yang sama. Snapshot event mempertahankan sejarah walau tautan dinonaktifkan; FK restrict mencegah penghapusan data historis.
-
-### Konfigurasi Meta per cabang (disetujui 20 Oktober 2026)
-
-Migrasi `0014_branch_meta_tracking_configs` menambah `branch_meta_tracking_configs` dengan `branch_id` sebagai PK/FK `branches.id` `ON DELETE RESTRICT`, `mode` (`inherit`/`custom`/`disabled`), `pixel_id?`, `dataset_id?`, `capi_access_token_encrypted?`, `page_view_enabled`, dan timestamp. CAPI memakai `pixel_id` sebagai data-source ID. `dataset_id` adalah kolom kompatibilitas lama dan selalu ditulis sama dengan `pixel_id`, tetapi bukan konfigurasi yang dapat diedit. CHECK database mewajibkan nilai konfigurasi khusus bersama-sama pada mode `custom`, dan bernilai `NULL` pada mode lain. Tidak ada token plaintext dalam tabel, audit, halaman publik, atau log. Tidak ada event, attribution, identity, atau data customer baru. Satu baris yang belum ada diperlakukan sebagai `inherit`; `disabled` hanya menghentikan provider Meta, bukan pencatatan event internal.
-
-Migrasi `0015_meta_page_load_event` menambah `page_load_meta_event?` dengan CHECK daftar standar. Migrasi `0017_branch_meta_cta_event` kemudian menetapkan `page_view_enabled=true` dan `page_load_meta_event='PageView'` bagi semua konfigurasi Meta aktif; resolver tidak lagi memakai nilai lain untuk page load. Migrasi `0018_meta_page_load_pageview_only` menormalkan konfigurasi nonaktif menjadi `NULL`, lalu mempersempit CHECK menjadi hanya `PageView` atau `NULL`. `cta_meta_event?` baru menyimpan pilihan standar khusus CTA WhatsApp: `ViewContent`, `AddToCart`, `AddToWishlist`, `InitiateCheckout`, `AddPaymentInfo`, `Purchase`, `Lead`, `CompleteRegistration`, atau `Contact`. Backfill memakai `Contact`; `NULL` hanya dipakai mode `disabled` atau konfigurasi lama yang belum dimigrasi dan resolver tetap fallback ke `Contact`. Event internal klik WhatsApp tetap `Contact`, sementara Pixel dan CAPI menerima `cta_meta_event` dengan `event_id` sama. Link biasa tetap `LinkClick`.
-
-Migrasi `0016_branch_meta_test_event_code` menambah `capi_test_event_code_encrypted?`. Kode uji Meta bersifat opsional, tersimpan terenkripsi, tidak pernah menjadi audit log atau DTO publik, dan hanya disertakan server pada payload CAPI sebagai `test_event_code`. Berdasarkan persetujuan pemilik 21 Oktober 2026, nilainya bersama token CAPI dapat didekripsi dan menjadi DTO CMS hanya untuk `technical_admin` yang telah diautentikasi. Nilai kosong berarti pengiriman produksi normal; mode `disabled` selalu menghapusnya.
-
-## Aturan baca dan integritas
-
-### Ekstensi ulasan Google manual melalui Firecrawl (disetujui 24 September 2026)
-
-Penyajian dua atau lebih review publik sebagai carousel satu kartu per slide tidak mengubah urutan, filter, relasi, data, atau event yang dijelaskan pada bagian ini.
-
-`branch_review_sources` memiliki satu baris unik per `branch_id`: `source_url`, `is_enabled`, `minimum_rating` 1–5, `maximum_reviews` 1–12, `display_mode` (`automatic`/`manual`), status pengambilan terakhir, dan timestamp. `branch_google_reviews` menyimpan FK cabang `ON DELETE RESTRICT`, `source_hash` unik per cabang, nama/avatar/count reviewer, rating 1–5, waktu relatif dan teks sumber asli, terjemahan Indonesia `relative_time_id`/`review_text_id`, URL sumber, flag pilihan/hide, urutan, dan waktu pengambilan. Index publik adalah `(branch_id, is_hidden, rating, sort_order)`. Kedua tabel memakai RLS; `anon`/`authenticated` tidak memiliki akses langsung dan role aplikasi mendapat `SELECT`/`INSERT`/`UPDATE`/`DELETE`. Isi review tidak dicatat pada audit log; audit batch hanya mencatat jumlah perubahan atau hapus. Migrasi menambahkan `google_reviews` di section global dan scope cabang yang sudah ada; renderer tetap kosong hingga source aktif dan review memiliki terjemahan Indonesia serta lolos filter. Konfigurasi Meta per cabang menjadi ekstensi berikutnya sehingga total tabel aplikasi menjadi lima belas.
-
-- `branch_review_sources.scrape_year` dapat kosong atau berada pada 2004–2100; `scrape_limit` hanya 10, 25, atau 50 dengan default 50. `branch_google_reviews.reviewed_at` bertipe `date` dan kosong bila sumber tidak memberi tanggal kalender pasti. Kedua nilai ini hanya mendukung import dan tidak dipakai renderer publik.
-- CTA publik hanya jika `products.is_active AND product_branches.is_active AND branches.is_active`. Nomor dari `branches.whatsapp_number`. Template: assignment → default situs. Label: assignment → cabang → default situs. FK assignment ke produk/cabang memakai `ON DELETE RESTRICT`.
-- Kampanye eligible jika aktif, `active_from` kosong/≤ sekarang, dan `active_until` kosong/≥ sekarang. Tampilkan maksimal satu, urut `sort_order ASC`, `active_from DESC NULLS LAST`, `created_at DESC`, `id ASC`. Periode tumpang-tindih boleh tetapi CMS memberi peringatan.
-- Event baru yang diterima aplikasi hanya `PageView`, `Contact`, dan `LinkClick`. CHECK database masih mengizinkan bentuk `ViewContent` lama untuk menjaga histori yang sudah tersimpan; aplikasi tidak lagi memproduksi, menerima, merender, maupun mengekspornya. PageView tanpa produk/cabang/CTA; Contact wajib produk, cabang, kedua snapshot, dan `cta='whatsapp'`; LinkClick wajib link snapshot serta `cta='link'`. FK event ke produk/cabang tetap `ON DELETE RESTRICT`; histori dipertahankan lewat deactivation dan snapshot.
-- `event_id` unik: retry setara memakai baris lama, sedangkan payload berbeda material ditolak 409 oleh aplikasi. Index event mengikuti waktu, nama+waktu, sesi+waktu, produk+waktu, cabang+waktu, `utm_campaign`+waktu, dan `utm_source`+waktu. `products` diindeks menurut status+urutan; kampanye menurut status/urutan/periode.
-- Atribusi UTM disnapshot pada tiap event; `anonymous_session_id` menghubungkan journey tanpa tabel sesi. Nilai sumber/kampanye yang tidak tersedia tetap kosong. Batas `metadata` 4 KiB serta validasi sesi, origin, path, dan konteks produk/cabang berada di server, bukan hanya pada CHECK database. Gate tracking ditentukan environment dan tidak menambah kolom consent pada event.
-
-Event internal disimpan maksimal 24 bulan. Job terautentikasi menghapus event kadaluarsa per batch dan hanya mencatat jumlah/status; audit log tidak boleh memuat rahasia. Perubahan produksi hanya melalui migrasi yang ditinjau dan disetujui, tidak melalui build aplikasi. `supabase/seed.sql` tidak menggantikan migrasi Drizzle; reset lokal harus diikuti `pnpm db:migrate:local`.
+Event internal disimpan maksimal 24 bulan. Endpoint retention terautentikasi
+menghapus batch terbatas hanya setelah pemilik menjadwalkannya dan memverifikasi
+perilakunya di lokal. Audit log mencatat jumlah/status, tidak pernah memuat event
+atau rahasia mentah.

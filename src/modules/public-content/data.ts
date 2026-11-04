@@ -25,11 +25,7 @@ import { resolveProfileVisibility } from "./profile-visibility";
 import { browserMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 
 const assetUrl = (path: string | null) =>
-  publicAssetUrl(
-    serverEnv.NEXT_PUBLIC_SUPABASE_URL,
-    serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET,
-    path,
-  );
+  publicAssetUrl(serverEnv.MEDIA_PUBLIC_BASE_URL, path);
 
 const safeHref = (value: string | null) =>
   publicHref(value, serverEnv.NEXT_PUBLIC_APP_ENV === "local");

@@ -26,7 +26,7 @@ The product combines a KGJ-owned public destination, branch-specific product con
 
 - Visitors may use an Instagram in-app browser and must reach WhatsApp through a normal, valid link even if analytics fails or JavaScript is unavailable.
 - Marketing edits routine content in the CMS without a developer deployment.
-- Local development uses Next.js and Supabase Local in Docker; the released application uses a separate hosted Supabase production project.
+- Local development uses Next.js and Docker PostgreSQL; production uses the same standalone PostgreSQL, internal CMS session, and persistent media-volume model on VPS 1.
 
 ## Capabilities and Constraints
 

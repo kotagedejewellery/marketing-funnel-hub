@@ -34,7 +34,7 @@ const utmsSchema = z.strictObject({
 });
 
 function signature(sessionId: string, payload: string) {
-  return createHmac("sha256", serverEnv.SUPABASE_SECRET_KEY)
+  return createHmac("sha256", serverEnv.TRACKING_HMAC_SECRET)
     .update(`kgj-attribution-v1:${sessionId}:${payload}`)
     .digest("base64url");
 }

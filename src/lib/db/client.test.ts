@@ -19,11 +19,10 @@ describe("createDatabaseClient", () => {
     postgresMock.mockClear();
   });
 
-  it("does not use TLS for the self-hosted Supabase Docker database", () => {
-    const url =
-      "postgresql://postgres:password@supabase-db:5432/postgres?sslmode=disable";
+  it("can disable TLS for an internal PostgreSQL network", () => {
+    const url = "postgresql://kgj_app:password@db:5432/kgj?sslmode=disable";
 
-    createDatabaseClient(url);
+    createDatabaseClient(url, false);
 
     expect(postgresMock).toHaveBeenCalledWith(url, {
       max: 1,
@@ -32,7 +31,7 @@ describe("createDatabaseClient", () => {
     });
   });
 
-  it("requires TLS for databases outside the internal Docker network", () => {
+  it("requires TLS by default", () => {
     const url =
       "postgresql://postgres:password@db.example.com:5432/postgres?sslmode=require";
 

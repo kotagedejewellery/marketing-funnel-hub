@@ -78,8 +78,7 @@ export function PageCampaigns({
                     entityId={row.id}
                     label={`Banner ${row.name}`}
                     previewUrl={publicAssetUrl(
-                      serverEnv.NEXT_PUBLIC_SUPABASE_URL,
-                      serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET,
+                      serverEnv.MEDIA_PUBLIC_BASE_URL,
                       row.bannerPath,
                     )}
                   />

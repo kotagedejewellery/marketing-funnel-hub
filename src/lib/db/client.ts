@@ -5,19 +5,12 @@ import postgres from "postgres";
 
 import { parseDatabaseUrl } from "@/lib/env/database-url";
 
-const internalDatabaseHosts = new Set([
-  "127.0.0.1",
-  "localhost",
-  "supabase-db",
-]);
-
-export function createDatabaseClient(input: unknown) {
+export function createDatabaseClient(input: unknown, ssl = true) {
   const url = parseDatabaseUrl(input);
-  const isInternalDatabase = internalDatabaseHosts.has(new URL(url).hostname);
   const client = postgres(url, {
     max: 1,
     prepare: false,
-    ssl: isInternalDatabase ? false : "require",
+    ssl: ssl ? "require" : false,
   });
 
   return {
@@ -29,6 +22,9 @@ export function createDatabaseClient(input: unknown) {
 let connection: ReturnType<typeof createDatabaseClient> | undefined;
 
 export function getDatabase() {
-  connection ??= createDatabaseClient(process.env.DATABASE_URL);
+  connection ??= createDatabaseClient(
+    process.env.DATABASE_URL,
+    process.env.DATABASE_SSL !== "false",
+  );
   return connection.db;
 }

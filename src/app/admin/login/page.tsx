@@ -6,7 +6,6 @@ import { getAdminAccess } from "@/modules/admin/access";
 export default async function AdminLoginPage() {
   const access = await getAdminAccess();
   if (access.status === "authorized") redirect("/admin");
-  if (access.status === "denied") redirect("/admin/denied");
 
   return (
     <main className="kgj-admin grid min-h-dvh text-foreground lg:grid-cols-2">

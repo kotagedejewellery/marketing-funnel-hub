@@ -3,35 +3,86 @@ name: marketing-funnel-hub
 services:
   app:
     image: ${APP_IMAGE:?Set APP_IMAGE to the immutable GHCR image tag before deploying.}
-
     restart: unless-stopped
-
     env_file:
       - .env.production
-
+    depends_on:
+      db:
+        condition: service_healthy
+      media-init:
+        condition: service_completed_successfully
+    volumes:
+      - media-data:/app/media
     networks:
       - proxy
-      - supabase
-
+      - private
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-
       - traefik.http.routers.kgj-link-bio.rule=Host(`link.kotagedejewellery.com`)
       - traefik.http.routers.kgj-link-bio.entrypoints=websecure
       - traefik.http.routers.kgj-link-bio.tls=true
       - traefik.http.routers.kgj-link-bio.tls.certresolver=letsencrypt
-
+      - traefik.http.routers.kgj-admin-session.rule=Host(`link.kotagedejewellery.com`) && Path(`/api/admin/session`)
+      - traefik.http.routers.kgj-admin-session.entrypoints=websecure
+      - traefik.http.routers.kgj-admin-session.tls=true
+      - traefik.http.routers.kgj-admin-session.tls.certresolver=letsencrypt
+      - traefik.http.routers.kgj-admin-session.priority=100
+      - traefik.http.routers.kgj-admin-session.middlewares=kgj-admin-session-rate
+      - traefik.http.middlewares.kgj-admin-session-rate.ratelimit.average=5
+      - traefik.http.middlewares.kgj-admin-session-rate.ratelimit.burst=10
+      - traefik.http.middlewares.kgj-admin-session-rate.ratelimit.period=1m
       - traefik.http.routers.kgj-link-bio-http.rule=Host(`link.kotagedejewellery.com`)
       - traefik.http.routers.kgj-link-bio-http.entrypoints=web
       - traefik.http.routers.kgj-link-bio-http.middlewares=kgj-link-bio-https
       - traefik.http.middlewares.kgj-link-bio-https.redirectscheme.scheme=https
-
       - traefik.http.services.kgj-link-bio.loadbalancer.server.port=3000
+
+  db:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_USER: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/10-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  media-init:
+    image: alpine:3.21
+    restart: "no"
+    command: ["sh", "-ec", "mkdir -p /media && chown -R 1001:1001 /media"]
+    volumes:
+      - media-data:/media
+
+  migration:
+    profiles: ["migration"]
+    build:
+      context: .
+      target: migration
+    env_file:
+      - .env.migration
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - proxy
+      - private
 
 networks:
   proxy:
     external: true
-  supabase:
-    external: true
-    name: supabase_default
+  private:
+    internal: true
+
+volumes:
+  postgres-data:
+  media-data:

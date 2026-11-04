@@ -16,15 +16,14 @@ jobs:
     env:
       NEXT_PUBLIC_APP_ENV: local
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3100
-      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_fixture_only
       NEXT_PUBLIC_META_PIXEL_ID: "1234567890"
-      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      DATABASE_MIGRATION_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-      SUPABASE_SECRET_KEY: sb_secret_ci_fixture_only
-      SUPABASE_PUBLIC_ASSET_BUCKET: public-assets
-      SUPABASE_PRIVATE_MEDIA_BUCKET: admin-media
-      META_CAPI_DATASET_ID: "1234567890"
+      DATABASE_URL: postgresql://kgj_app:local-app-password@127.0.0.1:54329/kgj?sslmode=disable
+      DATABASE_MIGRATION_URL: postgresql://postgres:postgres@127.0.0.1:54329/kgj?sslmode=disable
+      DATABASE_SSL: "false"
+      ADMIN_SESSION_SECRET: ci_admin_session_secret_at_least_32_characters
+      TRACKING_HMAC_SECRET: ci_tracking_hmac_secret_at_least_32_characters
+      MEDIA_STORAGE_ROOT: .media-ci
+      MEDIA_PUBLIC_BASE_URL: http://127.0.0.1:3100/media
       META_CAPI_ACCESS_TOKEN: ci_meta_access_token_fixture
       EVENT_RATE_LIMIT_WINDOW_SECONDS: "60"
       EVENT_RATE_LIMIT_PER_IP: "30"
@@ -40,19 +39,15 @@ jobs:
           require-lockfile: true
           cache: true
       - run: pnpm quality:check
-      - uses: supabase/setup-cli@v3.0.0
-        with:
-          version: 2.58.5
-      - name: Start Supabase Local
-        id: supabase_start
-        run: supabase start
+      - name: Start local PostgreSQL
+        run: docker compose -f compose.local.yml up -d --wait
       - run: pnpm db:migrate:local
       - run: pnpm test:integration
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
-      - name: Stop Supabase Local
-        if: always() && steps.supabase_start.outcome == 'success'
-        run: supabase stop --no-backup
+      - name: Stop local PostgreSQL
+        if: always()
+        run: docker compose -f compose.local.yml down -v
 
   publish-image:
     needs: quality
@@ -194,6 +189,52 @@ jobs:
             export APP_IMAGE
             printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
             trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+
+            docker compose -f compose.production.yml up -d db
+            schema_ready="$(
+              docker compose -f compose.production.yml exec -T db sh -ec '
+                psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "
+                  select case when
+                    (
+                      select count(*)
+                      from pg_tables
+                      where schemaname = '"'"'public'"'"'
+                        and tablename in (
+                          '"'"'admin_profiles'"'"', '"'"'admin_sessions'"'"', '"'"'audit_logs'"'"',
+                          '"'"'branches'"'"', '"'"'branch_google_reviews'"'"',
+                          '"'"'branch_meta_tracking_configs'"'"', '"'"'branch_review_sources'"'"',
+                          '"'"'campaigns'"'"', '"'"'content_sections'"'"', '"'"'events'"'"', '"'"'faqs'"'"',
+                          '"'"'gallery_items'"'"', '"'"'links'"'"', '"'"'product_branches'"'"',
+                          '"'"'products'"'"', '"'"'site_settings'"'"'
+                        )
+                    ) = 16
+                    and not exists (
+                      select 1
+                      from (
+                        values
+                          ('"'"'admin_profiles'"'"', '"'"'email'"'"'),
+                          ('"'"'admin_profiles'"'"', '"'"'password_hash'"'"'),
+                          ('"'"'admin_sessions'"'"', '"'"'token_hash'"'"'),
+                          ('"'"'site_settings'"'"', '"'"'default_link_bio_branch_id'"'"'),
+                          ('"'"'branch_review_sources'"'"', '"'"'scrape_limit'"'"'),
+                          ('"'"'branch_meta_tracking_configs'"'"', '"'"'cta_meta_event'"'"'),
+                          ('"'"'branch_meta_tracking_configs'"'"', '"'"'capi_test_event_code_encrypted'"'"')
+                      ) as required(table_name, column_name)
+                      where not exists (
+                        select 1
+                        from information_schema.columns
+                        where table_schema = '"'"'public'"'"'
+                          and table_name = required.table_name
+                          and column_name = required.column_name
+                      )
+                    )
+                  then '"'"'ready'"'"' else '"'"'missing'"'"' end;"
+              '
+            )"
+            if [ "$schema_ready" != "ready" ]; then
+              echo "Deployment dibatalkan: schema standalone belum siap. Jalankan migrasi manual yang telah disetujui sebelum deploy aplikasi."
+              exit 1
+            fi
 
             docker compose -f compose.production.yml pull app
             docker compose -f compose.production.yml up -d --no-build --force-recreate app
