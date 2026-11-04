@@ -165,7 +165,7 @@ jobs:
           script: |
             set -euo pipefail
             revision='${{ github.sha }}'
-            cd /opt/apps/sistem-marketing-funnel/marketing-funnel-hub
+            cd /opt/apps/sistem-marketing-funnel
 
             if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
               echo "Deployment dibatalkan: ada perubahan file repository di VPS."
