@@ -190,7 +190,7 @@ jobs:
             printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
             trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
 
-            docker compose -f compose.production.yml up -d db
+            docker compose -f compose.production.yml up -d --wait db
             schema_ready="$(
               docker compose -f compose.production.yml exec -T db sh -ec '
                 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "
