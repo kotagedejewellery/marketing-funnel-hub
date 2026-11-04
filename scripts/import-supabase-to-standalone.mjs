@@ -19,6 +19,9 @@ const applicationTables = [
 ];
 const mediaColumns = ["logo_path", "banner_path", "image_path"];
 const importBatchSize = 100;
+const primaryKeyColumns = {
+  branch_meta_tracking_configs: ["branch_id"],
+};
 
 function fail(message) {
   throw new Error(message);
@@ -127,10 +130,19 @@ function insertQuery(table, columnNames, rows, conflictColumns = ["id"]) {
   };
 }
 
-async function upsertById(sql, table, rows, columnNames) {
+function primaryKeyFor(table) {
+  return primaryKeyColumns[table] ?? ["id"];
+}
+
+async function upsertByPrimaryKey(sql, table, rows, columnNames) {
   for (let index = 0; index < rows.length; index += importBatchSize) {
     const batch = rows.slice(index, index + importBatchSize);
-    const { query, values } = insertQuery(table, columnNames, batch);
+    const { query, values } = insertQuery(
+      table,
+      columnNames,
+      batch,
+      primaryKeyFor(table),
+    );
     await sql.unsafe(query, values);
   }
 }
@@ -281,8 +293,15 @@ async function main() {
       ),
     );
     for (const table of applicationTables) {
-      if (!targetColumns[table].includes("id")) {
-        fail(`target tidak memiliki primary key id pada ${table}.`);
+      const primaryKey = primaryKeyFor(table);
+      if (
+        !primaryKey.every((columnName) =>
+          targetColumns[table].includes(columnName),
+        )
+      ) {
+        fail(
+          `target tidak memiliki primary key ${primaryKey.join(", ")} pada ${table}.`,
+        );
       }
     }
 
@@ -295,7 +314,12 @@ async function main() {
         if (table === "content_sections") {
           await upsertContentSections(transaction, mapped.rows, mapped.columns);
         } else {
-          await upsertById(transaction, table, mapped.rows, mapped.columns);
+          await upsertByPrimaryKey(
+            transaction,
+            table,
+            mapped.rows,
+            mapped.columns,
+          );
         }
       }
       await verifyCounts(transaction, sourceData);
