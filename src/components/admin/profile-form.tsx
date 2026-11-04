@@ -10,6 +10,7 @@ import {
 
 type Profile = {
   id: string;
+  email: string;
   displayName: string | null;
   role: string;
   isActive: boolean;
@@ -25,41 +26,62 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
     initialState,
   );
   const formId = profile?.id ?? "new";
-  const idErrorId = `profile-id-error-${formId}`;
-  const nameErrorId = `profile-name-error-${formId}`;
-  const roleErrorId = `profile-role-error-${formId}`;
+  const fieldError = (field: string) => `profile-${field}-error-${formId}`;
 
   return (
     <form action={action} className="grid gap-4 md:grid-cols-2">
-      {profile ? (
-        <>
-          <input type="hidden" name="id" value={profile.id} />
-          <p className="break-all text-xs text-muted-foreground md:col-span-2">
-            ID Auth: {profile.id}
+      {profile && <input type="hidden" name="id" value={profile.id} />}
+      <div className="grid gap-2 text-sm">
+        <label htmlFor={`profile-email-${formId}`} className="font-medium">
+          Email
+        </label>
+        <input
+          id={`profile-email-${formId}`}
+          required
+          name="email"
+          type="email"
+          autoComplete="email"
+          defaultValue={profile?.email ?? ""}
+          className={inputClass}
+          aria-invalid={Boolean(state.errors.email)}
+          aria-describedby={
+            state.errors.email ? fieldError("email") : undefined
+          }
+        />
+        {state.errors.email && (
+          <p id={fieldError("email")} className="text-destructive">
+            {state.errors.email}
           </p>
-        </>
-      ) : (
-        <div className="grid gap-2 text-sm md:col-span-2">
-          <label htmlFor={`profile-id-${formId}`} className="font-medium">
-            ID pengguna Supabase Auth
-          </label>
-          <input
-            id={`profile-id-${formId}`}
-            required
-            name="id"
-            type="text"
-            className={inputClass}
-            placeholder="UUID pengguna"
-            aria-invalid={Boolean(state.errors.id)}
-            aria-describedby={state.errors.id ? idErrorId : undefined}
-          />
-          {state.errors.id && (
-            <p id={idErrorId} className="text-destructive">
-              {state.errors.id}
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </div>
+      <div className="grid gap-2 text-sm">
+        <label htmlFor={`profile-password-${formId}`} className="font-medium">
+          {profile ? "Kata sandi baru" : "Kata sandi"}
+        </label>
+        <input
+          id={`profile-password-${formId}`}
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          minLength={profile ? undefined : 12}
+          required={!profile}
+          className={inputClass}
+          aria-invalid={Boolean(state.errors.password)}
+          aria-describedby={
+            state.errors.password ? fieldError("password") : undefined
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          {profile
+            ? "Kosongkan bila kata sandi tidak diubah."
+            : "Minimal 12 karakter."}
+        </p>
+        {state.errors.password && (
+          <p id={fieldError("password")} className="text-destructive">
+            {state.errors.password}
+          </p>
+        )}
+      </div>
       <div className="grid gap-2 text-sm">
         <label htmlFor={`profile-name-${formId}`} className="font-medium">
           Nama tampilan
@@ -70,14 +92,7 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
           defaultValue={profile?.displayName ?? ""}
           maxLength={120}
           className={inputClass}
-          aria-invalid={Boolean(state.errors.displayName)}
-          aria-describedby={state.errors.displayName ? nameErrorId : undefined}
         />
-        {state.errors.displayName && (
-          <p id={nameErrorId} className="text-destructive">
-            {state.errors.displayName}
-          </p>
-        )}
       </div>
       <div className="grid gap-2 text-sm">
         <label htmlFor={`profile-role-${formId}`} className="font-medium">
@@ -88,17 +103,10 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
           name="role"
           defaultValue={profile?.role ?? "admin"}
           className={inputClass}
-          aria-invalid={Boolean(state.errors.role)}
-          aria-describedby={state.errors.role ? roleErrorId : undefined}
         >
           <option value="admin">Admin</option>
           <option value="technical_admin">Technical admin</option>
         </select>
-        {state.errors.role && (
-          <p id={roleErrorId} className="text-destructive">
-            {state.errors.role}
-          </p>
-        )}
       </div>
       <label className="flex min-h-11 items-center gap-3 text-sm md:col-span-2">
         <input
@@ -124,7 +132,7 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
           ? "Menyimpan..."
           : profile
             ? "Simpan perubahan"
-            : "Simpan profil"}
+            : "Buat profil admin"}
       </button>
     </form>
   );

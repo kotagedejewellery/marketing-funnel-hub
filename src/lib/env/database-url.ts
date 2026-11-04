@@ -29,8 +29,9 @@ export function parseLocalMigrationUrl(input: unknown): string {
 
   if (
     url.hostname !== "127.0.0.1" ||
-    url.port !== "54322" ||
-    url.pathname !== "/postgres"
+    url.port !== "54329" ||
+    url.pathname !== "/kgj" ||
+    url.username !== "postgres"
   ) {
     throw new EnvironmentValidationError([variable]);
   }
@@ -43,27 +44,17 @@ export function parseLiveMigrationUrl(input: unknown): string {
   const value = parseDatabaseUrl(input, variable);
   const url = new URL(value);
 
-  const isDirectConnection =
-    url.hostname.startsWith("db.") &&
-    url.hostname.endsWith(".supabase.co") &&
-    url.username === "postgres";
-  const isSessionPooler =
-    url.hostname.endsWith(".pooler.supabase.com") &&
-    url.username.startsWith("postgres.");
-  const isSelfHostedDatabase =
-    url.hostname === "supabase-db" && url.username === "postgres";
-  const expectedSslMode = isSelfHostedDatabase ? "disable" : "require";
-
   if (
-    (!isDirectConnection && !isSessionPooler && !isSelfHostedDatabase) ||
+    url.hostname !== "db" ||
+    url.username !== "postgres" ||
     url.port !== "5432" ||
-    url.pathname !== "/postgres" ||
+    url.pathname !== "/kgj" ||
     (url.searchParams.has("sslmode") &&
-      url.searchParams.get("sslmode") !== expectedSslMode)
+      url.searchParams.get("sslmode") !== "disable")
   ) {
     throw new EnvironmentValidationError([variable]);
   }
 
-  url.searchParams.set("sslmode", expectedSslMode);
+  url.searchParams.set("sslmode", "disable");
   return url.toString();
 }

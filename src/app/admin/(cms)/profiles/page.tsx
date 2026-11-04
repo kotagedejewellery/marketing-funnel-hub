@@ -11,6 +11,7 @@ export default async function ProfilesPage() {
   const profiles = await getDatabase()
     .select({
       id: adminProfiles.id,
+      email: adminProfiles.email,
       displayName: adminProfiles.displayName,
       role: adminProfiles.role,
       isActive: adminProfiles.isActive,
@@ -22,20 +23,18 @@ export default async function ProfilesPage() {
     <div>
       <h1 className="font-serif text-4xl">Profil admin</h1>
       <p className="mt-3 max-w-2xl text-muted-foreground">
-        Buat pengguna terlebih dahulu di Supabase Auth, lalu hubungkan ID
-        pengguna di sini. Menonaktifkan profil menghentikan akses CMS tanpa
-        menghapus akun Auth.
+        Kelola akun CMS internal di sini. Menonaktifkan profil langsung
+        menghentikan akses akun tanpa menghapus histori konten.
       </p>
 
       <div className="mt-8">
         <FormDialog
-          title="Hubungkan pengguna Auth"
+          title="Buat profil admin"
           triggerLabel="Tambah profil admin"
           primary
         >
           <p className="mb-6 text-sm leading-6 text-muted-foreground">
-            Buat akun di Supabase Auth terlebih dahulu, lalu masukkan ID-nya di
-            sini.
+            Tetapkan email, peran, dan kata sandi untuk akun CMS baru.
           </p>
           <ProfileForm profile={null} />
         </FormDialog>
@@ -58,7 +57,7 @@ export default async function ProfilesPage() {
                 · {profile.isActive ? "Aktif" : "Nonaktif"}
               </p>
               <p className="mt-2 break-all text-xs text-muted-foreground">
-                ID Auth: {profile.id}
+                {profile.email}
               </p>
               <div className="mt-6">
                 <FormDialog

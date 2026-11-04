@@ -1,167 +1,87 @@
 # KGJ Marketing Funnel Hub
 
-An owned marketing conversion layer for Kotagede Jewellery. The P0 product will
-publish a custom Link Bio, route product interest to the correct WhatsApp branch,
-preserve campaign attribution, deliver Meta signals, and retain canonical
-first-party events.
+Link Bio milik Kotagede Jewellery untuk alur P0 **pengunjung → minat produk →
+WhatsApp cabang**. Aplikasi adalah modular monolith Next.js dengan PostgreSQL
+mandiri, CMS internal, volume media persisten, dan integrasi Meta opsional.
 
-## Current status
+Tidak ada Supabase, layanan auth pihak ketiga, object store, atau database yang
+dibuka ke internet pada arsitektur target.
 
-The repository contains the implemented P0 application and its source-of-truth
-documents. The public funnel is **Link Bio → product interest → branch
-WhatsApp**; its canonical events are `PageView`, `Contact`, and `LinkClick`.
-Supabase Local provides the approved application schema, RLS/grants, seed data,
-and Storage buckets.
+## Arsitektur runtime
 
-The owner manages production deployment, DNS, secrets, live migrations, WAF/rate
-limits, retention scheduling, and provider-account verification. A successful
-build or CI run does not prove that Meta received or deduplicated production
-events; verify that explicitly in Meta Events Manager after deployment.
+- **Next.js** melayani Link Bio, CMS, route media `/media/*`, dan API internal.
+- **PostgreSQL 17** berjalan pada jaringan Docker internal; aplikasi memakai
+  role terbatas `kgj_app`.
+- **Media** berada pada named volume Docker `media-data`, dipasang pada
+  `/app/media`; file publik hanya dibaca melalui route aplikasi.
+- **Traefik** hanya meneruskan domain publik ke aplikasi. PostgreSQL tidak
+  memiliki port host pada produksi.
+- **GitHub Actions** membangun image immutable GHCR. Deploy VPS hanya menarik
+  image tersebut; tidak menjalankan build atau migrasi database.
 
-### Historical foundation notes
+Kontrak produk, operasi, dan schema ada di [PRD](docs/prd.md),
+[System Architecture](docs/system-architecture.md), dan
+[Database Design](docs/database-design.md).
 
-- T0-01 repository/Git baseline: complete (user-managed)
-- T0-02 toolchain pinning: complete
-- T0-03 minimal application shell: complete
-- T0-04 Tailwind and shadcn/ui foundation: complete
-- T0-05 environment contract: complete
-- T0-06 test harnesses: complete
-- T0-07 local Supabase: complete; Docker and host firewall are user-managed
-- T0-08 Drizzle connectivity and baseline migration: complete
-- T0-09 Supabase Auth/Storage client boundaries: complete
-- T0-10 CI quality gates: complete (GitHub verification owner-reported)
-- T0-11 Vercel Preview/staging gate: retired by the approved local/live decision
-- T0-12 Sprint 0 checkpoint: in progress; see the checklist for remaining owner actions
-- Sprint 1 database schema: applied and verified locally; live migration was
-  reported successful by the owner but has not been independently checked here
-- Public Link Bio and desktop-oriented responsive CMS: implemented locally; owner review remains
-- P0 application implementation: complete locally. The public funnel
-  (product → branch → WhatsApp, `PageView`/`ViewContent`/`Contact`) passed one
-  focused browser check on 21 September 2026 under the earlier consent flow;
-  the current automatic-tracking policy remains unverified. `pnpm typecheck`
-  passed before this policy change.
-- Production deployment, provider activation, WAF, retention scheduling, and
-  live verification remain owner-managed and have not been verified here.
+## Pengembangan lokal
 
-## Quick start
+Prasyarat: Docker Desktop, Node.js 24, dan pnpm 11.15.1.
 
-Prerequisites:
-
-- Node.js 24
-- pnpm 11.15.1
-
-```bash
+```powershell
+Copy-Item .env.example .env.local
 pnpm install --frozen-lockfile
-# If .env.local does not exist, copy .env.example to it and fill local values.
-# Do not overwrite an existing .env.local or use live credentials here.
+docker compose -f compose.local.yml up -d --wait
+pnpm db:migrate:local
 pnpm dev
 ```
 
-Open `http://localhost:3000` for the branch directory. Each active branch has
-its own Link Bio at `http://localhost:3000/{branch-slug}`; old `/b/{branch-slug}`
-links redirect to the direct URL. The CMS manages branch pages at
-`/admin/link-bio` and shared defaults at `/admin/settings`.
+Jangan menimpa `.env.local` yang sudah ada. Media lokal dibuat pada `.media`
+saat admin pertama kali mengunggah file; direktori tersebut diabaikan Git.
+Compose lokal tidak memakai restart policy, sehingga database tidak otomatis
+aktif saat Docker Desktop dibuka.
 
-## Commands
+Untuk menghentikan database lokal tanpa menghapus data:
 
-| Command                          | Purpose                                                 |
-| -------------------------------- | ------------------------------------------------------- |
-| `pnpm dev`                       | Start the local development server                      |
-| `pnpm build`                     | Create a production Next.js build                       |
-| `pnpm start`                     | Serve the production build                              |
-| `pnpm typecheck`                 | Run strict TypeScript checks                            |
-| `pnpm lint`                      | Run ESLint                                              |
-| `pnpm format:check`              | Check source/configuration formatting with Prettier     |
-| `pnpm quality:check`             | Run the same fast quality gate as CI before pushing     |
-| `pnpm test`                      | Run all unit and component tests once                   |
-| `pnpm test:unit`                 | Run Node unit tests only                                |
-| `pnpm test:component`            | Run isolated jsdom component tests only                 |
-| `pnpm test:watch`                | Run Vitest in watch mode                                |
-| `pnpm test:e2e`                  | Run Chromium public-page smoke against Supabase Local   |
-| `pnpm db:generate --name=<name>` | Generate reviewed Drizzle schema migration              |
-| `pnpm db:migrate:local`          | Apply migrations to Supabase Local only                 |
-| `pnpm db:migrate:live`           | Apply reviewed migrations to hosted Supabase explicitly |
-| `pnpm test:integration`          | Run database integration tests against local PostgreSQL |
-
-Install the test browser once with `pnpm exec playwright install chromium` before
-running `pnpm test:e2e`. Start Supabase Local and apply Drizzle migrations first.
-The E2E runner starts its own server on port 3100, uses `.env.local` when present,
-and never needs live tracking credentials. On Windows, allow Playwright to
-terminate its local server process tree when the test ends.
-
-Browser smoke tests use only the local database, never the live database.
-
-Before pushing code or deploying, run `pnpm quality:check`. It runs formatting,
-lint, TypeScript, unit/component tests, and the production build in the same
-order as the fast GitHub CI gate. GitHub CI is the required quality gate before
-deploy. Vercel runs only the production Next.js build because its production
-environment is not a Vitest runtime; the owner-managed Docker image also runs
-only `pnpm build` during image creation. Database integration and browser E2E
-checks remain in CI because they require Supabase Local and Playwright.
-
-The Drizzle commands require an ignored `.env.local` with local `DATABASE_URL` and
-`DATABASE_MIGRATION_URL`; the migration command rejects non-local database targets.
-For a fresh local database, start Docker Desktop, run
-`supabase start --network-id kgj-marketing-funnel-local`, then
-`pnpm db:migrate:local`. A `supabase db reset --local` must be followed by the
-separate Drizzle migration. Keep local Supabase ports protected from non-local
-traffic and stop the stack when unused; never use live credentials for local work.
-
-### Menghentikan Supabase Lokal
-
-Saat selesai bekerja, jalankan `supabase stop`. Stack Supabase lokal memakai
-kebijakan Docker `unless-stopped`; menghentikannya melalui CLI mencegah container
-hidup kembali hanya karena Docker Desktop dibuka. Jalankan `supabase start
---network-id kgj-marketing-funnel-local` kembali saat layanan lokal diperlukan.
-
-The database-role and deployment boundaries are in the
-[system architecture](docs/system-architecture.md).
-
-The live database is the self-hosted Supabase PostgreSQL service on the VPS. The
-application uses `supabase-db:5432` through the private external Docker network
-`supabase_default` with TLS disabled only for that internal route. Never expose
-PostgreSQL publicly or reuse its URL outside the VPS network. A reviewed live
-migration remains a separate owner operation; its credential never belongs in
-the application runtime environment.
-
-## Docker production
-
-An owner-managed VPS runs the published production image through
-`compose.production.yml`; this is separate from Supabase Local and does not
-start when Docker Desktop starts. The image uses Next.js standalone output.
-GitHub Actions builds and publishes the image; the VPS only pulls its immutable
-SHA tag and supplies its ignored `.env.production` at runtime.
-
-On the VPS, copy `.env.live.example` to ignored `.env.production`, set
-`NEXT_PUBLIC_SITE_URL=https://link.kotagedejewellery.com`, fill the internal
-`DATABASE_URL` with the `supabase-db` password, create the external Traefik
-network named `proxy`, and ensure the self-hosted Supabase network is named
-`supabase_default`. Traefik must have `web`, `websecure`, and the `letsencrypt`
-certificate resolver. Point the domain's DNS record to the VPS and run reviewed
-live migrations separately. Normal deployment is performed by GitHub Actions;
-for an approved manual recovery, use the exact published image SHA:
-
-```bash
-APP_IMAGE=ghcr.io/kotagedejewellery/marketing-funnel-hub:<git-sha> \
-  docker compose -f compose.production.yml up -d --no-build
+```powershell
+docker compose -f compose.local.yml stop
 ```
 
-Do not put `DATABASE_LIVE_MIGRATION_URL` or `DATABASE_MIGRATION_URL` in
-`.env.production`; neither is read by the application runtime. Traefik rate
-limiting for `/api/events` and an external scheduler for
-`GET /api/cron/events-retention` remain owner-managed production operations.
-The existing geographic analytics uses Vercel request headers; country/city
-data is unavailable on Traefik unless the owner provides equivalent trusted
-headers.
+## Perintah penting
 
-### Deploy melalui GitHub Actions
+| Perintah | Kegunaan |
+| --- | --- |
+| `pnpm typecheck` | Validasi TypeScript |
+| `pnpm test` | Unit dan component tests |
+| `pnpm test:integration` | Uji PostgreSQL lokal yang sudah dimigrasikan |
+| `pnpm test:e2e` | Smoke test browser terhadap database lokal |
+| `pnpm quality:check` | Gate CI: format, lint, typecheck, test, dan build |
+| `pnpm db:generate:standalone` | Buat migrasi Drizzle PostgreSQL untuk ditinjau |
+| `pnpm db:migrate:local` | Terapkan migrasi ke PostgreSQL lokal saja |
+| `pnpm db:migrate:live` | Terapkan migrasi live yang sudah disetujui secara eksplisit |
 
-`.github/workflows/ci.yml` hanya melakukan deploy setelah quality gate untuk
-push ke `main` sukses. Ia membangun image untuk SHA tersebut pada GitHub runner,
-menyimpannya sebagai package private GHCR, lalu tersambung ke VPS melalui SSH
-untuk menarik dan menjalankan image yang sama. VPS tidak menjalankan `pnpm`,
-`next build`, atau `docker compose build`; deploy tidak dapat saling tumpang
-tindih. Tambahkan secret repository berikut di GitHub sebelum push ke `main`:
+Install Chromium sekali sebelum E2E:
+
+```powershell
+pnpm exec playwright install chromium
+```
+
+## Produksi di VPS 1
+
+1. Buat network Traefik `proxy` yang sudah digunakan VPS.
+2. Salin `.env.live.example` menjadi `.env.production` yang diabaikan Git.
+3. Isi password PostgreSQL, `DATABASE_URL` role `kgj_app`, rahasia sesi/tracking,
+   dan `MEDIA_STORAGE_ROOT=/app/media`.
+4. Pastikan `MEDIA_PUBLIC_BASE_URL=https://link.kotagedejewellery.com/media`.
+5. Jalankan migrasi production hanya setelah ditinjau dan disetujui pemilik;
+   gunakan service profile `migration`, bukan runtime aplikasi.
+6. Deploy image SHA melalui workflow GitHub Actions.
+
+`compose.production.yml` membuat dua volume terpisah: `postgres-data` dan
+`media-data`. Service `media-init` hanya mengatur kepemilikan volume media;
+ia tidak mengosongkan, menyalin, atau menghapus file. Aplikasi menggunakan
+`restart: unless-stopped`; database dan media tidak diekspos ke host.
+
+Repository secrets untuk deploy:
 
 ```text
 VPS_HOST
@@ -172,73 +92,90 @@ GHCR_USERNAME
 GHCR_PULL_TOKEN
 ```
 
-`DOCKER_BUILD_ENV` adalah isi runtime `.env.production` production, disimpan
-sebagai multiline secret tanpa tanda kutip. Ia hanya dipasang sebagai BuildKit
-secret ketika image dibuat dan tidak disalin ke image. Jaga nilainya selaras
-dengan `.env.production` di VPS, terutama semua `NEXT_PUBLIC_*`; jangan masukkan
-`DATABASE_LIVE_MIGRATION_URL` atau kredensial migrasi. `GHCR_USERNAME` adalah
-akun GitHub pembuat token. `GHCR_PULL_TOKEN` adalah personal access token
-**classic** akun tersebut dengan scope `read:packages` dan akses baca ke package
-`kotagedejewellery/marketing-funnel-hub`; token dipakai hanya saat VPS menarik
-image lalu langsung di-logout. Workflow memakai
-`GITHUB_TOKEN` dan izin `packages: write` untuk menerbitkan image. Bila kebijakan
-organisasi menolak penerbitan, izinkan workflow repository membuat package GHCR.
+`DOCKER_BUILD_ENV` berisi environment runtime production yang sama dengan
+`.env.production`, tanpa `DATABASE_LIVE_MIGRATION_URL`. Jangan menyimpan
+credential migrasi di image, runtime, Git, atau log. Workflow deploy memulai
+PostgreSQL lalu memeriksa schema minimum; bila belum ada, deploy aplikasi
+dihentikan tanpa mengubah data.
 
-Checkout repository pada VPS harus sudah berada di
-`/opt/apps/sistem-marketing-funnel/marketing-funnel-hub`, memiliki remote
-`origin`, akses baca repository, Docker Compose v2, dan file ignored
-`.env.production` yang telah diisi. Workflow sengaja tidak menjalankan migrasi
-database; jalankan dan setujui migrasi live secara terpisah sebelum deploy kode
-yang membutuhkannya.
+## Aturan keselamatan data dan cutover
 
-## Meta tracking release checklist
+Tidak ada startup, build, Dockerfile, atau workflow deploy yang melakukan
+reset database, `truncate`, migrasi otomatis, atau penghapusan volume.
 
-Before setting `TRACKING_ENABLED=true` in production:
+Baseline `drizzle-standalone/0000_standalone_baseline.sql` hanya untuk
+PostgreSQL baru yang kosong. Ia bukan skrip untuk menimpa database yang sudah
+berisi data. Cutover dari Supabase self-hosted harus diperlakukan sebagai
+operasi pemilik terpisah:
 
-1. In CMS, set a public privacy-policy URL that explains automatic Meta Pixel,
-   CAPI, and pseudonymous first-party cookie processing.
-2. Configure each branch as **inherit global**, **custom**, or **disabled**. A
-   technical admin may save a branch Pixel ID, CAPI token, optional Test Event
-   Code, and one standard Meta event for the WhatsApp CTA. The page-load event
-   is always `PageView`.
-3. For global fallback, set both `NEXT_PUBLIC_META_PIXEL_ID` and
-   `META_CAPI_ACCESS_TOKEN`. When using custom branch CAPI credentials, also
-   set server-only `META_TRACKING_CONFIG_ENCRYPTION_KEY` to 64 hexadecimal
-   characters. Do not add a separate CAPI Dataset ID.
-4. Deploy the application, then enable `TRACKING_ENABLED=true`. No database
-   migration is required for pseudonymous Advanced Matching.
+1. Backup database sumber dan target, serta salin bucket/file media sumber.
+2. Siapkan target kosong, lalu impor schema dan data melalui
+   [runbook cutover](docs/runbooks/standalone-vps-cutover.md) yang ditinjau.
+   Jangan menjalankan reset pada sumber maupun target berisi data.
+3. Salin setiap object media ke volume `media-data` dengan path relatif yang
+   sama seperti `logo_path`, `banner_path`, dan `image_path` di database.
+4. Bandingkan jumlah data, foreign key, branch root, akun admin, dan respons
+   URL media sebelum DNS/cutover.
+5. Simpan backup sampai smoke check publik, login CMS, unggah media, dan CTA
+   WhatsApp terbukti benar. Kata sandi admin CMS perlu dibuat ulang karena
+   Supabase Auth tidak dipakai lagi.
 
-When tracking is enabled, the application sends the same `event_id` to Pixel
-and CAPI for deduplication. It forwards `_fbp` when Meta Pixel has created it,
-creates `_fbc` from a valid `fbclid` landing URL, and creates a 180-day
-first-party random UUID cookie (`kgj_eid`) as Meta `external_id`. These values
-are pseudonymous transport data: they are not stored in internal events,
-database tables, audit records, or ordinary logs.
+Migrasi live tidak pernah dijalankan oleh GitHub Actions. Aset atau data lama
+tidak dihapus oleh perubahan aplikasi ini; pembersihan hanya boleh dilakukan
+oleh pemilik setelah periode rollback yang disetujui.
 
-To verify production, enter an optional Test Event Code in the branch CMS,
-open a Link Bio destination URL from Meta (or one with a valid `fbclid`), then
-click a WhatsApp CTA. In Meta Test Events, confirm browser and server copies
-of `PageView` and CTA event share an `event_id`; confirm `_fbp`, `_fbc` where
-available, and `external_id` in CAPI parameters. Meta controls delivery,
-deduplication status, and Event Match Quality, so those results cannot be
-proven by a local build alone.
+## Operasi migrasi owner-only
 
-## Documentation
+Salin `.env.migration.example` menjadi `.env.migration`, isi hanya URL owner
+database internal, lalu lindungi file itu (`chmod 600 .env.migration` di VPS).
+Service profile `migration` tidak dijalankan oleh startup atau GitHub Actions.
+Setelah pemilik menyetujui migrasi yang ditinjau, jalankan dari repository VPS:
 
-The complete `/docs` set is [PRD](docs/prd.md),
-[System Architecture](docs/system-architecture.md), and
-[Database Design](docs/database-design.md). The brief PDF supplied by the owner
-is business source material; these three documents include the later approved
-project-specific technical decisions.
+```bash
+APP_IMAGE=manual-migration-only \
+  docker compose -f compose.production.yml --profile migration run --rm --build migration
+```
 
-Implementation contributors must also follow [AGENTS.md](AGENTS.md).
+Untuk membuat technical admin pertama setelah impor, isi juga
+`BOOTSTRAP_ADMIN_EMAIL` dan `BOOTSTRAP_ADMIN_PASSWORD` (12â€“128 karakter) di
+`.env.migration`, lalu jalankan:
 
-## Architecture
+```bash
+APP_IMAGE=manual-migration-only \
+  docker compose -f compose.production.yml --profile migration run --rm --build \
+  migration node scripts/bootstrap-technical-admin.mjs
+```
 
-P0 is a Next.js modular monolith hosted on Vercel or an owner-managed
-Docker/Traefik VPS, with Supabase PostgreSQL, Auth, and Storage; Drizzle owns
-schema and migrations. Privileged database, auth, storage, and tracking paths
-use the Node.js runtime.
+Bootstrap menolak berjalan bila technical admin yang sudah memiliki kata sandi
+ada. Ia tidak mencetak password, hash, atau URL koneksi. Detail pemetaan data,
+media, validasi, dan rollback ada di runbook.
 
-See the [system architecture](docs/system-architecture.md) for runtime, security,
-tracking, and the two-environment (local/live) decision.
+Untuk cutover data, isi `SOURCE_DATABASE_URL`, tetapkan
+`MEDIA_COPY_VERIFIED=true` hanya setelah manifest asset selesai diverifikasi,
+dan gunakan konfirmasi eksplisit berikut. Script hanya membaca source,
+menolak target yang telah berisi data impor, lalu memakai satu transaksi target
+tanpa `DELETE`, `TRUNCATE`, atau reset:
+
+```bash
+CUTOVER_CONFIRMATION=IMPORT_SOURCE_DATA_WITHOUT_DELETION \
+  APP_IMAGE=manual-migration-only \
+  docker compose -f compose.production.yml --profile migration run --rm --build \
+  migration node scripts/import-supabase-to-standalone.mjs
+```
+
+## Meta tracking
+
+Saat `TRACKING_ENABLED=true`, browser dan CAPI menerima `PageView` ketika
+Link Bio dibuka. CTA WhatsApp mengirim `Contact` secara internal dan event Meta
+standar yang dipilih technical admin. Tracking bersifat best-effort dan tidak
+pernah menahan navigasi WhatsApp.
+
+Untuk konfigurasi cabang khusus, gunakan `META_TRACKING_CONFIG_ENCRYPTION_KEY`
+64 karakter hex. Token CAPI dan Test Event Code tidak masuk halaman publik,
+audit log, atau event internal. Detail lengkap ada di PRD.
+
+## Kontribusi
+
+Ikuti [AGENTS.md](AGENTS.md): baca dokumen sumber yang relevan, gunakan
+migrasi forward-only, lakukan pengujian proporsional, dan jangan commit/push
+atas nama pemilik.

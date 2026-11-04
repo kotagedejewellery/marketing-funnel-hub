@@ -7,8 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
 import { auditLogs, branches, galleryItems } from "@/lib/db/schema";
-import { serverEnv } from "@/lib/env/server";
-import { createPrivilegedSupabase } from "@/lib/supabase/server";
+import { uploadPublicAsset } from "@/lib/media/server";
 import { requireAdmin } from "@/modules/admin/access";
 import {
   imageExtension,
@@ -101,16 +100,7 @@ export async function saveGalleryItem(
     }
     imagePath = `gallery/${input.branchId}/${randomUUID()}.${extension}`;
     try {
-      const { storage } = createPrivilegedSupabase();
-      const { error } = await storage
-        .from(serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET)
-        .upload(imagePath, bytes, { contentType: file.type, upsert: false });
-      if (error) {
-        return {
-          message: "Unggah gambar gagal. Coba lagi.",
-          errors: { file: "Gambar belum terunggah." },
-        };
-      }
+      await uploadPublicAsset(imagePath, bytes);
     } catch {
       return {
         message: "Unggah gambar gagal. Coba lagi.",

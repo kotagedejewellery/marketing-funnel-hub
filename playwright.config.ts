@@ -30,13 +30,14 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_APP_ENV: "local",
       NEXT_PUBLIC_SITE_URL: baseURL,
-      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_local_test_key",
       DATABASE_URL:
         process.env.DATABASE_URL ??
-        "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
-      SUPABASE_SECRET_KEY: "sb_secret_local_test_key",
-      SUPABASE_PUBLIC_ASSET_BUCKET: "public-assets",
+        "postgresql://kgj_app:local-app-password@127.0.0.1:54329/kgj?sslmode=disable",
+      DATABASE_SSL: "false",
+      ADMIN_SESSION_SECRET: "test-admin-session-secret-at-least-32-characters",
+      TRACKING_HMAC_SECRET: "test-tracking-hmac-secret-at-least-32-characters",
+      MEDIA_STORAGE_ROOT: ".media-e2e",
+      MEDIA_PUBLIC_BASE_URL: `${baseURL}/media`,
       TRACKING_ENABLED: "false",
       CRON_SECRET: "test-cron-secret-123456",
     },

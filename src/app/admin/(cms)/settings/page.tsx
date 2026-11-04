@@ -82,8 +82,7 @@ export default async function SettingsPage() {
           entityId={settings.id}
           label="Logo"
           previewUrl={publicAssetUrl(
-            serverEnv.NEXT_PUBLIC_SUPABASE_URL,
-            serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET,
+            serverEnv.MEDIA_PUBLIC_BASE_URL,
             settings.logoPath,
           )}
         />

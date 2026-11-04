@@ -26,8 +26,7 @@ export function publicHref(
 }
 
 export function publicAssetUrl(
-  supabaseUrl: string,
-  bucket: string,
+  publicBaseUrl: string,
   path: string | null,
 ): string | null {
   if (!path) return null;
@@ -46,7 +45,7 @@ export function publicAssetUrl(
   }
 
   const objectPath = segments.map(encodeURIComponent).join("/");
-  return `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/${encodeURIComponent(bucket)}/${objectPath}`;
+  return `${publicBaseUrl.replace(/\/+$/, "")}/${objectPath}`;
 }
 
 export function whatsappHref(

@@ -24,6 +24,11 @@ RUN --mount=type=cache,id=kgj-link-bio-next-cache,target=/app/.next/cache,sharin
   --mount=type=secret,id=app_env,target=/app/.env.production \
   pnpm build
 
+FROM dependencies AS migration
+COPY . .
+
+CMD ["pnpm", "db:migrate:live"]
+
 FROM node:24-alpine AS runner
 WORKDIR /app
 

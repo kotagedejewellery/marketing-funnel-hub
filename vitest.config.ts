@@ -29,6 +29,7 @@ export default defineConfig({
           environment: "node",
           testTimeout: 15_000,
           include: ["src/**/*.integration.test.ts"],
+          setupFiles: ["./src/test/integration-setup.ts"],
         },
       },
       {

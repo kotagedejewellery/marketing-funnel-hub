@@ -1,4 +1,7 @@
 .next
+.media
+.media-test
+.media-e2e
 node_modules
 .pnpm-store
 .env*

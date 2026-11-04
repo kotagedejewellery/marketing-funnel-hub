@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/env/server", () => ({
   serverEnv: {
     NEXT_PUBLIC_APP_ENV: "production",
-    SUPABASE_SECRET_KEY: "test-secret-not-for-production",
+    TRACKING_HMAC_SECRET: "test-secret-not-for-production",
   },
 }));
 

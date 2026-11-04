@@ -60,8 +60,7 @@ export async function getProductAssignments(
       displayName: assignment?.displayName ?? "",
       description: assignment?.description ?? "",
       imageUrl: publicAssetUrl(
-        serverEnv.NEXT_PUBLIC_SUPABASE_URL,
-        serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET,
+        serverEnv.MEDIA_PUBLIC_BASE_URL,
         assignment?.imagePath ?? null,
       ),
       whatsappMessageTemplate: assignment?.whatsappMessageTemplate ?? "",

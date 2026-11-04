@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const publicAssetBucket = process.env.SUPABASE_PUBLIC_ASSET_BUCKET;
+const mediaPublicBaseUrl = process.env.MEDIA_PUBLIC_BASE_URL;
 
 let remotePatterns: NonNullable<NextConfig["images"]>["remotePatterns"] = [];
 
@@ -16,16 +15,16 @@ const reviewerPhotoPatterns: NonNullable<
   { protocol: "https", hostname: "**.gstatic.com", pathname: "/**" },
 ];
 
-if (supabaseUrl && publicAssetBucket) {
+if (mediaPublicBaseUrl) {
   try {
-    const url = new URL(supabaseUrl);
+    const url = new URL(mediaPublicBaseUrl);
     if (url.protocol === "http:" || url.protocol === "https:") {
       remotePatterns = [
         {
           protocol: url.protocol.slice(0, -1) as "http" | "https",
           hostname: url.hostname,
           port: url.port,
-          pathname: `${url.pathname.replace(/\/$/, "")}/storage/v1/object/public/${encodeURIComponent(publicAssetBucket)}/**`,
+          pathname: `${url.pathname.replace(/\/$/, "")}/**`,
           search: "",
         },
         ...reviewerPhotoPatterns,

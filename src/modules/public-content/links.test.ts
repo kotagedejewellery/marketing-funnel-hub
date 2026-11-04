@@ -63,18 +63,15 @@ describe("public destinations", () => {
     expect(publicHref("http://localhost:3000/info")).toBeNull();
   });
 
-  it("builds a public Storage URL only from a safe object path", () => {
+  it("builds a public object URL only from a safe object path", () => {
     expect(
       publicAssetUrl(
-        "http://127.0.0.1:54321",
-        "public-assets",
+        "http://localhost:3000/media",
         "products/cincin emas.webp",
       ),
-    ).toBe(
-      "http://127.0.0.1:54321/storage/v1/object/public/public-assets/products/cincin%20emas.webp",
-    );
+    ).toBe("http://localhost:3000/media/products/cincin%20emas.webp");
     expect(
-      publicAssetUrl("http://127.0.0.1:54321", "public-assets", "../secret"),
+      publicAssetUrl("http://localhost:3000/media", "../secret"),
     ).toBeNull();
   });
 });

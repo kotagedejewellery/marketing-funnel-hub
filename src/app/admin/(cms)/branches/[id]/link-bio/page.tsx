@@ -47,11 +47,7 @@ export default async function BranchLinkBioPage({
     ? await getBranchMetaTrackingSecretsForTechnicalAdmin(id)
     : null;
   const assetUrl = (path: string | null) =>
-    publicAssetUrl(
-      serverEnv.NEXT_PUBLIC_SUPABASE_URL,
-      serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET,
-      path,
-    );
+    publicAssetUrl(serverEnv.MEDIA_PUBLIC_BASE_URL, path);
 
   return (
     <div>

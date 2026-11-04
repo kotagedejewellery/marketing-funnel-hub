@@ -7,8 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
 import { auditLogs, branches, campaigns, siteSettings } from "@/lib/db/schema";
-import { serverEnv } from "@/lib/env/server";
-import { createPrivilegedSupabase } from "@/lib/supabase/server";
+import { uploadPublicAsset } from "@/lib/media/server";
 import { requireAdmin } from "@/modules/admin/access";
 
 import {
@@ -70,12 +69,8 @@ export async function uploadMedia(
 
   const folder = entityType === "site" ? "brand" : `${entityType}s`;
   const path = `${folder}/${entityId}/${randomUUID()}.${extension}`;
-  const { storage } = createPrivilegedSupabase();
   try {
-    const { error } = await storage
-      .from(serverEnv.SUPABASE_PUBLIC_ASSET_BUCKET)
-      .upload(path, bytes, { contentType: file.type, upsert: false });
-    if (error) return { ok: false, message: "Unggah gambar gagal. Coba lagi." };
+    await uploadPublicAsset(path, bytes);
   } catch {
     return { ok: false, message: "Unggah gambar gagal. Coba lagi." };
   }

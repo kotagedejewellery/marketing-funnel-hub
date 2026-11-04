@@ -3,8 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { createBrowserAuth } from "@/lib/supabase/client";
-
 export function SignOutButton() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -14,8 +12,8 @@ export function SignOutButton() {
     setPending(true);
     setError(false);
     try {
-      const { error: authError } = await createBrowserAuth().signOut();
-      if (authError) {
+      const response = await fetch("/api/admin/session", { method: "DELETE" });
+      if (!response.ok) {
         setError(true);
         return;
       }
