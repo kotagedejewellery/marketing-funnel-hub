@@ -110,10 +110,15 @@ export async function saveLink(
         .values(createValues)
         .returning({ id: links.id });
       if (branchId && created)
-        await appendPageBlockIfCustomized(tx, branchId, {
-          kind: "link",
-          linkId: created.id,
-        }, input.layoutPlacement);
+        await appendPageBlockIfCustomized(
+          tx,
+          branchId,
+          {
+            kind: "link",
+            linkId: created.id,
+          },
+          input.layoutPlacement,
+        );
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "create",

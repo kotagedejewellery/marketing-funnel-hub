@@ -183,7 +183,7 @@ export function BranchPageForm({
               ? "Simpan untuk menyalin template KGJ, lalu atur susunan ini khusus untuk cabang."
               : hasCustomLayout
                 ? "Urutan tampil diatur dari Susunan halaman. Di sini Anda tetap dapat mengatur visibilitas, judul, jarak, dan garis pemisah section."
-              : "Urutan dan visibilitas ini hanya berlaku untuk cabang ini."}
+                : "Urutan dan visibilitas ini hanya berlaku untuk cabang ini."}
           </p>
           {orderedSections.map((section, index) => (
             <div

@@ -26,8 +26,8 @@ describe("linkSchema", () => {
   });
 
   it("rejects an uncontrolled CTA style", () => {
-    expect(
-      linkSchema.safeParse({ ...link, buttonStyle: "neon" }).success,
-    ).toBe(false);
+    expect(linkSchema.safeParse({ ...link, buttonStyle: "neon" }).success).toBe(
+      false,
+    );
   });
 });
