@@ -163,4 +163,47 @@ describe("TrackingBehavior", () => {
     );
     vi.useRealTimers();
   });
+
+  it("records a custom CTA as LinkClick rather than Contact", () => {
+    const { getByRole } = render(
+      <main id="main-content">
+        <a
+          href="https://example.com/catalog"
+          data-track="link"
+          data-track-link-id="link-1"
+          onClick={(event) => event.preventDefault()}
+        >
+          Lihat katalog
+        </a>
+        <TrackingBehavior
+          context={{
+            anonymousSessionId: "3e29fb31-6d56-44b5-ad41-a8e97ac7281a",
+            metaExternalId: null,
+            attribution: {
+              source: null,
+              campaign: null,
+              utmSource: null,
+              utmMedium: null,
+              utmCampaign: null,
+              utmContent: null,
+              utmTerm: null,
+            },
+          }}
+          products={[]}
+          links={[{ id: "link-1", label: "Lihat katalog", type: "cta" }]}
+          branch={{ id: "branch-1", name: "Pusat" }}
+          metaTracking={{ pixelId: null, whatsappCtaMetaEvent: "Contact" }}
+        />
+      </main>,
+    );
+
+    fireEvent.click(getByRole("link", { name: "Lihat katalog" }));
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      "/api/events",
+      expect.objectContaining({
+        body: expect.stringContaining('"eventName":"LinkClick"'),
+      }),
+    );
+  });
 });

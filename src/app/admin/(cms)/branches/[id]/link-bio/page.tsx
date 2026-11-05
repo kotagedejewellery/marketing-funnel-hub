@@ -15,6 +15,7 @@ import {
   PageLinks,
 } from "@/components/admin/page-content-panels";
 import { PagePreview } from "@/components/admin/page-preview";
+import { PageBlockOrder } from "@/components/admin/page-block-order";
 import { serverEnv } from "@/lib/env/server";
 import { getBranchPageSettings } from "@/modules/admin/branches/page-data";
 import { requireAdmin } from "@/modules/admin/access";
@@ -41,6 +42,7 @@ export default async function BranchLinkBioPage({
     faqs,
     inheritsFaqs,
     products,
+    layoutBlocks,
     metaTracking,
   } = await getBranchPageSettings(id);
   const metaSecrets = isTechnicalAdmin
@@ -178,6 +180,7 @@ export default async function BranchLinkBioPage({
                   branch={branch}
                   sections={sections}
                   inheritsSections={inheritsSections}
+                  hasCustomLayout={layoutBlocks.length > 0}
                   mode="sections"
                 />
               </FormDialog>
@@ -196,6 +199,7 @@ export default async function BranchLinkBioPage({
               ))}
             </ol>
           </section>
+          <PageBlockOrder branchId={branch.id} blocks={layoutBlocks} />
           <PageCampaigns rows={campaigns} branchId={branch.id} />
           <GalleryManager
             branchId={branch.id}
@@ -204,7 +208,11 @@ export default async function BranchLinkBioPage({
               return imageUrl ? [{ ...item, imageUrl }] : [];
             })}
           />
-          <BranchProductManager branchId={branch.id} products={products} />
+          <BranchProductManager
+            branchId={branch.id}
+            products={products}
+            hasCustomLayout={layoutBlocks.length > 0}
+          />
           <BranchMetaTrackingManager
             branchId={branch.id}
             settings={{
@@ -231,7 +239,11 @@ export default async function BranchLinkBioPage({
             branchId={branch.id}
             inherits={inheritsFaqs}
           />
-          <PageLinks rows={links} branchId={branch.id} />
+          <PageLinks
+            rows={links}
+            branchId={branch.id}
+            hasCustomLayout={layoutBlocks.length > 0}
+          />
         </div>
         <PagePreview pageId={branch.id} title={branch.name} />
       </div>

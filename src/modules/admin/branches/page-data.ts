@@ -13,6 +13,7 @@ import {
   faqs,
   galleryItems,
   links,
+  pageBlocks,
   productBranches,
   products,
 } from "@/lib/db/schema";
@@ -61,6 +62,7 @@ export async function getBranchPageSettings(id: string) {
     productRows,
     assignmentRows,
     metaTrackingRows,
+    pageBlockRows,
   ] = await Promise.all([
     db
       .select()
@@ -128,6 +130,11 @@ export async function getBranchPageSettings(id: string) {
       .from(branchMetaTrackingConfigs)
       .where(eq(branchMetaTrackingConfigs.branchId, branch.id))
       .limit(1),
+    db
+      .select()
+      .from(pageBlocks)
+      .where(eq(pageBlocks.branchId, branch.id))
+      .orderBy(asc(pageBlocks.sortOrder), asc(pageBlocks.id)),
   ]);
   const assignmentByProductId = new Map(
     assignmentRows.map((row) => [row.productId, row]),
@@ -145,6 +152,72 @@ export async function getBranchPageSettings(id: string) {
       : metaTrackingRows[0]?.mode === "disabled"
         ? "disabled"
         : "inherit";
+  const branchProducts = productRows
+    .map((product) => ({
+      ...product,
+      assignment: assignmentByProductId.get(product.id) ?? null,
+    }))
+    .sort((a, b) => {
+      const aActive = Number(Boolean(a.assignment?.isActive));
+      const bActive = Number(Boolean(b.assignment?.isActive));
+      return (
+        bActive - aActive ||
+        (a.assignment?.sortOrder ?? a.sortOrder) -
+          (b.assignment?.sortOrder ?? b.sortOrder) ||
+        a.name.localeCompare(b.name)
+      );
+    });
+  const sectionsByKey = new Map(
+    sections.map((section) => [section.sectionKey, section]),
+  );
+  const productsByAssignmentId = new Map(
+    branchProducts.flatMap((product) =>
+      product.assignment ? [[product.assignment.id, product] as const] : [],
+    ),
+  );
+  const linksById = new Map(branchLinks.map((link) => [link.id, link]));
+  const layoutBlocks: {
+    id: string;
+    kind: "section" | "product" | "link";
+    label: string;
+    isActive: boolean;
+    linkType?: string;
+  }[] = [];
+  for (const block of pageBlockRows) {
+    if (block.kind === "section" && block.sectionKey) {
+      const section = sectionsByKey.get(block.sectionKey);
+      if (section)
+        layoutBlocks.push({
+          id: block.id,
+          kind: "section",
+          label: section.label,
+          isActive: section.isActive,
+        });
+      continue;
+    }
+    if (block.kind === "product" && block.productBranchId) {
+      const product = productsByAssignmentId.get(block.productBranchId);
+      if (product)
+        layoutBlocks.push({
+          id: block.id,
+          kind: "product",
+          label: product.assignment?.displayName || product.name,
+          isActive: Boolean(product.isActive && product.assignment?.isActive),
+        });
+      continue;
+    }
+    if (block.kind === "link" && block.linkId) {
+      const link = linksById.get(block.linkId);
+      if (link)
+        layoutBlocks.push({
+          id: block.id,
+          kind: "link",
+          label: link.label,
+          isActive: link.isActive,
+          linkType: link.linkType,
+        });
+    }
+  }
   return {
     branch,
     sections: sections.map(withSectionLabel),
@@ -156,21 +229,8 @@ export async function getBranchPageSettings(id: string) {
     reviews: branchReviews,
     faqs: branchFaqs.length ? branchFaqs : inheritedFaqs,
     inheritsFaqs: branchFaqs.length === 0,
-    products: productRows
-      .map((product) => ({
-        ...product,
-        assignment: assignmentByProductId.get(product.id) ?? null,
-      }))
-      .sort((a, b) => {
-        const aActive = Number(Boolean(a.assignment?.isActive));
-        const bActive = Number(Boolean(b.assignment?.isActive));
-        return (
-          bActive - aActive ||
-          (a.assignment?.sortOrder ?? a.sortOrder) -
-            (b.assignment?.sortOrder ?? b.sortOrder) ||
-          a.name.localeCompare(b.name)
-        );
-      }),
+    products: branchProducts,
+    layoutBlocks,
     metaTracking: {
       mode: metaTrackingMode,
       pixelId: metaTrackingRows[0]?.pixelId ?? null,

@@ -14,6 +14,7 @@ import {
   faqs,
   galleryItems,
   links,
+  pageBlocks,
   productBranches,
   products,
   siteSettings,
@@ -21,6 +22,7 @@ import {
 
 import { branchPageTitle } from "./branch-title";
 import { publicAssetUrl, publicHref, resolveWhatsappCta } from "./links";
+import { resolvePageBlocks } from "./page-blocks";
 import { resolveProfileVisibility } from "./profile-visibility";
 import { browserMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 
@@ -155,6 +157,7 @@ async function loadScopedContent(
     activeSections,
     pageFaqs,
     trackingConfigRows,
+    savedPageBlocks,
   ] = await Promise.all([
     db
       .select({
@@ -193,6 +196,7 @@ async function loadScopedContent(
     db
       .select({
         productId: productBranches.productId,
+        assignmentId: productBranches.id,
         assignmentSortOrder: productBranches.sortOrder,
         displayName: productBranches.displayName,
         displayDescription: productBranches.description,
@@ -271,6 +275,8 @@ async function loadScopedContent(
         url: links.url,
         linkType: links.linkType,
         platform: links.platform,
+        iconKey: links.iconKey,
+        buttonStyle: links.buttonStyle,
       })
       .from(links)
       .where(and(eq(links.isActive, true), eq(links.branchId, branch.id)))
@@ -306,6 +312,16 @@ async function loadScopedContent(
       .from(branchMetaTrackingConfigs)
       .where(eq(branchMetaTrackingConfigs.branchId, branch.id))
       .limit(1),
+    db
+      .select({
+        kind: pageBlocks.kind,
+        sectionKey: pageBlocks.sectionKey,
+        productBranchId: pageBlocks.productBranchId,
+        linkId: pageBlocks.linkId,
+      })
+      .from(pageBlocks)
+      .where(eq(pageBlocks.branchId, branch.id))
+      .orderBy(asc(pageBlocks.sortOrder), asc(pageBlocks.id)),
   ]);
 
   const campaign = eligibleCampaigns[0];
@@ -370,6 +386,76 @@ async function loadScopedContent(
           }),
         )
     : [];
+  const publicSections = sections
+    .filter((section) => section.isActive)
+    .map(({ sectionKey, publicTitle, spacingAfter, showDivider }) => ({
+      sectionKey,
+      publicTitle,
+      spacingAfter,
+      showDivider,
+    }));
+  const publicProducts = visibleProducts.map((product) => {
+    const assignment = branchAssignments.get(product.id);
+    const displayName = assignment?.displayName || product.name;
+    return {
+      id: product.id,
+      assignmentId: assignment?.assignmentId ?? product.id,
+      name: displayName,
+      slug: product.slug,
+      description: assignment?.displayDescription || product.description,
+      branches: activeBranches
+        .filter((item) => item.productId === product.id)
+        .map((item) => {
+          const cta = resolveWhatsappCta({
+            number: item.whatsappNumber,
+            product: displayName,
+            branch: item.name,
+            assignmentLabel: item.assignmentLabel,
+            branchLabel: item.branchLabel,
+            defaultLabel: site.defaultCtaLabel,
+            assignmentMessage: item.assignmentMessage,
+            defaultMessage: site.defaultWhatsappMessage,
+          });
+          return {
+            id: item.id,
+            name: item.name,
+            slug: item.slug,
+            ctaLabel: cta.ctaLabel,
+            whatsappUrl: cta.whatsappUrl,
+          };
+        }),
+    };
+  });
+  const publicLinks = activeLinks.flatMap((link) => {
+    const url = safeHref(link.url);
+    return url ? [{ ...link, url }] : [];
+  });
+  const savedBlocks: (
+    | { kind: "section"; sectionKey: string }
+    | { kind: "product"; productBranchId: string }
+    | { kind: "link"; linkId: string }
+  )[] = [];
+  for (const block of savedPageBlocks) {
+    if (block.kind === "section" && block.sectionKey) {
+      savedBlocks.push({ kind: "section", sectionKey: block.sectionKey });
+      continue;
+    }
+    if (block.kind === "product" && block.productBranchId) {
+      savedBlocks.push({
+        kind: "product",
+        productBranchId: block.productBranchId,
+      });
+      continue;
+    }
+    if (block.kind === "link" && block.linkId)
+      savedBlocks.push({ kind: "link", linkId: block.linkId });
+  }
+  const blocks = resolvePageBlocks({
+    sections: publicSections,
+    products: publicProducts,
+    links: publicLinks,
+    blocks: savedBlocks,
+  });
 
   return {
     site: {
@@ -418,50 +504,11 @@ async function loadScopedContent(
     reviews: reviewSource?.isEnabled
       ? { sourceUrl: reviewSource.sourceUrl, items: visibleReviews }
       : null,
-    products: visibleProducts.map((product) => {
-      const assignment = branchAssignments.get(product.id);
-      const displayName = assignment?.displayName || product.name;
-      return {
-        id: product.id,
-        name: displayName,
-        slug: product.slug,
-        description: assignment?.displayDescription || product.description,
-        branches: activeBranches
-          .filter((item) => item.productId === product.id)
-          .map((item) => {
-            const cta = resolveWhatsappCta({
-              number: item.whatsappNumber,
-              product: displayName,
-              branch: item.name,
-              assignmentLabel: item.assignmentLabel,
-              branchLabel: item.branchLabel,
-              defaultLabel: site.defaultCtaLabel,
-              assignmentMessage: item.assignmentMessage,
-              defaultMessage: site.defaultWhatsappMessage,
-            });
-            return {
-              id: item.id,
-              name: item.name,
-              slug: item.slug,
-              ctaLabel: cta.ctaLabel,
-              whatsappUrl: cta.whatsappUrl,
-            };
-          }),
-      };
-    }),
-    links: activeLinks.flatMap((link) => {
-      const url = safeHref(link.url);
-      return url ? [{ ...link, url }] : [];
-    }),
+    products: publicProducts,
+    links: publicLinks,
     faqs: visibleFaqs,
-    sections: sections
-      .filter((section) => section.isActive)
-      .map(({ sectionKey, publicTitle, spacingAfter, showDivider }) => ({
-        sectionKey,
-        publicTitle,
-        spacingAfter,
-        showDivider,
-      })),
+    sections: publicSections,
+    blocks,
     tracking,
     pageBranch: { id: branch.id, name: branch.name, slug: branch.slug },
   };

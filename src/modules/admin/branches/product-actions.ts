@@ -12,6 +12,7 @@ import {
   products,
 } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
+import { appendPageBlockIfCustomized } from "@/modules/admin/link-bio/page-blocks";
 
 import { branchProductSchema } from "./product-validation";
 
@@ -120,6 +121,7 @@ export async function addExistingProductToBranch(
         .from(productBranches)
         .where(eq(productBranches.branchId, branchId));
       const sortOrder = Number(lastOrder?.value ?? -1) + 1;
+      let assignmentId = existing[0]?.id;
 
       if (existing[0]) {
         await tx
@@ -127,13 +129,17 @@ export async function addExistingProductToBranch(
           .set({ isActive: true, sortOrder, updatedAt: new Date() })
           .where(eq(productBranches.id, existing[0].id));
       } else {
-        await tx.insert(productBranches).values({
-          branchId,
-          productId,
-          isActive: true,
-          sortOrder,
-        });
+        const [createdAssignment] = await tx
+          .insert(productBranches)
+          .values({ branchId, productId, isActive: true, sortOrder })
+          .returning({ id: productBranches.id });
+        assignmentId = createdAssignment?.id;
       }
+      if (assignmentId)
+        await appendPageBlockIfCustomized(tx, branchId, {
+          kind: "product",
+          productBranchId: assignmentId,
+        });
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: existing[0] ? "activate" : "assign",
@@ -234,12 +240,20 @@ export async function createProductForBranch(
         .returning({ id: products.id });
       if (!created) throw new Error("Product insert returned no row.");
 
-      await tx.insert(productBranches).values({
-        branchId: input.branchId,
-        productId: created.id,
-        isActive: true,
-        sortOrder: Number(lastAssignmentOrder[0]?.value ?? -1) + 1,
-      });
+      const [createdAssignment] = await tx
+        .insert(productBranches)
+        .values({
+          branchId: input.branchId,
+          productId: created.id,
+          isActive: true,
+          sortOrder: Number(lastAssignmentOrder[0]?.value ?? -1) + 1,
+        })
+        .returning({ id: productBranches.id });
+      if (createdAssignment)
+        await appendPageBlockIfCustomized(tx, input.branchId, {
+          kind: "product",
+          productBranchId: createdAssignment.id,
+        });
       await tx.insert(auditLogs).values([
         {
           adminId: profile.id,
@@ -344,11 +358,19 @@ export async function saveBranchProduct(
           .set({ ...values, updatedAt: new Date() })
           .where(eq(productBranches.id, existing.id));
       } else {
-        await tx.insert(productBranches).values({
-          branchId: input.branchId,
-          productId: input.productId,
-          ...values,
-        });
+        const [createdAssignment] = await tx
+          .insert(productBranches)
+          .values({
+            branchId: input.branchId,
+            productId: input.productId,
+            ...values,
+          })
+          .returning({ id: productBranches.id });
+        if (createdAssignment)
+          await appendPageBlockIfCustomized(tx, input.branchId, {
+            kind: "product",
+            productBranchId: createdAssignment.id,
+          });
       }
       await tx.insert(auditLogs).values({
         adminId: profile.id,

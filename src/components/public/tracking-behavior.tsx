@@ -21,7 +21,7 @@ type TrackingProduct = {
 type TrackingLink = {
   id: string;
   label: string;
-  type: "secondary" | "social";
+  type: "secondary" | "social" | "cta";
 };
 
 type Pixel = ((...args: unknown[]) => void) & {

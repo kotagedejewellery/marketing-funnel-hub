@@ -1,0 +1,2 @@
+ALTER TABLE "links" ADD COLUMN "button_style" text DEFAULT 'primary' NOT NULL;--> statement-breakpoint
+ALTER TABLE "links" ADD CONSTRAINT "links_button_style_check" CHECK ("links"."button_style" in ('primary', 'soft', 'outline'));

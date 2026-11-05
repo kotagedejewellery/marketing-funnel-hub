@@ -28,7 +28,7 @@ const branchSchema = z.strictObject({
 const linkSchema = z.strictObject({
   id: z.uuid(),
   label: z.string().trim().min(1).max(200),
-  type: z.enum(["secondary", "social"]),
+  type: z.enum(["secondary", "social", "cta"]),
 });
 
 const pageUrlSchema = z

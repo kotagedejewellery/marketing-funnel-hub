@@ -311,6 +311,7 @@ export const links = pgTable(
     linkType: text("link_type").notNull(),
     platform: text("platform"),
     iconKey: text("icon_key"),
+    buttonStyle: text("button_style").notNull().default("primary"),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -323,9 +324,63 @@ export const links = pgTable(
   (table) => [
     check(
       "links_type_check",
-      sql`${table.linkType} in ('secondary', 'social')`,
+      sql`${table.linkType} in ('secondary', 'social', 'cta')`,
+    ),
+    check(
+      "links_button_style_check",
+      sql`${table.buttonStyle} in ('primary', 'soft', 'outline')`,
     ),
     index("links_branch_sort_idx").on(table.branchId, table.sortOrder),
+  ],
+).enableRLS();
+
+export const pageBlocks = pgTable(
+  "page_blocks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    kind: text("kind").notNull(),
+    sectionKey: text("section_key"),
+    productBranchId: uuid("product_branch_id").references(
+      () => productBranches.id,
+      { onDelete: "restrict" },
+    ),
+    linkId: uuid("link_id").references(() => links.id, {
+      onDelete: "restrict",
+    }),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "page_blocks_kind_check",
+      sql`${table.kind} in ('section', 'product', 'link')`,
+    ),
+    check(
+      "page_blocks_reference_check",
+      sql`(
+        (${table.kind} = 'section' and ${table.sectionKey} is not null and ${table.productBranchId} is null and ${table.linkId} is null)
+        or (${table.kind} = 'product' and ${table.sectionKey} is null and ${table.productBranchId} is not null and ${table.linkId} is null)
+        or (${table.kind} = 'link' and ${table.sectionKey} is null and ${table.productBranchId} is null and ${table.linkId} is not null)
+      )`,
+    ),
+    uniqueIndex("page_blocks_branch_section_unique")
+      .on(table.branchId, table.sectionKey)
+      .where(sql`${table.kind} = 'section'`),
+    uniqueIndex("page_blocks_branch_product_unique")
+      .on(table.branchId, table.productBranchId)
+      .where(sql`${table.kind} = 'product'`),
+    uniqueIndex("page_blocks_branch_link_unique")
+      .on(table.branchId, table.linkId)
+      .where(sql`${table.kind} = 'link'`),
+    index("page_blocks_branch_sort_idx").on(table.branchId, table.sortOrder),
   ],
 ).enableRLS();
 
@@ -528,7 +583,7 @@ export const events = pgTable(
         (${table.eventName} = 'PageView' and ${table.productId} is null and ${table.productCategory} is null and ${table.branchId} is null and ${table.branchName} is null and ${table.linkId} is null and ${table.linkLabel} is null and ${table.linkType} is null and ${table.cta} is null)
         or (${table.eventName} = 'ViewContent' and ${table.productId} is not null and ${table.productCategory} is not null and ${table.branchId} is null and ${table.branchName} is null and ${table.linkId} is null and ${table.linkLabel} is null and ${table.linkType} is null and ${table.cta} is null)
         or (${table.eventName} = 'Contact' and ${table.productId} is not null and ${table.productCategory} is not null and ${table.branchId} is not null and ${table.branchName} is not null and ${table.linkId} is null and ${table.linkLabel} is null and ${table.linkType} is null and ${table.cta} = 'whatsapp')
-        or (${table.eventName} = 'LinkClick' and ${table.productId} is null and ${table.productCategory} is null and ${table.branchId} is not null and ${table.branchName} is not null and ${table.linkId} is not null and ${table.linkLabel} is not null and ${table.linkType} in ('secondary', 'social') and ${table.cta} = 'link')
+        or (${table.eventName} = 'LinkClick' and ${table.productId} is null and ${table.productCategory} is null and ${table.branchId} is not null and ${table.branchName} is not null and ${table.linkId} is not null and ${table.linkLabel} is not null and ${table.linkType} in ('secondary', 'social', 'cta') and ${table.cta} = 'link')
       )`,
     ),
     check(

@@ -13,6 +13,7 @@ type LinkRecord = {
   linkType: string;
   platform: string | null;
   iconKey: string | null;
+  buttonStyle: string;
   isActive: boolean;
   sortOrder: number;
 };
@@ -23,10 +24,12 @@ const inputClass =
 export function LinkForm({
   link,
   branchId = null,
+  hasCustomLayout = false,
   stayOnPage = false,
 }: {
   link: LinkRecord | null;
   branchId?: string | null;
+  hasCustomLayout?: boolean;
   stayOnPage?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveLink, {
@@ -44,7 +47,6 @@ export function LinkForm({
         value={link?.branchId ?? branchId ?? ""}
       />
       <input type="hidden" name="platform" value={link?.platform ?? ""} />
-      <input type="hidden" name="iconKey" value={link?.iconKey ?? ""} />
       <input type="hidden" name="sortOrder" value={link?.sortOrder ?? 0} />
       <div>
         <p className="text-sm leading-6 text-muted-foreground">
@@ -94,9 +96,65 @@ export function LinkForm({
         >
           <option value="secondary">Tautan tambahan</option>
           <option value="social">Sosial</option>
+          <option value="cta">Tombol custom</option>
         </select>
         <FieldError message={state.errors.linkType} />
       </div>
+      <div>
+        <label htmlFor="buttonStyle" className="font-medium">
+          Gaya tombol custom
+        </label>
+        <select
+          id="buttonStyle"
+          name="buttonStyle"
+          defaultValue={link?.buttonStyle ?? "primary"}
+          className={inputClass}
+        >
+          <option value="primary">Utama gelap</option>
+          <option value="soft">Lembut</option>
+          <option value="outline">Outline</option>
+        </select>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Gaya ini digunakan saat jenis tautan adalah Tombol custom.
+        </p>
+        <FieldError message={state.errors.buttonStyle} />
+      </div>
+      <div>
+        <label htmlFor="iconKey" className="font-medium">
+          Ikon tombol custom
+        </label>
+        <select
+          id="iconKey"
+          name="iconKey"
+          defaultValue={link?.iconKey ?? ""}
+          className={inputClass}
+        >
+          <option value="">Tanpa ikon</option>
+          <option value="arrow">Panah</option>
+          <option value="catalog">Katalog</option>
+          <option value="calendar">Kalender</option>
+        </select>
+        <FieldError message={state.errors.iconKey} />
+      </div>
+      {hasCustomLayout && !link && (
+        <div>
+          <label htmlFor="layoutPlacement" className="font-medium">
+            Posisi awal di halaman
+          </label>
+          <select
+            id="layoutPlacement"
+            name="layoutPlacement"
+            defaultValue="end"
+            className={inputClass}
+          >
+            <option value="end">Paling bawah</option>
+            <option value="start">Paling atas</option>
+          </select>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Setelah disimpan, posisi tetap dapat diatur dari Susunan halaman.
+          </p>
+        </div>
+      )}
       <label className="flex min-h-11 items-center gap-3 border-t border-border pt-6 font-medium">
         <input
           type="checkbox"

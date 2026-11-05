@@ -57,6 +57,116 @@ function ReviewStars({ rating }: { rating: number }) {
   );
 }
 
+function ProductCta({
+  product,
+  branchName,
+}: {
+  product: PublicContent["products"][number];
+  branchName: string;
+}) {
+  const destination = product.branches[0];
+  return (
+    <article data-track-product-id={product.id}>
+      {destination ? (
+        <a
+          href={destination.whatsappUrl}
+          data-track="whatsapp"
+          data-track-branch-id={destination.id}
+          className="group flex min-h-20 w-full items-center gap-4 rounded-2xl bg-[#0e0d0d] px-5 py-4 text-[var(--primary-foreground)] shadow-[0_12px_26px_-18px_rgba(40,33,28,0.65)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none"
+          aria-label={`${destination.ctaLabel}, WhatsApp ${branchName}`}
+        >
+          <WhatsAppIcon />
+          <div className="min-w-0 flex-1 text-center">
+            <h3 className="font-serif text-base leading-snug font-bold break-words sm:text-lg">
+              {product.name}
+            </h3>
+            {product.description && (
+              <p className="mt-1 text-xs leading-5 whitespace-pre-line text-[var(--kgj-on-dark-muted)] sm:text-sm">
+                {product.description}
+              </p>
+            )}
+            <p className="mt-1 text-xs font-bold text-[var(--kgj-accent-soft)]">
+              {destination.ctaLabel}
+            </p>
+          </div>
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-5 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </a>
+      ) : (
+        <div className="rounded-2xl bg-card px-5 py-5">
+          <h3 className="font-serif text-lg font-bold">{product.name}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Kontak cabang belum tersedia.
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function CustomLinkIcon({ iconKey }: { iconKey: string | null }) {
+  if (!iconKey) return null;
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {iconKey === "catalog" ? (
+        <>
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z" />
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 8H20" />
+        </>
+      ) : iconKey === "calendar" ? (
+        <>
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M16 3v4M8 3v4M3 10h18" />
+        </>
+      ) : (
+        <path d="m9 18 6-6-6-6" />
+      )}
+    </svg>
+  );
+}
+
+function LinkCta({ link }: { link: PublicContent["links"][number] }) {
+  const primary = link.linkType === "cta";
+  const customClass =
+    link.buttonStyle === "outline"
+      ? "border border-foreground bg-background text-foreground hover:bg-secondary"
+      : link.buttonStyle === "soft"
+        ? "bg-[var(--kgj-accent-soft)] text-foreground hover:bg-[var(--kgj-accent)]"
+        : "bg-[#0e0d0d] text-[var(--primary-foreground)] shadow-[0_12px_26px_-18px_rgba(40,33,28,0.65)] hover:-translate-y-0.5";
+  return (
+    <a
+      href={link.url}
+      data-track="link"
+      data-track-link-id={link.id}
+      className={
+        primary
+          ? `group flex min-h-16 items-center gap-4 rounded-2xl px-5 py-3 font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 motion-reduce:transition-none ${customClass}`
+          : "flex min-h-16 items-center gap-4 rounded-2xl bg-card px-5 py-3 font-bold transition-colors hover:bg-[var(--kgj-accent-soft)] focus-visible:outline-2 focus-visible:outline-offset-2"
+      }
+    >
+      {primary && <CustomLinkIcon iconKey={link.iconKey} />}
+      <span className="min-w-0 flex-1 break-words">{link.label}</span>
+    </a>
+  );
+}
+
 export function LinkBio({
   content,
   trackingContext = null,
@@ -67,7 +177,7 @@ export function LinkBio({
   preview?: boolean;
 }) {
   const secondaryLinks = content.links.filter(
-    (link) => link.linkType === "secondary",
+    (link) => link.linkType === "secondary" || link.linkType === "cta",
   );
   const socialLinks = content.links.filter(
     (link) => link.linkType === "social",
@@ -75,9 +185,50 @@ export function LinkBio({
   const logoSection = content.sections.find(
     (section) => section.sectionKey === "profile_logo",
   );
-  const sections = content.sections.filter(
-    (section) => section.sectionKey !== "profile_logo",
+  const footerSection = content.sections.find(
+    (section) => section.sectionKey === "footer",
   );
+  const hasCustomPageLayout = content.blocks.some(
+    (block) => block.kind !== "section",
+  );
+  const productsByBlockKey = new Map<string, PublicContent["products"][number]>(
+    content.blocks.flatMap((block) =>
+      block.kind === "product"
+        ? [[`product:${block.product.assignmentId}`, block.product] as const]
+        : [],
+    ),
+  );
+  const linksByBlockKey = new Map<string, PublicContent["links"][number]>(
+    content.blocks.flatMap((block) =>
+      block.kind === "link"
+        ? [[`link:${block.link.id}`, block.link] as const]
+        : [],
+    ),
+  );
+  const sections: PublicContent["sections"] = [];
+  for (const block of content.blocks) {
+    if (block.kind === "section") {
+      if (
+        block.section.sectionKey !== "profile_logo" &&
+        block.section.sectionKey !== "footer"
+      )
+        sections.push(block.section);
+    } else if (block.kind === "product") {
+      sections.push({
+        sectionKey: `product:${block.product.assignmentId}`,
+        publicTitle: null,
+        spacingAfter: "normal",
+        showDivider: false,
+      });
+    } else {
+      sections.push({
+        sectionKey: `link:${block.link.id}`,
+        publicTitle: null,
+        spacingAfter: "normal",
+        showDivider: false,
+      });
+    }
+  }
   const hasVisibleBrandHeader =
     content.site.showProfileName ||
     (content.site.showHeadline && Boolean(content.site.headline)) ||
@@ -111,7 +262,7 @@ export function LinkBio({
           links={content.links.map((link) => ({
             id: link.id,
             label: link.label,
-            type: link.linkType as "secondary" | "social",
+            type: link.linkType as "secondary" | "social" | "cta",
           }))}
           branch={content.pageBranch}
           metaTracking={content.tracking}
@@ -150,6 +301,25 @@ export function LinkBio({
           {sections.map(
             ({ sectionKey, publicTitle, spacingAfter, showDivider }) => {
               const layoutClass = sectionLayoutClass(spacingAfter, showDivider);
+              const product = productsByBlockKey.get(sectionKey);
+              if (product) {
+                return (
+                  <section key={sectionKey} className={layoutClass}>
+                    <ProductCta
+                      product={product}
+                      branchName={content.pageBranch.name}
+                    />
+                  </section>
+                );
+              }
+              const link = linksByBlockKey.get(sectionKey);
+              if (link) {
+                return (
+                  <section key={sectionKey} className={layoutClass}>
+                    <LinkCta link={link} />
+                  </section>
+                );
+              }
               switch (sectionKey) {
                 case "brand_header":
                   if (!hasVisibleBrandHeader) return null;
@@ -355,6 +525,23 @@ export function LinkBio({
                 }
 
                 case "products":
+                  if (hasCustomPageLayout) {
+                    if (!publicTitle) return null;
+                    return (
+                      <section
+                        key={sectionKey}
+                        className={layoutClass}
+                        aria-labelledby="products-title"
+                      >
+                        <h2
+                          id="products-title"
+                          className="text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
+                        >
+                          {publicTitle}
+                        </h2>
+                      </section>
+                    );
+                  }
                   return (
                     <section
                       key={sectionKey}
@@ -444,6 +631,23 @@ export function LinkBio({
 
                 case "secondary_links":
                 case "social_links": {
+                  if (hasCustomPageLayout) {
+                    if (!publicTitle) return null;
+                    return (
+                      <section
+                        key={sectionKey}
+                        className={layoutClass}
+                        aria-labelledby={`${sectionKey}-title`}
+                      >
+                        <h2
+                          id={`${sectionKey}-title`}
+                          className="font-serif text-3xl font-bold text-balance sm:text-4xl"
+                        >
+                          {publicTitle}
+                        </h2>
+                      </section>
+                    );
+                  }
                   const sectionLinks =
                     sectionKey === "social_links"
                       ? socialLinks
@@ -610,28 +814,23 @@ export function LinkBio({
                     </section>
                   ) : null;
 
-                case "footer":
-                  return (
-                    <footer
-                      key={sectionKey}
-                      className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-8 text-sm text-muted-foreground"
-                    >
-                      <span>{content.site.siteName}</span>
-                      {content.site.privacyUrl && (
-                        <a
-                          className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
-                          href={content.site.privacyUrl}
-                        >
-                          Privasi
-                        </a>
-                      )}
-                    </footer>
-                  );
-
                 default:
                   return null;
               }
             },
+          )}
+          {footerSection && (
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-8 text-sm text-muted-foreground">
+              <span>{content.site.siteName}</span>
+              {content.site.privacyUrl && (
+                <a
+                  className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
+                  href={content.site.privacyUrl}
+                >
+                  Privasi
+                </a>
+              )}
+            </footer>
           )}
         </div>
       </div>

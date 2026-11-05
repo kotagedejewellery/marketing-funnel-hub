@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { getDatabase } from "@/lib/db/client";
 import { auditLogs, branches, links } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
+import { appendPageBlockIfCustomized } from "@/modules/admin/link-bio/page-blocks";
 
 import { linkSchema } from "./validation";
 
@@ -56,6 +57,7 @@ export async function saveLink(
     label: input.label,
     url: input.url,
     linkType: input.linkType,
+    buttonStyle: input.buttonStyle,
     platform: input.platform,
     iconKey: input.iconKey,
     isActive: input.isActive,
@@ -107,6 +109,11 @@ export async function saveLink(
         .insert(links)
         .values(createValues)
         .returning({ id: links.id });
+      if (branchId && created)
+        await appendPageBlockIfCustomized(tx, branchId, {
+          kind: "link",
+          linkId: created.id,
+        }, input.layoutPlacement);
       await tx.insert(auditLogs).values({
         adminId: profile.id,
         action: "create",

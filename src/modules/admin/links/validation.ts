@@ -11,17 +11,17 @@ export const linkSchema = z.object({
     .trim()
     .max(2048)
     .refine(isAllowedPublicUrl, "Gunakan URL HTTPS yang valid."),
-  linkType: z.enum(["secondary", "social"]),
+  linkType: z.enum(["secondary", "social", "cta"]),
+  buttonStyle: z.enum(["primary", "soft", "outline"]).default("primary"),
   platform: z
     .string()
     .trim()
     .max(80)
     .transform((value) => value || null),
   iconKey: z
-    .string()
-    .trim()
-    .max(80)
+    .enum(["", "arrow", "catalog", "calendar"])
     .transform((value) => value || null),
+  layoutPlacement: z.enum(["start", "end"]).default("end"),
   isActive: z.boolean(),
   sortOrder: z
     .string()

@@ -22,24 +22,25 @@ mandiri.
 
 ## Tabel aplikasi
 
-| Tabel | Tujuan dan aturan utama |
-| --- | --- |
-| `admin_profiles` | Akun CMS: UUID, email unik, hash password `scrypt`, nama tampilan, role `admin`/`technical_admin`, serta status aktif. |
-| `admin_sessions` | Sesi opaque: hash token unik, expiry, dan FK cascade ke profil. Token plaintext hanya di cookie `HttpOnly`. |
-| `site_settings` | Satu baris pengaturan/template KGJ, termasuk cabang Link Bio utama. |
-| `content_sections` | Susunan section bersama atau per cabang, visibilitas, jarak, divider, dan judul publik. |
-| `branches` | Nama, slug unik, nomor WhatsApp, profil override, logo, status, dan urutan cabang. |
-| `products` | Kategori produk bersama; slug adalah kategori tracking yang stabil. |
-| `product_branches` | Assignment produk–cabang yang unik, override CTA/pesan, status, dan urutan. |
-| `campaigns` | Kampanye scope cabang, gambar banner, periode, URL, status, dan urutan. |
-| `links` | Tautan sekunder/sosial per cabang dengan status dan urutan. |
-| `faqs` | FAQ bersama atau per cabang, dengan fallback template pada pembacaan publik. |
-| `gallery_items` | Gambar galeri wajib milik satu cabang; tidak memiliki CTA atau hubungan produk. |
-| `branch_review_sources` | Satu konfigurasi sumber ulasan Google/Firecrawl per cabang. |
-| `branch_google_reviews` | Ulasan hasil import, terjemahan, status tampilan, pilihan manual, dan urutan. |
-| `branch_meta_tracking_configs` | Konfigurasi Meta per cabang. Token CAPI dan Test Event Code terenkripsi. |
-| `events` | Event internal anonim/pseudonim `PageView`, `Contact`, dan `LinkClick`, termasuk attribution dan snapshot historis. |
-| `audit_logs` | Audit mutation tersanitasi tanpa credential, token, atau data customer. |
+| Tabel                          | Tujuan dan aturan utama                                                                                                |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `admin_profiles`               | Akun CMS: UUID, email unik, hash password `scrypt`, nama tampilan, role `admin`/`technical_admin`, serta status aktif. |
+| `admin_sessions`               | Sesi opaque: hash token unik, expiry, dan FK cascade ke profil. Token plaintext hanya di cookie `HttpOnly`.            |
+| `site_settings`                | Satu baris pengaturan/template KGJ, termasuk cabang Link Bio utama.                                                    |
+| `content_sections`             | Susunan section bersama atau per cabang, visibilitas, jarak, divider, dan judul publik.                                |
+| `page_blocks`                  | Susunan kustom per cabang: satu referensi tervalidasi ke section, assignment produk, atau tautan per blok.             |
+| `branches`                     | Nama, slug unik, nomor WhatsApp, profil override, logo, status, dan urutan cabang.                                     |
+| `products`                     | Kategori produk bersama; slug adalah kategori tracking yang stabil.                                                    |
+| `product_branches`             | Assignment produk–cabang yang unik, override CTA/pesan, status, dan urutan.                                            |
+| `campaigns`                    | Kampanye scope cabang, gambar banner, periode, URL, status, dan urutan.                                                |
+| `links`                        | Tautan sekunder/sosial atau CTA custom per cabang dengan status, urutan, gaya tombol terkontrol, dan ikon opsional.    |
+| `faqs`                         | FAQ bersama atau per cabang, dengan fallback template pada pembacaan publik.                                           |
+| `gallery_items`                | Gambar galeri wajib milik satu cabang; tidak memiliki CTA atau hubungan produk.                                        |
+| `branch_review_sources`        | Satu konfigurasi sumber ulasan Google/Firecrawl per cabang.                                                            |
+| `branch_google_reviews`        | Ulasan hasil import, terjemahan, status tampilan, pilihan manual, dan urutan.                                          |
+| `branch_meta_tracking_configs` | Konfigurasi Meta per cabang. Token CAPI dan Test Event Code terenkripsi.                                               |
+| `events`                       | Event internal anonim/pseudonim `PageView`, `Contact`, dan `LinkClick`, termasuk attribution dan snapshot historis.    |
+| `audit_logs`                   | Audit mutation tersanitasi tanpa credential, token, atau data customer.                                                |
 
 `site_settings.id` memakai UUID singleton
 `00000000-0000-0000-0000-000000000001`. FK konten memakai `RESTRICT` untuk
@@ -50,7 +51,8 @@ menjaga histori, kecuali sesi admin yang cascade bila profil dihapus.
 - `branches.slug`, `products.slug`, email admin, token sesi, dan `events.event_id`
   unik.
 - Assignment (`product_id`, `branch_id`) unik. Section unik per scope cabang.
-- CTA publik hanya muncul bila cabang, produk, dan assignment semuanya aktif.
+- CTA WhatsApp publik hanya muncul bila cabang, produk, dan assignment semuanya aktif. CTA custom memakai tautan HTTPS aktif milik cabang dan menghasilkan `LinkClick`, bukan `Contact`.
+- `page_blocks` hanya tersedia setelah cabang mengaktifkan susunan kustom; setiap blok mereferensikan tepat satu section, assignment produk, atau tautan. Section logo dan footer tidak menjadi blok yang dapat dipindah.
 - Root Link Bio membaca `site_settings.default_link_bio_branch_id`; cabang
   tidak aktif tidak boleh dipilih sebagai root atau dirender publik.
 - Event memakai snapshot nama/kategori agar histori tetap terbaca ketika konten
@@ -66,7 +68,7 @@ yang terbukti.
 
 ## Role dan RLS
 
-Baseline membuat role `kgj_app` dan policy `kgj_app_access` pada 16 tabel.
+Baseline dan migrasi berikutnya membuat role `kgj_app` dan policy `kgj_app_access` pada seluruh tabel aplikasi, termasuk `page_blocks`.
 Container PostgreSQL membuat login role itu dari `POSTGRES_APP_PASSWORD` saat
 volume baru pertama kali diinisialisasi. Runtime memakai `DATABASE_URL` dengan
 role tersebut; URL owner PostgreSQL hanya untuk migrasi yang disetujui.

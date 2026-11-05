@@ -95,11 +95,17 @@ export function PageCampaigns({
 export function PageLinks({
   rows,
   branchId = null,
+  hasCustomLayout = false,
 }: {
   rows: PageLink[];
   branchId?: string | null;
+  hasCustomLayout?: boolean;
 }) {
   const groups = [
+    {
+      label: "Tombol custom",
+      rows: rows.filter((row) => row.linkType === "cta"),
+    },
     {
       label: "Tautan tambahan",
       rows: rows.filter((row) => row.linkType === "secondary"),
@@ -120,11 +126,17 @@ export function PageLinks({
             Tautan tambahan
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tautan tambahan dan media sosial halaman ini.
+            Tautan tambahan, tombol custom, dan media sosial halaman ini.
+            {hasCustomLayout && " Posisi diatur dari Susunan halaman."}
           </p>
         </div>
         <FormDialog title="Tambah tautan" triggerLabel="Tambah tautan">
-          <LinkForm link={null} branchId={branchId} stayOnPage />
+          <LinkForm
+            link={null}
+            branchId={branchId}
+            hasCustomLayout={hasCustomLayout}
+            stayOnPage
+          />
         </FormDialog>
       </div>
       {rows.length === 0 ? (
@@ -157,18 +169,24 @@ export function PageLinks({
                         </p>
                       </div>
                       <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                        <PageOrderControls
-                          kind="link"
-                          id={row.id}
-                          branchId={branchId}
-                          index={index}
-                          count={group.rows.length}
-                        />
+                        {!hasCustomLayout && (
+                          <PageOrderControls
+                            kind="link"
+                            id={row.id}
+                            branchId={branchId}
+                            index={index}
+                            count={group.rows.length}
+                          />
+                        )}
                         <FormDialog
                           title={`Edit ${row.label}`}
                           triggerLabel="Edit"
                         >
-                          <LinkForm link={row} stayOnPage />
+                          <LinkForm
+                            link={row}
+                            hasCustomLayout={hasCustomLayout}
+                            stayOnPage
+                          />
                         </FormDialog>
                       </div>
                     </li>

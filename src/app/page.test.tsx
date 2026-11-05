@@ -43,6 +43,35 @@ const emptyContent: PublicContent = {
       showDivider: false,
     },
   ],
+  blocks: [
+    {
+      kind: "section",
+      section: {
+        sectionKey: "brand_header",
+        publicTitle: null,
+        spacingAfter: "normal",
+        showDivider: false,
+      },
+    },
+    {
+      kind: "section",
+      section: {
+        sectionKey: "products",
+        publicTitle: null,
+        spacingAfter: "normal",
+        showDivider: false,
+      },
+    },
+    {
+      kind: "section",
+      section: {
+        sectionKey: "footer",
+        publicTitle: null,
+        spacingAfter: "normal",
+        showDivider: false,
+      },
+    },
+  ],
   pageBranch: { id: "branch-1", name: "Solo", slug: "solo" },
 };
 
@@ -75,6 +104,7 @@ describe("public Link Bio", () => {
           products: [
             {
               id: "product-1",
+              assignmentId: "assignment-1",
               name: "Wedding Ring",
               slug: "wedding-ring",
               description: "Cincin custom",
@@ -90,6 +120,7 @@ describe("public Link Bio", () => {
             },
             {
               id: "product-2",
+              assignmentId: "assignment-2",
               name: "Nusantara Series",
               slug: "nusantara-series",
               description: "Cincin motif Nusantara",
@@ -124,6 +155,74 @@ describe("public Link Bio", () => {
     ).toHaveAttribute("href", "https://wa.me/628123456789?text=Nusantara");
   });
 
+  it("places individual custom and WhatsApp CTAs in the saved page order", () => {
+    const product = {
+      id: "product-1",
+      assignmentId: "assignment-1",
+      name: "Wedding Ring",
+      slug: "wedding-ring",
+      description: null,
+      branches: [
+        {
+          id: "branch-1",
+          name: "Solo",
+          slug: "solo",
+          ctaLabel: "Hubungi via WhatsApp",
+          whatsappUrl: "https://wa.me/628123456789?text=Halo",
+        },
+      ],
+    };
+    const link = {
+      id: "link-1",
+      label: "Lihat katalog",
+      url: "https://example.com/catalog",
+      linkType: "cta" as const,
+      platform: null,
+      iconKey: "catalog",
+      buttonStyle: "outline" as const,
+    };
+
+    render(
+      <LinkBio
+        content={{
+          ...emptyContent,
+          products: [product],
+          links: [link],
+          blocks: [
+            {
+              kind: "section",
+              section: {
+                sectionKey: "products",
+                publicTitle: "Pilihan produk",
+                spacingAfter: "normal",
+                showDivider: false,
+              },
+            },
+            { kind: "link", link },
+            { kind: "product", product },
+          ],
+        }}
+      />,
+    );
+
+    const catalog = screen.getByRole("link", { name: "Lihat katalog" });
+    const whatsapp = screen.getByRole("link", {
+      name: /Hubungi via WhatsApp, WhatsApp Solo/i,
+    });
+    expect(
+      screen.getByRole("heading", { name: "Pilihan produk" }),
+    ).toBeVisible();
+    expect(
+      screen.getAllByRole("link", {
+        name: /Hubungi via WhatsApp, WhatsApp Solo/i,
+      }),
+    ).toHaveLength(1);
+    expect(catalog).toHaveClass("border-foreground");
+    expect(catalog.compareDocumentPosition(whatsapp)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it("shows gallery images independently from WhatsApp products", () => {
     render(
       <LinkBio
@@ -144,6 +243,17 @@ describe("public Link Bio", () => {
               publicTitle: null,
               spacingAfter: "normal",
               showDivider: false,
+            },
+          ],
+          blocks: [
+            {
+              kind: "section",
+              section: {
+                sectionKey: "gallery",
+                publicTitle: null,
+                spacingAfter: "normal",
+                showDivider: false,
+              },
             },
           ],
         }}
@@ -177,6 +287,17 @@ describe("public Link Bio", () => {
               publicTitle: null,
               spacingAfter: "normal",
               showDivider: false,
+            },
+          ],
+          blocks: [
+            {
+              kind: "section",
+              section: {
+                sectionKey: "campaign_banner",
+                publicTitle: null,
+                spacingAfter: "normal",
+                showDivider: false,
+              },
             },
           ],
         }}
@@ -222,6 +343,17 @@ describe("public Link Bio", () => {
               showDivider: false,
             },
           ],
+          blocks: [
+            {
+              kind: "section",
+              section: {
+                sectionKey: "google_reviews",
+                publicTitle: "Review kami",
+                spacingAfter: "normal",
+                showDivider: false,
+              },
+            },
+          ],
         }}
       />,
     );
@@ -248,6 +380,17 @@ describe("public Link Bio", () => {
               publicTitle: null,
               spacingAfter: "compact",
               showDivider: true,
+            },
+          ],
+          blocks: [
+            {
+              kind: "section",
+              section: {
+                sectionKey: "products",
+                publicTitle: null,
+                spacingAfter: "compact",
+                showDivider: true,
+              },
             },
           ],
         }}

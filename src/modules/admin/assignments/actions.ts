@@ -12,6 +12,7 @@ import {
   products,
 } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
+import { appendPageBlockIfCustomized } from "@/modules/admin/link-bio/page-blocks";
 
 import { assignmentSchema } from "./validation";
 
@@ -90,6 +91,7 @@ export async function saveProductAssignments(
           description: input.description,
           whatsappMessageTemplate: input.whatsappMessageTemplate,
         };
+        let assignmentId = previous?.id;
         if (previous) {
           if (
             Object.entries(values).every(
@@ -107,10 +109,17 @@ export async function saveProductAssignments(
               ),
             );
         } else {
-          await tx
+          const [createdAssignment] = await tx
             .insert(productBranches)
-            .values({ productId, branchId: input.branchId, ...values });
+            .values({ productId, branchId: input.branchId, ...values })
+            .returning({ id: productBranches.id });
+          assignmentId = createdAssignment?.id;
         }
+        if (assignmentId)
+          await appendPageBlockIfCustomized(tx, input.branchId, {
+            kind: "product",
+            productBranchId: assignmentId,
+          });
         changedBranchIds.push(input.branchId);
       }
       if (changedBranchIds.length > 0) {

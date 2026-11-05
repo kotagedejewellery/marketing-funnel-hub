@@ -36,9 +36,11 @@ const inputClass =
 export function BranchProductManager({
   branchId,
   products,
+  hasCustomLayout = false,
 }: {
   branchId: string;
   products: BranchProduct[];
+  hasCustomLayout?: boolean;
 }) {
   const [moveState, moveAction, moving] = useActionState(moveBranchProduct, {
     message: "",
@@ -63,6 +65,7 @@ export function BranchProductManager({
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
             Atur pilihan produk yang membuka WhatsApp cabang ini. Gambar tetap
             dikelola terpisah melalui Galeri Produk.
+            {hasCustomLayout && " Posisi tombol diatur dari Susunan halaman."}
           </p>
         </div>
         <FormDialog
@@ -98,26 +101,32 @@ export function BranchProductManager({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <form action={moveAction}>
-                    <input type="hidden" name="branchId" value={branchId} />
-                    <input type="hidden" name="productId" value={product.id} />
-                    <button
-                      name="direction"
-                      value="up"
-                      disabled={moving || index === 0}
-                      className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
-                    >
-                      Naik
-                    </button>
-                    <button
-                      name="direction"
-                      value="down"
-                      disabled={moving || index === visible.length - 1}
-                      className="ml-2 min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
-                    >
-                      Turun
-                    </button>
-                  </form>
+                  {!hasCustomLayout && (
+                    <form action={moveAction}>
+                      <input type="hidden" name="branchId" value={branchId} />
+                      <input
+                        type="hidden"
+                        name="productId"
+                        value={product.id}
+                      />
+                      <button
+                        name="direction"
+                        value="up"
+                        disabled={moving || index === 0}
+                        className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
+                      >
+                        Naik
+                      </button>
+                      <button
+                        name="direction"
+                        value="down"
+                        disabled={moving || index === visible.length - 1}
+                        className="ml-2 min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
+                      >
+                        Turun
+                      </button>
+                    </form>
+                  )}
                   <FormDialog
                     title={`Edit tombol ${product.name}`}
                     triggerLabel="Edit tombol"
@@ -131,7 +140,7 @@ export function BranchProductManager({
         </ul>
       )}
 
-      <FormFeedback state={moveState} pending={moving} />
+      {!hasCustomLayout && <FormFeedback state={moveState} pending={moving} />}
 
       {products.length > 0 && (
         <details className="mt-6 rounded-xl bg-secondary p-5">

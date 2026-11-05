@@ -31,6 +31,7 @@ export function BranchPageForm({
   branch,
   sections,
   inheritsSections,
+  hasCustomLayout = false,
   mode,
 }: {
   branch: {
@@ -44,6 +45,7 @@ export function BranchPageForm({
   };
   sections: Section[];
   inheritsSections: boolean;
+  hasCustomLayout?: boolean;
   mode: "identity" | "sections";
 }) {
   const [orderedSections, setOrderedSections] = useState(sections);
@@ -179,6 +181,8 @@ export function BranchPageForm({
           <p className="text-sm text-muted-foreground">
             {inheritsSections
               ? "Simpan untuk menyalin template KGJ, lalu atur susunan ini khusus untuk cabang."
+              : hasCustomLayout
+                ? "Urutan tampil diatur dari Susunan halaman. Di sini Anda tetap dapat mengatur visibilitas, judul, jarak, dan garis pemisah section."
               : "Urutan dan visibilitas ini hanya berlaku untuk cabang ini."}
           </p>
           {orderedSections.map((section, index) => (
@@ -189,7 +193,7 @@ export function BranchPageForm({
               <input
                 type="hidden"
                 name={`order_${section.sectionKey}`}
-                value={index * 10}
+                value={hasCustomLayout ? section.sortOrder : index * 10}
               />
               <label
                 htmlFor={`active_${section.sectionKey}`}
@@ -259,32 +263,34 @@ export function BranchPageForm({
                   />
                 </>
               )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={
-                    section.sectionKey === "profile_logo" ||
-                    index === 0 ||
-                    orderedSections[index - 1]?.sectionKey === "profile_logo"
-                  }
-                  onClick={() => moveSection(index, -1)}
-                  className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
-                >
-                  Naik
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    section.sectionKey === "profile_logo" ||
-                    index === orderedSections.length - 1 ||
-                    orderedSections[index + 1]?.sectionKey === "profile_logo"
-                  }
-                  onClick={() => moveSection(index, 1)}
-                  className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
-                >
-                  Turun
-                </button>
-              </div>
+              {!hasCustomLayout && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={
+                      section.sectionKey === "profile_logo" ||
+                      index === 0 ||
+                      orderedSections[index - 1]?.sectionKey === "profile_logo"
+                    }
+                    onClick={() => moveSection(index, -1)}
+                    className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
+                  >
+                    Naik
+                  </button>
+                  <button
+                    type="button"
+                    disabled={
+                      section.sectionKey === "profile_logo" ||
+                      index === orderedSections.length - 1 ||
+                      orderedSections[index + 1]?.sectionKey === "profile_logo"
+                    }
+                    onClick={() => moveSection(index, 1)}
+                    className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
+                  >
+                    Turun
+                  </button>
+                </div>
+              )}
             </div>
           ))}
           {state.errors.sections && (

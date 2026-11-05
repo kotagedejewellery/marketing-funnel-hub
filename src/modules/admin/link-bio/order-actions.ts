@@ -13,6 +13,7 @@ import {
   faqs,
   galleryItems,
   links,
+  pageBlocks,
 } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 
@@ -20,7 +21,15 @@ type ActionState = { message: string; ok?: boolean };
 
 const moveSchema = z
   .object({
-    kind: z.enum(["link", "faq", "gallery", "review", "campaign", "branch"]),
+    kind: z.enum([
+      "link",
+      "faq",
+      "gallery",
+      "review",
+      "campaign",
+      "page_block",
+      "branch",
+    ]),
     id: z.uuid(),
     branchId: z.union([z.uuid(), z.literal("")]),
     direction: z.enum(["up", "down"]),
@@ -33,7 +42,10 @@ const moveSchema = z
         message: "Pengurutan cabang tidak memakai scope cabang.",
       });
     }
-    if ((kind === "gallery" || kind === "review") && !branchId) {
+    if (
+      (kind === "gallery" || kind === "review" || kind === "page_block") &&
+      !branchId
+    ) {
       context.addIssue({
         code: "custom",
         path: ["branchId"],
@@ -121,6 +133,14 @@ export async function movePageItem(
               : isNull(campaigns.branchId),
           )
           .orderBy(asc(campaigns.sortOrder), asc(campaigns.id));
+      } else if (kind === "page_block") {
+        rows = branchId
+          ? await tx
+              .select({ id: pageBlocks.id })
+              .from(pageBlocks)
+              .where(eq(pageBlocks.branchId, branchId))
+              .orderBy(asc(pageBlocks.sortOrder), asc(pageBlocks.id))
+          : [];
       } else {
         rows = await tx
           .select({ id: branches.id })
@@ -161,6 +181,11 @@ export async function movePageItem(
             .update(campaigns)
             .set({ sortOrder: position, updatedAt: new Date() })
             .where(eq(campaigns.id, row.id));
+        } else if (kind === "page_block") {
+          await tx
+            .update(pageBlocks)
+            .set({ sortOrder: position, updatedAt: new Date() })
+            .where(eq(pageBlocks.id, row.id));
         } else {
           await tx
             .update(branches)
@@ -182,7 +207,9 @@ export async function movePageItem(
                   ? "branch_google_reviews"
                   : kind === "campaign"
                     ? "campaigns"
-                    : "branches",
+                    : kind === "page_block"
+                      ? "page_blocks"
+                      : "branches",
         entityId: id,
         changes: { field: "sortOrder", branchId: branchId || null },
       });
