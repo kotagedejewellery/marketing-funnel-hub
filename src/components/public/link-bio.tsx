@@ -257,12 +257,14 @@ export function LinkBio({
             branches: product.branches.map((branch) => ({
               id: branch.id,
               name: branch.name,
+              metaEventName: branch.metaEventName,
             })),
           }))}
           links={content.links.map((link) => ({
             id: link.id,
             label: link.label,
             type: link.linkType as "secondary" | "social" | "cta",
+            metaEventName: link.metaEventName,
           }))}
           branch={content.pageBranch}
           metaTracking={content.tracking}

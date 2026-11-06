@@ -204,10 +204,10 @@ jobs:
                           '"'"'branches'"'"', '"'"'branch_google_reviews'"'"',
                           '"'"'branch_meta_tracking_configs'"'"', '"'"'branch_review_sources'"'"',
                           '"'"'campaigns'"'"', '"'"'content_sections'"'"', '"'"'events'"'"', '"'"'faqs'"'"',
-                          '"'"'gallery_items'"'"', '"'"'links'"'"', '"'"'product_branches'"'"',
-                          '"'"'products'"'"', '"'"'site_settings'"'"'
+                          '"'"'gallery_items'"'"', '"'"'links'"'"', '"'"'page_blocks'"'"',
+                          '"'"'product_branches'"'"', '"'"'products'"'"', '"'"'site_settings'"'"'
                         )
-                    ) = 16
+                    ) = 17
                     and not exists (
                       select 1
                       from (
@@ -218,7 +218,10 @@ jobs:
                           ('"'"'site_settings'"'"', '"'"'default_link_bio_branch_id'"'"'),
                           ('"'"'branch_review_sources'"'"', '"'"'scrape_limit'"'"'),
                           ('"'"'branch_meta_tracking_configs'"'"', '"'"'cta_meta_event'"'"'),
-                          ('"'"'branch_meta_tracking_configs'"'"', '"'"'capi_test_event_code_encrypted'"'"')
+                          ('"'"'branch_meta_tracking_configs'"'"', '"'"'capi_test_event_code_encrypted'"'"'),
+                          ('"'"'page_blocks'"'"', '"'"'branch_id'"'"'),
+                          ('"'"'links'"'"', '"'"'meta_event_name'"'"'),
+                          ('"'"'product_branches'"'"', '"'"'meta_event_name'"'"')
                       ) as required(table_name, column_name)
                       where not exists (
                         select 1

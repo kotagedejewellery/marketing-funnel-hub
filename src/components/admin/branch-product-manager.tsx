@@ -25,6 +25,7 @@ type BranchProduct = {
     description: string | null;
     ctaLabel: string | null;
     whatsappMessageTemplate: string | null;
+    metaEventName: string | null;
     isActive: boolean;
     sortOrder: number;
   } | null;
@@ -37,10 +38,12 @@ export function BranchProductManager({
   branchId,
   products,
   hasCustomLayout = false,
+  canManageMeta = false,
 }: {
   branchId: string;
   products: BranchProduct[];
   hasCustomLayout?: boolean;
+  canManageMeta?: boolean;
 }) {
   const [moveState, moveAction, moving] = useActionState(moveBranchProduct, {
     message: "",
@@ -131,7 +134,11 @@ export function BranchProductManager({
                     title={`Edit tombol ${product.name}`}
                     triggerLabel="Edit tombol"
                   >
-                    <BranchProductForm branchId={branchId} product={product} />
+                    <BranchProductForm
+                      branchId={branchId}
+                      product={product}
+                      canManageMeta={canManageMeta}
+                    />
                   </FormDialog>
                 </div>
               </div>
@@ -326,9 +333,11 @@ function CreateBranchProductForm({ branchId }: { branchId: string }) {
 function BranchProductForm({
   branchId,
   product,
+  canManageMeta,
 }: {
   branchId: string;
   product: BranchProduct;
+  canManageMeta: boolean;
 }) {
   const [state, action, pending] = useActionState(saveBranchProduct, {
     message: "",
@@ -428,6 +437,27 @@ function BranchProductForm({
         </p>
         <FieldError message={state.errors.whatsappMessageTemplate} />
       </div>
+      {canManageMeta && (
+        <div className="border-t border-border pt-5">
+          <label htmlFor={`meta-event-${product.id}`} className="font-medium">
+            Event Meta khusus
+          </label>
+          <input
+            id={`meta-event-${product.id}`}
+            name="metaEventName"
+            defaultValue={assignment?.metaEventName ?? ""}
+            maxLength={100}
+            placeholder="Ikuti event Meta default cabang"
+            className={inputClass}
+          />
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Kosong mengikuti default cabang. Nama standar seperti Lead dikirim
+            sebagai event standar; nama lain, misalnya CTA_Konsultasi, dikirim
+            sebagai custom event Meta.
+          </p>
+          <FieldError message={state.errors.metaEventName} />
+        </div>
+      )}
       <FieldError message={state.errors.isActive} />
       <FormFeedback state={state} pending={pending} />
       <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveLink } from "@/modules/admin/links/actions";
@@ -14,6 +14,7 @@ type LinkRecord = {
   platform: string | null;
   iconKey: string | null;
   buttonStyle: string;
+  metaEventName: string | null;
   isActive: boolean;
   sortOrder: number;
 };
@@ -26,16 +27,19 @@ export function LinkForm({
   branchId = null,
   hasCustomLayout = false,
   stayOnPage = false,
+  canManageMeta = false,
 }: {
   link: LinkRecord | null;
   branchId?: string | null;
   hasCustomLayout?: boolean;
   stayOnPage?: boolean;
+  canManageMeta?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveLink, {
     message: "",
     errors: {},
   });
+  const [linkType, setLinkType] = useState(link?.linkType ?? "secondary");
 
   return (
     <form action={action} className="space-y-6">
@@ -91,7 +95,8 @@ export function LinkForm({
         <select
           id="linkType"
           name="linkType"
-          defaultValue={link?.linkType ?? "secondary"}
+          value={linkType}
+          onChange={(event) => setLinkType(event.target.value)}
           className={inputClass}
         >
           <option value="secondary">Tautan tambahan</option>
@@ -136,6 +141,26 @@ export function LinkForm({
         </select>
         <FieldError message={state.errors.iconKey} />
       </div>
+      {canManageMeta && linkType === "cta" && (
+        <div className="border-t border-border pt-6">
+          <label htmlFor="metaEventName" className="font-medium">
+            Event Meta khusus
+          </label>
+          <input
+            id="metaEventName"
+            name="metaEventName"
+            defaultValue={link?.metaEventName ?? ""}
+            maxLength={100}
+            placeholder="Ikuti event LinkClick bawaan"
+            className={inputClass}
+          />
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Berlaku hanya untuk Tombol custom. Nama standar seperti Lead dikirim
+            sebagai event standar; nama lain dikirim sebagai custom event Meta.
+          </p>
+          <FieldError message={state.errors.metaEventName} />
+        </div>
+      )}
       {hasCustomLayout && !link && (
         <div>
           <label htmlFor="layoutPlacement" className="font-medium">

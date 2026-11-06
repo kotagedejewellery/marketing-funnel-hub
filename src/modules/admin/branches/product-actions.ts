@@ -11,7 +11,7 @@ import {
   productBranches,
   products,
 } from "@/lib/db/schema";
-import { requireAdmin } from "@/modules/admin/access";
+import { requireAdmin, requireTechnicalAdmin } from "@/modules/admin/access";
 import { appendPageBlockIfCustomized } from "@/modules/admin/link-bio/page-blocks";
 
 import { branchProductSchema } from "./product-validation";
@@ -291,6 +291,8 @@ export async function saveBranchProduct(
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await requireAdmin();
+  const canUpdateMetaEvent = formData.has("metaEventName");
+  if (canUpdateMetaEvent) await requireTechnicalAdmin();
   const parsed = branchProductSchema.safeParse({
     productId: formData.get("productId"),
     branchId: formData.get("branchId"),
@@ -300,6 +302,9 @@ export async function saveBranchProduct(
     displayName: formData.get("displayName"),
     description: formData.get("description"),
     whatsappMessageTemplate: formData.get("whatsappMessageTemplate"),
+    ...(canUpdateMetaEvent && {
+      metaEventName: formData.get("metaEventName"),
+    }),
   });
   if (!parsed.success) {
     return {
@@ -335,7 +340,10 @@ export async function saveBranchProduct(
   try {
     await db.transaction(async (tx) => {
       const [existing] = await tx
-        .select({ id: productBranches.id })
+        .select({
+          id: productBranches.id,
+          metaEventName: productBranches.metaEventName,
+        })
         .from(productBranches)
         .where(
           and(
@@ -351,6 +359,7 @@ export async function saveBranchProduct(
         description: input.description,
         ctaLabel: input.ctaLabel,
         whatsappMessageTemplate: input.whatsappMessageTemplate,
+        ...(canUpdateMetaEvent && { metaEventName: input.metaEventName }),
       };
       if (existing) {
         await tx
@@ -386,6 +395,7 @@ export async function saveBranchProduct(
             "description",
             "ctaLabel",
             "whatsappMessageTemplate",
+            ...(canUpdateMetaEvent ? ["metaEventName"] : []),
           ],
         },
       });

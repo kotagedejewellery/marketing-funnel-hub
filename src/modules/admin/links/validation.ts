@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 import { isAllowedPublicUrl } from "@/modules/admin/url-validation";
+import { metaCtaEventOverrideSchema } from "@/modules/tracking/meta-event";
 
 export const linkSchema = z.object({
   id: z.union([z.uuid(), z.literal("")]),
@@ -21,6 +22,7 @@ export const linkSchema = z.object({
   iconKey: z
     .enum(["", "arrow", "catalog", "calendar"])
     .transform((value) => value || null),
+  metaEventName: metaCtaEventOverrideSchema.optional(),
   layoutPlacement: z.enum(["start", "end"]).default("end"),
   isActive: z.boolean(),
   sortOrder: z

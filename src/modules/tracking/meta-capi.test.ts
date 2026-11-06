@@ -38,6 +38,7 @@ const resolved = {
   product: { id: event.product.id, slug: "wedding-ring" },
   branch: { id: event.branch.id, name: "Surabaya" },
   link: null,
+  metaEventName: null,
 };
 const request = new Request("https://kgj.example/api/events", {
   headers: { "user-agent": "Test Browser", "x-forwarded-for": "203.0.113.1" },
@@ -133,7 +134,7 @@ describe("Meta CAPI adapter", () => {
     try {
       await sendMetaCapi(
         pageView,
-        { product: null, branch: null, link: null },
+        { product: null, branch: null, link: null, metaEventName: null },
         request,
         { fbp: "fb.1.test" },
         {
@@ -178,6 +179,35 @@ describe("Meta CAPI adapter", () => {
       expect(requestBody.data[0]).toMatchObject({
         event_id: event.eventId,
         event_name: "AddPaymentInfo",
+      });
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("uses the authoritative CTA-specific custom event for CAPI", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    try {
+      await sendMetaCapi(
+        event,
+        { ...resolved, metaEventName: "CTA_Konsultasi_Premium" },
+        request,
+        { fbp: "fb.1.test" },
+        {
+          pixelId: "123456",
+          whatsappCtaMetaEvent: "Lead",
+          capiAccessToken: "test-token-not-for-network",
+        },
+      );
+
+      const requestBody = JSON.parse(
+        String(fetchMock.mock.calls[0]?.[1]?.body),
+      ) as { data: Array<{ event_id: string; event_name: string }> };
+      expect(requestBody.data[0]).toMatchObject({
+        event_id: event.eventId,
+        event_name: "CTA_Konsultasi_Premium",
       });
     } finally {
       fetchMock.mockRestore();

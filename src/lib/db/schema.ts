@@ -282,6 +282,7 @@ export const productBranches = pgTable(
     showImage: boolean("show_image").notNull().default(true),
     whatsappMessageTemplate: text("whatsapp_message_template"),
     ctaLabel: text("cta_label"),
+    metaEventName: text("meta_event_name"),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -295,6 +296,10 @@ export const productBranches = pgTable(
     unique("product_branches_product_branch_unique").on(
       table.productId,
       table.branchId,
+    ),
+    check(
+      "product_branches_meta_event_name_check",
+      sql`${table.metaEventName} is null or (${table.metaEventName} <> 'PageView' and ${table.metaEventName} ~ '^[A-Za-z][A-Za-z0-9_]{0,99}$')`,
     ),
   ],
 ).enableRLS();
@@ -312,6 +317,7 @@ export const links = pgTable(
     platform: text("platform"),
     iconKey: text("icon_key"),
     buttonStyle: text("button_style").notNull().default("primary"),
+    metaEventName: text("meta_event_name"),
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -329,6 +335,10 @@ export const links = pgTable(
     check(
       "links_button_style_check",
       sql`${table.buttonStyle} in ('primary', 'soft', 'outline')`,
+    ),
+    check(
+      "links_meta_event_name_check",
+      sql`${table.metaEventName} is null or (${table.metaEventName} <> 'PageView' and ${table.metaEventName} ~ '^[A-Za-z][A-Za-z0-9_]{0,99}$')`,
     ),
     index("links_branch_sort_idx").on(table.branchId, table.sortOrder),
   ],

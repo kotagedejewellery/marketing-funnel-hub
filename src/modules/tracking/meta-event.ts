@@ -1,3 +1,5 @@
+import * as z from "zod";
+
 import type { CanonicalEvent } from "./event";
 
 export const metaStandardEventNames = [
@@ -29,10 +31,29 @@ export const metaCtaEventNames = [
 
 export type MetaCtaEventName = (typeof metaCtaEventNames)[number];
 
+export const metaCtaEventOverrideSchema = z
+  .string()
+  .trim()
+  .max(100, "Nama event Meta maksimal 100 karakter.")
+  .refine(
+    (value) => value === "" || /^[A-Za-z][A-Za-z0-9_]*$/.test(value),
+    "Gunakan huruf, angka, atau garis bawah; nama harus diawali huruf.",
+  )
+  .refine(
+    (value) => value !== "PageView",
+    "PageView hanya dikirim saat halaman dibuka.",
+  )
+  .transform((value) => value || null);
+
 type MetaProviderEvent = {
   name: string;
   type: "standard" | "custom";
 };
+
+export function parseMetaCtaEventOverride(value: string | null | undefined) {
+  const parsed = metaCtaEventOverrideSchema.safeParse(value ?? "");
+  return parsed.success ? parsed.data : null;
+}
 
 export function parseMetaStandardEventName(
   value: string | null,
@@ -53,14 +74,22 @@ export function parseMetaCtaEventName(
 export function resolveMetaProviderEvent(
   event: Pick<CanonicalEvent, "eventName" | "cta">,
   whatsappCtaMetaEvent: MetaCtaEventName | null,
+  ctaMetaEventOverride?: string | null,
 ): MetaProviderEvent {
   if (event.eventName === "PageView")
     return { name: "PageView", type: "standard" };
+  const configuredEvent = parseMetaCtaEventOverride(ctaMetaEventOverride);
   if (event.eventName === "Contact" && event.cta === "whatsapp") {
+    const name = configuredEvent ?? whatsappCtaMetaEvent ?? "Contact";
     return {
-      name: whatsappCtaMetaEvent ?? "Contact",
-      type: "standard",
+      name,
+      type: parseMetaStandardEventName(name) ? "standard" : "custom",
     };
   }
+  if (event.eventName === "LinkClick" && configuredEvent)
+    return {
+      name: configuredEvent,
+      type: parseMetaStandardEventName(configuredEvent) ? "standard" : "custom",
+    };
   return { name: "LinkClick", type: "custom" };
 }

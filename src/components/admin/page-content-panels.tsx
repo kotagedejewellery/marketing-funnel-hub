@@ -96,10 +96,12 @@ export function PageLinks({
   rows,
   branchId = null,
   hasCustomLayout = false,
+  canManageMeta = false,
 }: {
   rows: PageLink[];
   branchId?: string | null;
   hasCustomLayout?: boolean;
+  canManageMeta?: boolean;
 }) {
   const groups = [
     {
@@ -135,6 +137,7 @@ export function PageLinks({
             link={null}
             branchId={branchId}
             hasCustomLayout={hasCustomLayout}
+            canManageMeta={canManageMeta}
             stayOnPage
           />
         </FormDialog>
@@ -185,6 +188,7 @@ export function PageLinks({
                           <LinkForm
                             link={row}
                             hasCustomLayout={hasCustomLayout}
+                            canManageMeta={canManageMeta}
                             stayOnPage
                           />
                         </FormDialog>

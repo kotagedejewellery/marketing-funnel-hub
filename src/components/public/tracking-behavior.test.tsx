@@ -95,7 +95,9 @@ describe("TrackingBehavior", () => {
             {
               id: "product-1",
               slug: "wedding-ring",
-              branches: [{ id: "branch-1", name: "Pusat" }],
+              branches: [
+                { id: "branch-1", name: "Pusat", metaEventName: null },
+              ],
             },
           ]}
           links={[]}
@@ -114,6 +116,70 @@ describe("TrackingBehavior", () => {
       "trackSingle",
       "123456",
       "AddPaymentInfo",
+      expect.objectContaining({ cta: "whatsapp" }),
+      { eventID: eventId },
+    );
+    expect(fetch).toHaveBeenLastCalledWith(
+      "/api/events",
+      expect.objectContaining({
+        body: expect.stringContaining('"eventName":"Contact"'),
+      }),
+    );
+  });
+
+  it("sends a CTA-specific custom event to Pixel while keeping Contact internal", () => {
+    const { getByRole } = render(
+      <main id="main-content">
+        <article data-track-product-id="product-1">
+          <a
+            href="https://wa.me/628123456789"
+            data-track="whatsapp"
+            data-track-branch-id="branch-1"
+            onClick={(event) => event.preventDefault()}
+          >
+            WhatsApp custom
+          </a>
+        </article>
+        <TrackingBehavior
+          context={{
+            anonymousSessionId: "3e29fb31-6d56-44b5-ad41-a8e97ac7281a",
+            metaExternalId: null,
+            attribution: {
+              source: null,
+              campaign: null,
+              utmSource: null,
+              utmMedium: null,
+              utmCampaign: null,
+              utmContent: null,
+              utmTerm: null,
+            },
+          }}
+          products={[
+            {
+              id: "product-1",
+              slug: "wedding-ring",
+              branches: [
+                {
+                  id: "branch-1",
+                  name: "Pusat",
+                  metaEventName: "CTA_Konsultasi",
+                },
+              ],
+            },
+          ]}
+          links={[]}
+          branch={{ id: "branch-1", name: "Pusat" }}
+          metaTracking={{ pixelId: "123456", whatsappCtaMetaEvent: "Lead" }}
+        />
+      </main>,
+    );
+
+    fireEvent.click(getByRole("link", { name: "WhatsApp custom" }));
+
+    expect(pixel).toHaveBeenLastCalledWith(
+      "trackSingleCustom",
+      "123456",
+      "CTA_Konsultasi",
       expect.objectContaining({ cta: "whatsapp" }),
       { eventID: eventId },
     );
@@ -190,7 +256,14 @@ describe("TrackingBehavior", () => {
             },
           }}
           products={[]}
-          links={[{ id: "link-1", label: "Lihat katalog", type: "cta" }]}
+          links={[
+            {
+              id: "link-1",
+              label: "Lihat katalog",
+              type: "cta",
+              metaEventName: null,
+            },
+          ]}
           branch={{ id: "branch-1", name: "Pusat" }}
           metaTracking={{ pixelId: null, whatsappCtaMetaEvent: "Contact" }}
         />

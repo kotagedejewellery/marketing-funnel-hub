@@ -31,9 +31,9 @@ mandiri.
 | `page_blocks`                  | Susunan kustom per cabang: satu referensi tervalidasi ke section, assignment produk, atau tautan per blok.             |
 | `branches`                     | Nama, slug unik, nomor WhatsApp, profil override, logo, status, dan urutan cabang.                                     |
 | `products`                     | Kategori produk bersama; slug adalah kategori tracking yang stabil.                                                    |
-| `product_branches`             | Assignment produk–cabang yang unik, override CTA/pesan, status, dan urutan.                                            |
+| `product_branches`             | Assignment produk–cabang yang unik, override CTA/pesan/event Meta, status, dan urutan.                                |
 | `campaigns`                    | Kampanye scope cabang, gambar banner, periode, URL, status, dan urutan.                                                |
-| `links`                        | Tautan sekunder/sosial atau CTA custom per cabang dengan status, urutan, gaya tombol terkontrol, dan ikon opsional.    |
+| `links`                        | Tautan sekunder/sosial atau CTA custom per cabang dengan status, urutan, gaya tombol, ikon, dan event Meta opsional.  |
 | `faqs`                         | FAQ bersama atau per cabang, dengan fallback template pada pembacaan publik.                                           |
 | `gallery_items`                | Gambar galeri wajib milik satu cabang; tidak memiliki CTA atau hubungan produk.                                        |
 | `branch_review_sources`        | Satu konfigurasi sumber ulasan Google/Firecrawl per cabang.                                                            |
@@ -58,8 +58,10 @@ menjaga histori, kecuali sesi admin yang cascade bila profil dihapus.
 - Event memakai snapshot nama/kategori agar histori tetap terbaca ketika konten
   dinonaktifkan. Event tidak menyimpan PII customer.
 - Konfigurasi Meta mode `custom` harus lengkap; mode `disabled` menghapus
-  credential khusus. Page load provider selalu `PageView`; event CTA tersimpan
-  terpisah dan harus berasal dari daftar standar yang disetujui.
+  credential khusus. Page load provider selalu `PageView`. `product_branches`
+  dan link bertipe `cta` dapat menyimpan `meta_event_name` nullable: `NULL`
+  mempertahankan fallback, sedangkan nilai harus identifier teknis 1–100 karakter
+  yang diawali huruf, memakai huruf/angka/garis bawah, dan bukan `PageView`.
 
 Index pada schema mendukung daftar aktif/urut per cabang, scope/urut section,
 serta akses event berdasarkan waktu, nama event, sesi, produk, cabang, tautan,

@@ -1,0 +1,4 @@
+ALTER TABLE "links" ADD COLUMN "meta_event_name" text;--> statement-breakpoint
+ALTER TABLE "product_branches" ADD COLUMN "meta_event_name" text;--> statement-breakpoint
+ALTER TABLE "links" ADD CONSTRAINT "links_meta_event_name_check" CHECK ("links"."meta_event_name" is null or ("links"."meta_event_name" <> 'PageView' and "links"."meta_event_name" ~ '^[A-Za-z][A-Za-z0-9_]{0,99}$'));--> statement-breakpoint
+ALTER TABLE "product_branches" ADD CONSTRAINT "product_branches_meta_event_name_check" CHECK ("product_branches"."meta_event_name" is null or ("product_branches"."meta_event_name" <> 'PageView' and "product_branches"."meta_event_name" ~ '^[A-Za-z][A-Za-z0-9_]{0,99}$'));

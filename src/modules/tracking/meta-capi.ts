@@ -93,6 +93,7 @@ export async function sendMetaCapi(
   const metaEvent = resolveMetaProviderEvent(
     event,
     config?.whatsappCtaMetaEvent ?? null,
+    resolved.metaEventName,
   );
 
   const payload = metaPayload(

@@ -44,6 +44,29 @@ describe("Meta provider event mapping", () => {
     });
   });
 
+  it("lets an individual CTA replace the branch fallback with a custom Meta event", () => {
+    expect(
+      resolveMetaProviderEvent(
+        { eventName: "Contact", cta: "whatsapp" },
+        "Lead",
+        "CTA_Konsultasi_Premium",
+      ),
+    ).toEqual({
+      name: "CTA_Konsultasi_Premium",
+      type: "custom",
+    });
+  });
+
+  it("lets an individual custom-link CTA use a standard Meta event", () => {
+    expect(
+      resolveMetaProviderEvent(
+        { eventName: "LinkClick", cta: "link" },
+        "Contact",
+        "Lead",
+      ),
+    ).toEqual({ name: "Lead", type: "standard" });
+  });
+
   it("keeps non-WhatsApp provider events canonical", () => {
     expect(
       resolveMetaProviderEvent({ eventName: "LinkClick", cta: "link" }, "Lead"),

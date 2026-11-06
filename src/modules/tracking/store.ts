@@ -59,7 +59,12 @@ export async function resolveEventContext(event: CanonicalEvent) {
   const db = getDatabase();
   if (event.eventName === "LinkClick") {
     const [link] = await db
-      .select({ id: links.id, label: links.label, type: links.linkType })
+      .select({
+        id: links.id,
+        label: links.label,
+        type: links.linkType,
+        metaEventName: links.metaEventName,
+      })
       .from(links)
       .where(
         and(
@@ -76,18 +81,31 @@ export async function resolveEventContext(event: CanonicalEvent) {
       .from(branches)
       .where(and(eq(branches.id, event.branch.id), eq(branches.isActive, true)))
       .limit(1);
-    return branch ? { product: null, branch, link } : null;
+    return branch
+      ? {
+          product: null,
+          branch,
+          link,
+          metaEventName: link.type === "cta" ? link.metaEventName : null,
+        }
+      : null;
   }
-  if (!event.product) return { product: null, branch: null, link: null };
+  if (!event.product)
+    return { product: null, branch: null, link: null, metaEventName: null };
   const [product] = await db
     .select({ id: products.id, slug: products.slug })
     .from(products)
     .where(and(eq(products.id, event.product.id), eq(products.isActive, true)))
     .limit(1);
   if (!product) return null;
-  if (!event.branch) return { product, branch: null, link: null };
+  if (!event.branch)
+    return { product, branch: null, link: null, metaEventName: null };
   const [assignment] = await db
-    .select({ id: branches.id, name: branches.name })
+    .select({
+      id: branches.id,
+      name: branches.name,
+      metaEventName: productBranches.metaEventName,
+    })
     .from(productBranches)
     .innerJoin(branches, eq(productBranches.branchId, branches.id))
     .where(
@@ -99,7 +117,14 @@ export async function resolveEventContext(event: CanonicalEvent) {
       ),
     )
     .limit(1);
-  return assignment ? { product, branch: assignment, link: null } : null;
+  return assignment
+    ? {
+        product,
+        branch: { id: assignment.id, name: assignment.name },
+        link: null,
+        metaEventName: assignment.metaEventName,
+      }
+    : null;
 }
 
 export async function storeEvent(

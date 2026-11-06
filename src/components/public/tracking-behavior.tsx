@@ -15,13 +15,14 @@ export type TrackingContext = Pick<
 type TrackingProduct = {
   id: string;
   slug: string;
-  branches: { id: string; name: string }[];
+  branches: { id: string; name: string; metaEventName: string | null }[];
 };
 
 type TrackingLink = {
   id: string;
   label: string;
   type: "secondary" | "social" | "cta";
+  metaEventName: string | null;
 };
 
 type Pixel = ((...args: unknown[]) => void) & {
@@ -112,11 +113,13 @@ function sendEvent(
   event: CanonicalEvent,
   metaTracking: BrowserMetaTrackingConfig,
   metaExternalId: string | null,
+  ctaMetaEventOverride?: string | null,
 ) {
   const browser = window as ProviderWindow;
   const metaEvent = resolveMetaProviderEvent(
     event,
     metaTracking.whatsappCtaMetaEvent,
+    ctaMetaEventOverride,
   );
 
   const metaPixelActive =
@@ -216,6 +219,7 @@ export function TrackingBehavior({
           },
           metaTracking,
           context.metaExternalId,
+          link.type === "cta" ? link.metaEventName : null,
         );
         return;
       }
@@ -237,6 +241,7 @@ export function TrackingBehavior({
         },
         metaTracking,
         context.metaExternalId,
+        productBranch.metaEventName,
       );
     }
 

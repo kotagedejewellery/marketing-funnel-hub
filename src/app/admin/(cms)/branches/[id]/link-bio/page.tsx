@@ -212,6 +212,7 @@ export default async function BranchLinkBioPage({
             branchId={branch.id}
             products={products}
             hasCustomLayout={layoutBlocks.length > 0}
+            canManageMeta={isTechnicalAdmin}
           />
           <BranchMetaTrackingManager
             branchId={branch.id}
@@ -243,6 +244,7 @@ export default async function BranchLinkBioPage({
             rows={links}
             branchId={branch.id}
             hasCustomLayout={layoutBlocks.length > 0}
+            canManageMeta={isTechnicalAdmin}
           />
         </div>
         <PagePreview pageId={branch.id} title={branch.name} />

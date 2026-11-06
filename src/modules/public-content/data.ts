@@ -206,6 +206,7 @@ async function loadScopedContent(
         whatsappNumber: branches.whatsappNumber,
         assignmentMessage: productBranches.whatsappMessageTemplate,
         assignmentLabel: productBranches.ctaLabel,
+        metaEventName: productBranches.metaEventName,
         branchLabel: branches.ctaLabel,
       })
       .from(productBranches)
@@ -277,6 +278,7 @@ async function loadScopedContent(
         platform: links.platform,
         iconKey: links.iconKey,
         buttonStyle: links.buttonStyle,
+        metaEventName: links.metaEventName,
       })
       .from(links)
       .where(and(eq(links.isActive, true), eq(links.branchId, branch.id)))
@@ -422,6 +424,7 @@ async function loadScopedContent(
             slug: item.slug,
             ctaLabel: cta.ctaLabel,
             whatsappUrl: cta.whatsappUrl,
+            metaEventName: item.metaEventName,
           };
         }),
     };

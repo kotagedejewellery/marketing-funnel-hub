@@ -113,6 +113,7 @@ export async function getBranchPageSettings(id: string) {
         description: productBranches.description,
         ctaLabel: productBranches.ctaLabel,
         whatsappMessageTemplate: productBranches.whatsappMessageTemplate,
+        metaEventName: productBranches.metaEventName,
         isActive: productBranches.isActive,
         sortOrder: productBranches.sortOrder,
       })

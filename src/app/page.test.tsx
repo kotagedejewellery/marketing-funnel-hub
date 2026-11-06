@@ -115,6 +115,7 @@ describe("public Link Bio", () => {
                   slug: "solo",
                   ctaLabel: "Hubungi via WhatsApp",
                   whatsappUrl: "https://wa.me/628123456789?text=Halo",
+                  metaEventName: null,
                 },
               ],
             },
@@ -131,6 +132,7 @@ describe("public Link Bio", () => {
                   slug: "solo",
                   ctaLabel: "Konsultasi Nusantara",
                   whatsappUrl: "https://wa.me/628123456789?text=Nusantara",
+                  metaEventName: null,
                 },
               ],
             },
@@ -169,6 +171,7 @@ describe("public Link Bio", () => {
           slug: "solo",
           ctaLabel: "Hubungi via WhatsApp",
           whatsappUrl: "https://wa.me/628123456789?text=Halo",
+          metaEventName: null,
         },
       ],
     };
@@ -180,6 +183,7 @@ describe("public Link Bio", () => {
       platform: null,
       iconKey: "catalog",
       buttonStyle: "outline" as const,
+      metaEventName: null,
     };
 
     render(

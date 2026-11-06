@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { getDatabase } from "@/lib/db/client";
 import { auditLogs, branches, links } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
+import { requireTechnicalAdmin } from "@/modules/admin/access";
 import { appendPageBlockIfCustomized } from "@/modules/admin/link-bio/page-blocks";
 
 import { linkSchema } from "./validation";
@@ -22,6 +23,8 @@ export async function saveLink(
   formData: FormData,
 ): Promise<ActionState> {
   const profile = await requireAdmin();
+  const canUpdateMetaEvent = formData.has("metaEventName");
+  if (canUpdateMetaEvent) await requireTechnicalAdmin();
   const parsed = linkSchema.safeParse({
     ...Object.fromEntries(formData),
     isActive: formData.get("isActive") === "on",
@@ -72,15 +75,21 @@ export async function saveLink(
             id: links.id,
             branchId: links.branchId,
             sortOrder: links.sortOrder,
+            metaEventName: links.metaEventName,
           })
           .from(links)
           .where(eq(links.id, input.id))
           .limit(1);
         if (!current || current.branchId !== branchId) return "";
+        const metaEventName =
+          input.linkType === "cta" && canUpdateMetaEvent
+            ? (input.metaEventName ?? null)
+            : current.metaEventName;
         await tx
           .update(links)
           .set({
             ...values,
+            metaEventName,
             sortOrder: current.sortOrder,
             updatedAt: new Date(),
           })
@@ -103,6 +112,10 @@ export async function saveLink(
         .where(and(scope, eq(links.linkType, input.linkType)));
       const createValues = {
         ...values,
+        metaEventName:
+          input.linkType === "cta" && canUpdateMetaEvent
+            ? (input.metaEventName ?? null)
+            : null,
         sortOrder: Number(lastOrder?.value ?? -1) + 1,
       };
       const [created] = await tx

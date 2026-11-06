@@ -30,4 +30,13 @@ describe("linkSchema", () => {
       false,
     );
   });
+
+  it("accepts a CTA-specific Meta event and rejects an unsafe name", () => {
+    expect(
+      linkSchema.parse({ ...link, metaEventName: "CTA_Katalog_November" }),
+    ).toMatchObject({ metaEventName: "CTA_Katalog_November" });
+    expect(
+      linkSchema.safeParse({ ...link, metaEventName: "CTA katalog" }).success,
+    ).toBe(false);
+  });
 });
