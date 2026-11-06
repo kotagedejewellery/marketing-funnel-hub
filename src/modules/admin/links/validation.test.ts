@@ -31,12 +31,13 @@ describe("linkSchema", () => {
     );
   });
 
-  it("accepts a CTA-specific Meta event and rejects an unsafe name", () => {
+  it("accepts only a standard CTA-specific Meta event", () => {
+    expect(linkSchema.parse({ ...link, metaEventName: "Lead" })).toMatchObject({
+      metaEventName: "Lead",
+    });
     expect(
-      linkSchema.parse({ ...link, metaEventName: "CTA_Katalog_November" }),
-    ).toMatchObject({ metaEventName: "CTA_Katalog_November" });
-    expect(
-      linkSchema.safeParse({ ...link, metaEventName: "CTA katalog" }).success,
+      linkSchema.safeParse({ ...link, metaEventName: "CTA_Katalog_November" })
+        .success,
     ).toBe(false);
   });
 });

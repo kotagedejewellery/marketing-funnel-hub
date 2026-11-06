@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
@@ -11,6 +11,10 @@ import {
   moveBranchProduct,
   saveBranchProduct,
 } from "@/modules/admin/branches/product-actions";
+import {
+  metaCtaEventNames,
+  parseMetaCtaEventName,
+} from "@/modules/tracking/meta-event";
 
 type BranchProduct = {
   id: string;
@@ -345,6 +349,14 @@ function BranchProductForm({
     ok: false,
   });
   const assignment = product.assignment;
+  const legacyMetaEventName =
+    assignment?.metaEventName &&
+    !parseMetaCtaEventName(assignment.metaEventName)
+      ? assignment.metaEventName
+      : null;
+  const [metaEventSelection, setMetaEventSelection] = useState(
+    legacyMetaEventName ? "__legacy__" : (assignment?.metaEventName ?? ""),
+  );
 
   return (
     <form action={action} className="space-y-5">
@@ -442,18 +454,30 @@ function BranchProductForm({
           <label htmlFor={`meta-event-${product.id}`} className="font-medium">
             Event Meta khusus
           </label>
-          <input
+          <select
             id={`meta-event-${product.id}`}
-            name="metaEventName"
-            defaultValue={assignment?.metaEventName ?? ""}
-            maxLength={100}
-            placeholder="Ikuti event Meta default cabang"
+            name={
+              metaEventSelection === "__legacy__" ? undefined : "metaEventName"
+            }
+            value={metaEventSelection}
+            onChange={(event) => setMetaEventSelection(event.target.value)}
             className={inputClass}
-          />
+          >
+            {legacyMetaEventName && (
+              <option value="__legacy__">
+                Pertahankan event custom lama: {legacyMetaEventName}
+              </option>
+            )}
+            <option value="">Ikuti event Meta default cabang</option>
+            {metaCtaEventNames.map((eventName) => (
+              <option key={eventName} value={eventName}>
+                {eventName}
+              </option>
+            ))}
+          </select>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Kosong mengikuti default cabang. Nama standar seperti Lead dikirim
-            sebagai event standar; nama lain, misalnya CTA_Konsultasi, dikirim
-            sebagai custom event Meta.
+            Pilih event standar khusus untuk tombol ini, atau ikuti event Meta
+            default cabang.
           </p>
           <FieldError message={state.errors.metaEventName} />
         </div>

@@ -60,8 +60,9 @@ menjaga histori, kecuali sesi admin yang cascade bila profil dihapus.
 - Konfigurasi Meta mode `custom` harus lengkap; mode `disabled` menghapus
   credential khusus. Page load provider selalu `PageView`. `product_branches`
   dan link bertipe `cta` dapat menyimpan `meta_event_name` nullable: `NULL`
-  mempertahankan fallback, sedangkan nilai harus identifier teknis 1–100 karakter
-  yang diawali huruf, memakai huruf/angka/garis bawah, dan bukan `PageView`.
+  mempertahankan fallback. CMS hanya menyimpan nama event standar CTA yang
+  disetujui; constraint identifier lama dipertahankan agar event custom historis
+  tetap terbaca hingga technical admin secara eksplisit memilih penggantinya.
 
 Index pada schema mendukung daftar aktif/urut per cabang, scope/urut section,
 serta akses event berdasarkan waktu, nama event, sesi, produk, cabang, tautan,

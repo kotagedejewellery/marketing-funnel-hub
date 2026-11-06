@@ -1,6 +1,6 @@
 import * as z from "zod";
 
-import { metaCtaEventOverrideSchema } from "@/modules/tracking/meta-event";
+import { metaCtaEventSelectionSchema } from "@/modules/tracking/meta-event";
 
 export const branchProductSchema = z.object({
   productId: z.uuid(),
@@ -41,5 +41,5 @@ export const branchProductSchema = z.object({
       "Hanya variabel {product} dan {branch} yang didukung.",
     )
     .transform((value) => value || null),
-  metaEventName: metaCtaEventOverrideSchema.optional(),
+  metaEventName: metaCtaEventSelectionSchema.optional(),
 });

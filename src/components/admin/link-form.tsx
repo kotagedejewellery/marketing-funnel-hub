@@ -4,6 +4,10 @@ import { useActionState, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveLink } from "@/modules/admin/links/actions";
+import {
+  metaCtaEventNames,
+  parseMetaCtaEventName,
+} from "@/modules/tracking/meta-event";
 
 type LinkRecord = {
   id: string;
@@ -40,6 +44,13 @@ export function LinkForm({
     errors: {},
   });
   const [linkType, setLinkType] = useState(link?.linkType ?? "secondary");
+  const legacyMetaEventName =
+    link?.metaEventName && !parseMetaCtaEventName(link.metaEventName)
+      ? link.metaEventName
+      : null;
+  const [metaEventSelection, setMetaEventSelection] = useState(
+    legacyMetaEventName ? "__legacy__" : (link?.metaEventName ?? ""),
+  );
 
   return (
     <form action={action} className="space-y-6">
@@ -146,17 +157,30 @@ export function LinkForm({
           <label htmlFor="metaEventName" className="font-medium">
             Event Meta khusus
           </label>
-          <input
+          <select
             id="metaEventName"
-            name="metaEventName"
-            defaultValue={link?.metaEventName ?? ""}
-            maxLength={100}
-            placeholder="Ikuti event LinkClick bawaan"
+            name={
+              metaEventSelection === "__legacy__" ? undefined : "metaEventName"
+            }
+            value={metaEventSelection}
+            onChange={(event) => setMetaEventSelection(event.target.value)}
             className={inputClass}
-          />
+          >
+            {legacyMetaEventName && (
+              <option value="__legacy__">
+                Pertahankan event custom lama: {legacyMetaEventName}
+              </option>
+            )}
+            <option value="">Ikuti event LinkClick bawaan</option>
+            {metaCtaEventNames.map((eventName) => (
+              <option key={eventName} value={eventName}>
+                {eventName}
+              </option>
+            ))}
+          </select>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Berlaku hanya untuk Tombol custom. Nama standar seperti Lead dikirim
-            sebagai event standar; nama lain dikirim sebagai custom event Meta.
+            Berlaku hanya untuk Tombol custom. Pilih event standar untuk
+            mengganti event custom lama atau mengikuti LinkClick bawaan.
           </p>
           <FieldError message={state.errors.metaEventName} />
         </div>

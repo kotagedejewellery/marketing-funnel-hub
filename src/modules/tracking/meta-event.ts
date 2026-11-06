@@ -45,6 +45,10 @@ export const metaCtaEventOverrideSchema = z
   )
   .transform((value) => value || null);
 
+export const metaCtaEventSelectionSchema = z
+  .enum(["", ...metaCtaEventNames])
+  .transform((value) => value || null);
+
 type MetaProviderEvent = {
   name: string;
   type: "standard" | "custom";
