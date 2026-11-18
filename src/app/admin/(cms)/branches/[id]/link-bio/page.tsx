@@ -1,10 +1,9 @@
 import Link from "next/link";
-
 import { BranchForm } from "@/components/admin/branch-form";
+import { BranchMetaTrackingManager } from "@/components/admin/branch-meta-tracking-manager";
+import { BranchPageBuilder } from "@/components/admin/branch-page-builder";
 import { BranchPageForm } from "@/components/admin/branch-page-form";
 import { BranchProductManager } from "@/components/admin/branch-product-manager";
-import { BranchMetaTrackingManager } from "@/components/admin/branch-meta-tracking-manager";
-import { BranchPublicUrl } from "@/components/admin/branch-public-url";
 import { FaqManager } from "@/components/admin/faq-manager";
 import { FormDialog } from "@/components/admin/form-dialog";
 import { GalleryManager } from "@/components/admin/gallery-manager";
@@ -15,13 +14,12 @@ import {
   PageLinks,
 } from "@/components/admin/page-content-panels";
 import { PagePreview } from "@/components/admin/page-preview";
-import { PageBlockOrder } from "@/components/admin/page-block-order";
 import { serverEnv } from "@/lib/env/server";
-import { getBranchPageSettings } from "@/modules/admin/branches/page-data";
 import { requireAdmin } from "@/modules/admin/access";
+import { getBranchPageSettings } from "@/modules/admin/branches/page-data";
+import { getPageSourceSummary } from "@/modules/admin/branches/page-source-summary";
 import { getBranchMetaTrackingSecretsForTechnicalAdmin } from "@/modules/admin/tracking/branch-meta-secrets";
 import { publicAssetUrl } from "@/modules/public-content/links";
-
 export default async function BranchLinkBioPage({
   params,
 }: {
@@ -42,7 +40,7 @@ export default async function BranchLinkBioPage({
     faqs,
     inheritsFaqs,
     products,
-    layoutBlocks,
+    builderLayout,
     metaTracking,
   } = await getBranchPageSettings(id);
   const metaSecrets = isTechnicalAdmin
@@ -50,213 +48,254 @@ export default async function BranchLinkBioPage({
     : null;
   const assetUrl = (path: string | null) =>
     publicAssetUrl(serverEnv.MEDIA_PUBLIC_BASE_URL, path);
-
+  const activeProducts = products.filter(
+    (product) => product.isActive && product.assignment?.isActive,
+  );
+  const activeLinks = links.filter((link) => link.isActive);
   return (
     <div>
-      <Link
-        href="/admin/link-bio"
-        className="text-sm underline underline-offset-4"
-      >
-        Kembali ke semua halaman
-      </Link>
-      <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+      {" "}
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        {" "}
         <div>
-          <h1 className="font-serif text-4xl">Link Bio {branch.name}</h1>
-          <p className="mt-3 text-muted-foreground">
-            Semua isi di bawah ini hanya berlaku untuk cabang {branch.name}.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
+          {" "}
           <Link
-            href={`/admin/preview/link-bio/${branch.id}`}
-            target="_blank"
+            href="/admin/link-bio"
             className="text-sm font-semibold underline underline-offset-4"
           >
-            Buka pratinjau
-          </Link>
+            {" "}
+            Kembali ke semua halaman{" "}
+          </Link>{" "}
+          <p className="mt-2 text-sm text-muted-foreground">
+            {" "}
+            Halaman publik: /{branch.slug} ?? WhatsApp:{" "}
+            {branch.whatsappNumber}{" "}
+          </p>{" "}
+        </div>{" "}
+        <div className="flex items-center gap-3">
+          {" "}
+          <span className="rounded-full bg-secondary px-3 py-2 text-sm font-semibold">
+            {" "}
+            {branch.isActive ? "Cabang aktif" : "Cabang nonaktif"}{" "}
+          </span>{" "}
           <FormDialog
             title={`Edit informasi ${branch.name}`}
-            triggerLabel="Edit info & WhatsApp"
+            triggerLabel="Edit cabang"
           >
-            <BranchForm branch={branch} />
-          </FormDialog>
-        </div>
-      </div>
-      <section className="mt-8 rounded-2xl bg-[var(--kgj-accent-soft)] p-6 sm:p-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="font-serif text-2xl">URL halaman</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {branch.isActive
-                ? "Perubahan yang disimpan langsung tampil pada halaman publik."
-                : "Cabang nonaktif: pratinjau tersedia, URL publik belum bisa dibuka."}
-            </p>
-            <BranchPublicUrl
-              url={new URL(
-                `/${branch.slug}`,
-                serverEnv.NEXT_PUBLIC_SITE_URL,
-              ).toString()}
-              isActive={branch.isActive}
-            />
-            <p className="mt-3 text-sm text-muted-foreground">
-              WhatsApp: {branch.whatsappNumber}
-            </p>
-          </div>
-          <span className="rounded-full bg-card px-4 py-2 text-sm font-semibold">
-            {branch.isActive ? "Aktif" : "Nonaktif"}
-          </span>
-        </div>
-      </section>
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.7fr)]">
-        <div className="min-w-0 space-y-6">
-          <section className="rounded-2xl bg-card p-6 sm:p-8">
-            <h2 className="font-serif text-2xl">Profil merek</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {branch.profileName
-                ? "Nama tampilan khusus cabang sudah diisi."
-                : "Nama tampilan dibuat otomatis dari merek dan cabang."}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {branch.headline
-                ? "Headline khusus cabang sudah diisi."
-                : "Headline mengikuti Standar & Template KGJ."}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {branch.introduction
-                ? "Deskripsi singkat khusus cabang sudah diisi."
-                : "Deskripsi singkat mengikuti Standar & Template KGJ."}
-            </p>
-            <p className="mt-3 text-sm text-muted-foreground">
-              Tampilan: nama {visibilityLabel(branch.showProfileName)}, judul{" "}
-              {visibilityLabel(branch.showHeadline)}, deskripsi{" "}
-              {visibilityLabel(branch.showIntroduction)}.
-            </p>
-            <div className="mt-5">
-              <FormDialog
-                title={`Edit profil ${branch.name}`}
-                triggerLabel="Atur profil cabang"
-                primary
-              >
+            {" "}
+            <BranchForm branch={branch} />{" "}
+          </FormDialog>{" "}
+        </div>{" "}
+      </header>{" "}
+      <BranchPageBuilder
+        branchId={branch.id}
+        branchName={branch.name}
+        initialBlocks={builderLayout.draftBlocks}
+        catalog={{
+          sections: sections
+            .filter((section) => section.isActive)
+            .map(({ sectionKey, label }) => ({ sectionKey, label })),
+          products: activeProducts,
+          links: activeLinks.map(({ id: linkId, label }) => ({
+            id: linkId,
+            label,
+          })),
+          sourceSummary: getPageSourceSummary({
+            now: new Date(),
+            branchIsActive: branch.isActive,
+            logoPath: branch.logoPath,
+            campaigns,
+            gallery,
+            activeCtaCount: activeProducts.length,
+            reviewSource: reviewSource
+              ? {
+                  ...reviewSource,
+                  displayMode:
+                    reviewSource.displayMode === "manual"
+                      ? "manual"
+                      : "automatic",
+                }
+              : null,
+            reviews,
+            faqs,
+            inheritsFaqs,
+            activeLinkCount: activeLinks.length,
+            activeSectionCount: sections.filter((item) => item.isActive).length,
+          }),
+        }}
+        dataTools={{
+          identity: (
+            <FormDialog
+              title={`Profil ${branch.name}`}
+              triggerLabel="Atur profil & logo"
+              refreshBuilderData
+              dataTool="identity"
+            >
+              {" "}
+              <div className="space-y-6">
+                {" "}
                 <BranchPageForm
                   branch={branch}
                   sections={sections}
                   inheritsSections={inheritsSections}
                   mode="identity"
-                />
-              </FormDialog>
-            </div>
-          </section>
-          <MediaUploadField
-            entityType="branch"
-            entityId={branch.id}
-            label={`Logo profil ${branch.name}`}
-            previewUrl={assetUrl(branch.logoPath)}
-          />
-          {!branch.logoPath && (
-            <p className="-mt-4 text-sm text-muted-foreground">
-              Belum ada logo khusus; halaman ini mengikuti logo dari Pengaturan
-              &amp; Template KGJ.
-            </p>
-          )}
-          <section className="rounded-2xl bg-card p-6 sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="font-serif text-2xl">Susunan bagian</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {inheritsSections
-                    ? "Mengikuti template susunan KGJ. Simpan perubahan untuk menjadikannya khusus cabang."
-                    : "Susunan dan bagian yang tampil khusus untuk cabang ini."}
-                </p>
-              </div>
-              <FormDialog
-                title={`Susunan ${branch.name}`}
-                triggerLabel={
-                  inheritsSections
-                    ? "Kustomisasi section cabang"
-                    : "Atur section"
-                }
-              >
-                <BranchPageForm
-                  branch={branch}
-                  sections={sections}
-                  inheritsSections={inheritsSections}
-                  hasCustomLayout={layoutBlocks.length > 0}
-                  mode="sections"
-                />
-              </FormDialog>
-            </div>
-            <ol className="mt-5 divide-y divide-border border-t border-border">
-              {sections.map((section) => (
-                <li
-                  key={section.id}
-                  className="flex items-center justify-between gap-3 py-3 text-sm"
-                >
-                  <span className="font-medium">{section.label}</span>
-                  <span className="text-muted-foreground">
-                    {section.isActive ? "Tampil" : "Disembunyikan"}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
-          <PageBlockOrder branchId={branch.id} blocks={layoutBlocks} />
-          <PageCampaigns rows={campaigns} branchId={branch.id} />
-          <GalleryManager
-            branchId={branch.id}
-            items={gallery.flatMap((item) => {
-              const imageUrl = assetUrl(item.imagePath);
-              return imageUrl ? [{ ...item, imageUrl }] : [];
-            })}
-          />
-          <BranchProductManager
-            branchId={branch.id}
-            products={products}
-            hasCustomLayout={layoutBlocks.length > 0}
-            canManageMeta={isTechnicalAdmin}
-          />
-          <BranchMetaTrackingManager
-            branchId={branch.id}
-            settings={{
-              ...metaTracking,
-              capiAccessToken: metaSecrets?.capiAccessToken ?? null,
-              capiTestEventCode: metaSecrets?.capiTestEventCode ?? null,
-            }}
-            canManage={isTechnicalAdmin}
-          />
-          <GoogleReviewManager
-            key={[
-              reviewSource?.updatedAt.getTime() ?? "new",
-              ...reviews.map((review) =>
-                [review.id, review.updatedAt.getTime()].join("-"),
-              ),
-            ].join(":")}
-            branchId={branch.id}
-            source={reviewSource}
-            reviews={reviews}
-            canScrape={profile.role === "technical_admin"}
-          />
-          <FaqManager
-            faqs={faqs}
-            branchId={branch.id}
-            inherits={inheritsFaqs}
-          />
-          <PageLinks
-            rows={links}
-            branchId={branch.id}
-            hasCustomLayout={layoutBlocks.length > 0}
-            canManageMeta={isTechnicalAdmin}
-          />
-        </div>
-        <PagePreview pageId={branch.id} title={branch.name} />
-      </div>
+                />{" "}
+                <MediaUploadField
+                  entityType="branch"
+                  entityId={branch.id}
+                  label={`Logo profil ${branch.name}`}
+                  previewUrl={assetUrl(branch.logoPath)}
+                />{" "}
+              </div>{" "}
+            </FormDialog>
+          ),
+          sections: (
+            <FormDialog
+              title={`Tampilan & susunan ${branch.name}`}
+              triggerLabel="Atur tampilan & susunan halaman"
+              refreshBuilderData
+              dataTool="sections"
+            >
+              {" "}
+              <BranchPageForm
+                branch={branch}
+                sections={sections}
+                inheritsSections={inheritsSections}
+                hasCustomLayout
+                mode="sections"
+              />{" "}
+            </FormDialog>
+          ),
+          campaigns: (
+            <FormDialog
+              title="Konten unggulan"
+              triggerLabel="Atur konten unggulan"
+              refreshBuilderData
+              dataTool="campaigns"
+            >
+              {" "}
+              <PageCampaigns rows={campaigns} branchId={branch.id} />{" "}
+            </FormDialog>
+          ),
+          gallery: (
+            <FormDialog
+              title="Galeri produk"
+              triggerLabel="Atur galeri produk"
+              refreshBuilderData
+              dataTool="gallery"
+            >
+              {" "}
+              <GalleryManager
+                branchId={branch.id}
+                items={gallery.flatMap((item) => {
+                  const imageUrl = assetUrl(item.imagePath);
+                  return imageUrl ? [{ ...item, imageUrl }] : [];
+                })}
+              />{" "}
+            </FormDialog>
+          ),
+          cta: (
+            <FormDialog
+              title="Tombol WhatsApp"
+              triggerLabel="Atur CTA WhatsApp"
+              refreshBuilderData
+              dataTool="cta"
+            >
+              {" "}
+              <BranchProductManager
+                branchId={branch.id}
+                products={products}
+                hasCustomLayout
+                canManageMeta={isTechnicalAdmin}
+              />{" "}
+            </FormDialog>
+          ),
+          reviews: (
+            <FormDialog
+              title="Ulasan Google"
+              triggerLabel="Atur ulasan Google"
+              refreshBuilderData
+              dataTool="reviews"
+            >
+              {" "}
+              <GoogleReviewManager
+                key={[
+                  reviewSource?.updatedAt.getTime() ?? "new",
+                  ...reviews.map((review) =>
+                    [review.id, review.updatedAt.getTime()].join("-"),
+                  ),
+                ].join(":")}
+                branchId={branch.id}
+                source={reviewSource}
+                reviews={reviews}
+                canScrape={isTechnicalAdmin}
+              />{" "}
+            </FormDialog>
+          ),
+          faq: (
+            <FormDialog
+              title="FAQ"
+              triggerLabel="Atur FAQ"
+              refreshBuilderData
+              dataTool="faq"
+            >
+              {" "}
+              <FaqManager
+                faqs={faqs}
+                branchId={branch.id}
+                inherits={inheritsFaqs}
+              />{" "}
+            </FormDialog>
+          ),
+          links: (
+            <FormDialog
+              title="Tautan & media sosial"
+              triggerLabel="Atur tautan & sosial"
+              refreshBuilderData
+              dataTool="links"
+            >
+              {" "}
+              <PageLinks
+                rows={links}
+                branchId={branch.id}
+                hasCustomLayout
+                canManageMeta={isTechnicalAdmin}
+              />{" "}
+            </FormDialog>
+          ),
+          formResponses: (
+            <Link
+              href={`/admin/form-responses?branchId=${branch.id}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-card px-5 text-sm font-bold hover:border-[var(--kgj-accent)] hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {" "}
+              Respons form{" "}
+            </Link>
+          ),
+          tracking: (
+            <FormDialog
+              title="Meta Pixel & CAPI"
+              triggerLabel="Atur Tracking Meta"
+              refreshBuilderData
+              dataTool="tracking"
+            >
+              {" "}
+              <BranchMetaTrackingManager
+                branchId={branch.id}
+                settings={{
+                  ...metaTracking,
+                  capiAccessToken: metaSecrets?.capiAccessToken ?? null,
+                  capiTestEventCode: metaSecrets?.capiTestEventCode ?? null,
+                }}
+                canManage={isTechnicalAdmin}
+              />{" "}
+            </FormDialog>
+          ),
+        }}
+        preview={
+          <PagePreview pageId={branch.id} title={branch.name} embedded />
+        }
+      />{" "}
     </div>
   );
-}
-
-function visibilityLabel(value: boolean | null) {
-  return value === null
-    ? "mengikuti template"
-    : value
-      ? "ditampilkan"
-      : "disembunyikan";
 }

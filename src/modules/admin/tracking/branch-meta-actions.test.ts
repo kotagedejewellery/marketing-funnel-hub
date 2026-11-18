@@ -9,7 +9,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("drizzle-orm", () => ({ eq: vi.fn() }));
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn(),
+  sql: (strings: TemplateStringsArray) => strings.join(""),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/db/client", () => ({ getDatabase: mocks.getDatabase }));
 vi.mock("@/modules/admin/access", () => ({

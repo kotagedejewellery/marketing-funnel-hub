@@ -8,6 +8,7 @@ import {
   campaigns,
   branchGoogleReviews,
   branchMetaTrackingConfigs,
+  branchPageBuilderLayouts,
   branchReviewSources,
   contentSections,
   faqs,
@@ -17,6 +18,7 @@ import {
   productBranches,
   products,
 } from "@/lib/db/schema";
+import { pageBuilderBlocksSchema } from "@/modules/page-builder/schema";
 
 import { getBranch } from "./data";
 import { branchSectionKeys, branchSectionLabels } from "./page-validation";
@@ -63,6 +65,7 @@ export async function getBranchPageSettings(id: string) {
     assignmentRows,
     metaTrackingRows,
     pageBlockRows,
+    builderLayouts,
   ] = await Promise.all([
     db
       .select()
@@ -136,6 +139,15 @@ export async function getBranchPageSettings(id: string) {
       .from(pageBlocks)
       .where(eq(pageBlocks.branchId, branch.id))
       .orderBy(asc(pageBlocks.sortOrder), asc(pageBlocks.id)),
+    db
+      .select({
+        draftBlocks: branchPageBuilderLayouts.draftBlocks,
+        publishedBlocks: branchPageBuilderLayouts.publishedBlocks,
+        isPublished: branchPageBuilderLayouts.isPublished,
+      })
+      .from(branchPageBuilderLayouts)
+      .where(eq(branchPageBuilderLayouts.branchId, branch.id))
+      .limit(1),
   ]);
   const assignmentByProductId = new Map(
     assignmentRows.map((row) => [row.productId, row]),
@@ -232,6 +244,15 @@ export async function getBranchPageSettings(id: string) {
     inheritsFaqs: branchFaqs.length === 0,
     products: branchProducts,
     layoutBlocks,
+    builderLayout: {
+      draftBlocks:
+        pageBuilderBlocksSchema.safeParse(builderLayouts[0]?.draftBlocks)
+          .data ?? [],
+      publishedBlocks:
+        pageBuilderBlocksSchema.safeParse(builderLayouts[0]?.publishedBlocks)
+          .data ?? [],
+      isPublished: builderLayouts[0]?.isPublished ?? false,
+    },
     metaTracking: {
       mode: metaTrackingMode,
       pixelId: metaTrackingRows[0]?.pixelId ?? null,

@@ -151,6 +151,19 @@
   display: none;
 }
 
+:is(.kgj-public, .kgj-admin)
+  :is(button:not(:disabled), a[href], summary, [role="button"]) {
+  cursor: pointer;
+}
+
+:is(.kgj-public, .kgj-admin) button:disabled {
+  cursor: not-allowed;
+}
+
+.kgj-admin [data-builder-drag-handle][data-dragging="true"] {
+  cursor: grabbing;
+}
+
 .kgj-admin-dialog
   :is(input:not([type="checkbox"]):not([type="hidden"]), textarea, select) {
   border-radius: 0.75rem;

@@ -24,6 +24,11 @@ const items: {
     icon: "M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z M12 8a2 2 0 1 0 0 4a2 2 0 1 0 0-4",
   },
   {
+    href: "/admin/form-responses",
+    label: "Respons Form",
+    icon: "M6 3h9l3 3v15H6z M15 3v4h4 M9 12h6 M9 16h6",
+  },
+  {
     href: "/admin/settings",
     label: "Standar & Template KGJ",
     icon: "M4 6h16 M4 12h16 M4 18h16 M9 4v4 M15 10v4 M9 16v4",

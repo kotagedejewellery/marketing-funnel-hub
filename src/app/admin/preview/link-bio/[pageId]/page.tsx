@@ -22,7 +22,12 @@ export default async function AdminLinkBioPreview({
   if (!z.uuid().safeParse(pageId).success) notFound();
 
   const branch = await getBranch(pageId);
-  const content = await loadBranchPublicContent(branch.slug, new Date(), true);
+  const content = await loadBranchPublicContent(
+    branch.slug,
+    new Date(),
+    true,
+    true,
+  );
   if (!content) notFound();
 
   return (

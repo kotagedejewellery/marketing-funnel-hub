@@ -13,6 +13,7 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn(),
   isNull: vi.fn(),
   max: vi.fn(),
+  sql: (strings: TemplateStringsArray) => strings.join(""),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));

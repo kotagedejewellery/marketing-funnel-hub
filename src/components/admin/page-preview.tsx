@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 export function PagePreview({
   pageId,
   title,
+  embedded = false,
 }: {
   pageId: string;
   title: string;
+  embedded?: boolean;
 }) {
   const [revision, setRevision] = useState(0);
 
@@ -21,7 +23,7 @@ export function PagePreview({
 
   return (
     <section
-      className="rounded-2xl bg-card p-5 xl:sticky xl:top-6 xl:self-start"
+      className={`${embedded ? "rounded-2xl bg-card p-5 2xl:sticky 2xl:top-6" : "rounded-2xl bg-card p-5 xl:sticky xl:top-6"} 2xl:self-start`}
       aria-label={`Pratinjau ${title}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -31,14 +33,23 @@ export function PagePreview({
             Versi tersimpan · tanpa tracking
           </p>
         </div>
-        <a
-          href={previewPath}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          Buka lebih besar
-        </a>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setRevision(Date.now())}
+            className="min-h-10 text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            Muat ulang
+          </button>
+          <a
+            href={previewPath}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            Buka lebih besar
+          </a>
+        </div>
       </div>
       <div className="mx-auto mt-5 w-full max-w-[390px] overflow-hidden rounded-[1.75rem] border-8 border-[var(--kgj-dark)] bg-background shadow-[0_20px_45px_-32px_rgba(40,33,28,0.7)]">
         <iframe

@@ -1,9 +1,11 @@
 import type { PublicContent } from "@/modules/public-content/data";
+import { pageBuilderBlocksSchema } from "@/modules/page-builder/schema";
 
 import { GalleryCarousel } from "./gallery-carousel";
 import { PublicImage } from "./public-image";
 import { ReviewCarousel } from "./review-carousel";
 import { TrackingBehavior, type TrackingContext } from "./tracking-behavior";
+import { BuilderLinkBio } from "./builder-link-bio";
 
 function bypassImageOptimization(url: string) {
   return (
@@ -176,6 +178,18 @@ export function LinkBio({
   trackingContext?: TrackingContext | null;
   preview?: boolean;
 }) {
+  const builderBlocks = pageBuilderBlocksSchema.safeParse(
+    content.builderBlocks,
+  );
+  if (builderBlocks.success && builderBlocks.data.length > 0) {
+    return (
+      <BuilderLinkBio
+        content={content}
+        trackingContext={trackingContext}
+        preview={preview}
+      />
+    );
+  }
   const secondaryLinks = content.links.filter(
     (link) => link.linkType === "secondary" || link.linkType === "cta",
   );

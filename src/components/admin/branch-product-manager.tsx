@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
+import { usePageDataManager } from "@/components/admin/page-data-manager-context";
 import { ProductForm } from "@/components/admin/product-form";
 import {
   addExistingProductToBranch,
@@ -49,6 +50,7 @@ export function BranchProductManager({
   hasCustomLayout?: boolean;
   canManageMeta?: boolean;
 }) {
+  const selection = usePageDataManager();
   const [moveState, moveAction, moving] = useActionState(moveBranchProduct, {
     message: "",
     errors: {},
@@ -58,6 +60,16 @@ export function BranchProductManager({
   const available = products.filter(
     (product) => product.isActive && !product.assignment?.isActive,
   );
+  const selectedAssignmentId =
+    selection?.tool === "cta" && selection.target?.kind === "assignment"
+      ? selection.target.id
+      : null;
+  const focusedProductRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    if (selectedAssignmentId)
+      focusedProductRef.current?.scrollIntoView({ block: "nearest" });
+  }, [selectedAssignmentId]);
 
   return (
     <section
@@ -91,63 +103,75 @@ export function BranchProductManager({
         </p>
       ) : (
         <ul className="mt-6 divide-y divide-border border-y border-border">
-          {visible.map((product, index) => (
-            <li key={product.id} className="py-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold">
-                    {product.assignment?.displayName || product.name}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {product.isActive
-                      ? "Tampil di halaman ini"
-                      : "Jenis produk bersama nonaktif; tombol tidak tampil"}
-                    {product.assignment?.displayName
-                      ? " · Nama khusus cabang"
-                      : " · Mengikuti nama bersama"}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {!hasCustomLayout && (
-                    <form action={moveAction}>
-                      <input type="hidden" name="branchId" value={branchId} />
-                      <input
-                        type="hidden"
-                        name="productId"
-                        value={product.id}
+          {visible.map((product, index) => {
+            const isFocused = product.assignment?.id === selectedAssignmentId;
+            return (
+              <li
+                key={product.id}
+                ref={isFocused ? focusedProductRef : null}
+                className={`py-4 ${isFocused ? "rounded-lg bg-secondary px-3" : ""}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {product.assignment?.displayName || product.name}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {product.isActive
+                        ? "Tampil di halaman ini"
+                        : "Jenis produk bersama nonaktif; tombol tidak tampil"}
+                      {product.assignment?.displayName
+                        ? " · Nama khusus cabang"
+                        : " · Mengikuti nama bersama"}
+                    </p>
+                    {isFocused && (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Dipilih dari blok di kanvas.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!hasCustomLayout && (
+                      <form action={moveAction}>
+                        <input type="hidden" name="branchId" value={branchId} />
+                        <input
+                          type="hidden"
+                          name="productId"
+                          value={product.id}
+                        />
+                        <button
+                          name="direction"
+                          value="up"
+                          disabled={moving || index === 0}
+                          className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
+                        >
+                          Naik
+                        </button>
+                        <button
+                          name="direction"
+                          value="down"
+                          disabled={moving || index === visible.length - 1}
+                          className="ml-2 min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
+                        >
+                          Turun
+                        </button>
+                      </form>
+                    )}
+                    <FormDialog
+                      title={`Edit tombol ${product.name}`}
+                      triggerLabel="Edit tombol"
+                    >
+                      <BranchProductForm
+                        branchId={branchId}
+                        product={product}
+                        canManageMeta={canManageMeta}
                       />
-                      <button
-                        name="direction"
-                        value="up"
-                        disabled={moving || index === 0}
-                        className="min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
-                      >
-                        Naik
-                      </button>
-                      <button
-                        name="direction"
-                        value="down"
-                        disabled={moving || index === visible.length - 1}
-                        className="ml-2 min-h-11 rounded-full border border-border px-3 text-sm disabled:opacity-40"
-                      >
-                        Turun
-                      </button>
-                    </form>
-                  )}
-                  <FormDialog
-                    title={`Edit tombol ${product.name}`}
-                    triggerLabel="Edit tombol"
-                  >
-                    <BranchProductForm
-                      branchId={branchId}
-                      product={product}
-                      canManageMeta={canManageMeta}
-                    />
-                  </FormDialog>
+                    </FormDialog>
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 

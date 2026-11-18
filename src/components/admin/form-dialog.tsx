@@ -11,7 +11,14 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  type PageDataToolKey,
+  usePageDataManager,
+  useSelectPageDataManager,
+} from "@/components/admin/page-data-manager-context";
+
 const FormDialogContext = createContext<() => void>(() => {});
+const keepManagerOpen = () => {};
 
 export function useCloseFormDialog() {
   return useContext(FormDialogContext);
@@ -23,14 +30,23 @@ export function FormDialog({
   children,
   primary = false,
   initiallyOpen = false,
+  refreshBuilderData = false,
+  dataTool,
 }: {
   title: string;
   triggerLabel: string;
   children: ReactNode;
   primary?: boolean;
   initiallyOpen?: boolean;
+  refreshBuilderData?: boolean;
+  dataTool?: PageDataToolKey;
 }) {
+  const pageDataSelection = usePageDataManager();
+  const selectPageDataManager = useSelectPageDataManager();
   const [open, setOpen] = useState(initiallyOpen);
+  const isInlineManager =
+    dataTool !== undefined && pageDataSelection?.tool === dataTool;
+  const isOpen = open || isInlineManager;
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
@@ -40,22 +56,42 @@ export function FormDialog({
   }, []);
 
   useEffect(() => {
-    if (open && !dialogRef.current?.open) {
+    if (!isInlineManager && open && !dialogRef.current?.open) {
       dialogRef.current?.showModal();
       closeRef.current?.focus();
     }
-  }, [open]);
+  }, [isInlineManager, open]);
 
   useEffect(() => {
-    window.addEventListener("kgj:admin-saved", closeDialog);
-    return () => window.removeEventListener("kgj:admin-saved", closeDialog);
-  }, [closeDialog]);
+    if (!isOpen) return;
+    const handleSave = () => {
+      if (!isInlineManager) closeDialog();
+      if (refreshBuilderData)
+        window.dispatchEvent(new Event("kgj:branch-source-saved"));
+    };
+    window.addEventListener("kgj:admin-saved", handleSave);
+    return () => window.removeEventListener("kgj:admin-saved", handleSave);
+  }, [closeDialog, isInlineManager, isOpen, refreshBuilderData]);
+
+  if (isInlineManager) {
+    return (
+      <FormDialogContext.Provider value={keepManagerOpen}>
+        {children}
+      </FormDialogContext.Provider>
+    );
+  }
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          if (dataTool && selectPageDataManager) {
+            selectPageDataManager({ tool: dataTool });
+            return;
+          }
+          setOpen(true);
+        }}
         className={`inline-flex min-h-11 items-center justify-center rounded-full px-5 text-sm font-bold focus-visible:outline-2 focus-visible:outline-offset-2 ${primary ? "bg-primary text-primary-foreground hover:bg-[var(--kgj-accent)]" : "border border-border bg-card hover:border-[var(--kgj-accent)] hover:bg-secondary"}`}
       >
         {triggerLabel}
@@ -91,7 +127,7 @@ export function FormDialog({
           </button>
         </div>
         <div className="px-6 py-6 sm:px-8">
-          {open ? (
+          {isOpen ? (
             <FormDialogContext.Provider value={closeDialog}>
               {children}
             </FormDialogContext.Provider>

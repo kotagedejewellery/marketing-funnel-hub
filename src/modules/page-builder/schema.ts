@@ -1,0 +1,186 @@
+import sanitizeHtml from "sanitize-html";
+import * as z from "zod";
+
+import { branchSectionKeys } from "@/modules/admin/branches/page-validation";
+
+const blockBase = z.object({
+  id: z.uuid(),
+  width: z.enum(["full", "half"]).default("full"),
+  isVisible: z.boolean().default(true),
+});
+
+export const pageBuilderFormFieldSchema = z
+  .object({
+    id: z.uuid(),
+    name: z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),
+    label: z.string().trim().min(1).max(120),
+    type: z.enum([
+      "text",
+      "email",
+      "tel",
+      "number",
+      "date",
+      "textarea",
+      "select",
+      "radio",
+      "checkbox",
+    ]),
+    placeholder: z.string().trim().max(160).default(""),
+    help: z.string().trim().max(300).default(""),
+    required: z.boolean().default(false),
+    options: z.array(z.string().trim().min(1).max(120)).max(20).default([]),
+  })
+  .superRefine((field, context) => {
+    if (
+      (field.type === "select" || field.type === "radio") &&
+      field.options.length < 2
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["options"],
+        message: "Pilihan membutuhkan minimal dua opsi.",
+      });
+    }
+  });
+
+export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
+  blockBase.extend({
+    type: z.literal("rich_text"),
+    text: z.string().trim().max(4000),
+  }),
+  blockBase.extend({
+    type: z.literal("html"),
+    html: z.string().trim().max(20000),
+  }),
+  blockBase.extend({
+    type: z.literal("image"),
+    url: z
+      .url()
+      .max(2048)
+      .refine(isHttpsUrl, "Gambar harus memakai URL HTTPS."),
+    alt: z.string().trim().max(250),
+  }),
+  blockBase
+    .extend({
+      type: z.literal("spacer"),
+      // Retained for layouts saved before the pixel control was introduced.
+      size: z.enum(["sm", "md", "lg"]).optional(),
+      spacingPx: z.number().int().min(0).max(240).optional(),
+      showDivider: z.boolean().default(false),
+    })
+    .superRefine((block, context) => {
+      if (block.spacingPx === undefined && block.size === undefined) {
+        context.addIssue({
+          code: "custom",
+          message: "Pemisah membutuhkan jarak vertikal.",
+        });
+      }
+    }),
+  blockBase.extend({
+    type: z.literal("embed"),
+    url: z
+      .url()
+      .max(2048)
+      .refine(
+        (value) => embedUrl(value) !== null,
+        "Embed harus berupa URL YouTube /embed yang aman.",
+      ),
+  }),
+  blockBase.extend({
+    type: z.literal("form"),
+    title: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(1000).default(""),
+    submitLabel: z.string().trim().min(1).max(80).default("Simpan data"),
+    privacyNotice: z
+      .string()
+      .trim()
+      .min(1)
+      .max(500)
+      .default("Data Anda disimpan oleh KGJ untuk menindaklanjuti konsultasi."),
+    assignmentId: z.uuid(),
+    fields: z.array(pageBuilderFormFieldSchema).min(1).max(20),
+  }),
+  blockBase.extend({ type: z.literal("product_cta"), assignmentId: z.uuid() }),
+  blockBase.extend({ type: z.literal("link"), linkId: z.uuid() }),
+  blockBase.extend({
+    type: z.literal("section"),
+    sectionKey: z.enum(branchSectionKeys),
+  }),
+]);
+
+export const pageBuilderBlocksSchema = z
+  .array(pageBuilderBlockSchema)
+  .max(60)
+  .superRefine((blocks, context) => {
+    if (new Set(blocks.map((block) => block.id)).size !== blocks.length) {
+      context.addIssue({ code: "custom", message: "ID blok harus unik." });
+    }
+    for (const block of blocks) {
+      if (
+        block.type === "form" &&
+        new Set(block.fields.map((field) => field.name)).size !==
+          block.fields.length
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "Nama field form harus unik.",
+        });
+      }
+    }
+  });
+
+export type PageBuilderBlock = z.infer<typeof pageBuilderBlockSchema>;
+export type PageBuilderFormField = z.infer<typeof pageBuilderFormFieldSchema>;
+export type PageBuilderBlockInput = PageBuilderBlock extends infer T
+  ? T extends { id: string }
+    ? Omit<T, "id">
+    : never
+  : never;
+
+export function sanitizePageBuilderHtml(value: string) {
+  return sanitizeHtml(value, {
+    allowedTags: [
+      "a",
+      "b",
+      "br",
+      "blockquote",
+      "code",
+      "em",
+      "h2",
+      "h3",
+      "li",
+      "ol",
+      "p",
+      "strong",
+      "ul",
+    ],
+    allowedAttributes: { a: ["href", "target", "rel"] },
+    allowedSchemes: ["https", "mailto", "tel"],
+    allowedSchemesAppliedToAttributes: ["href"],
+    transformTags: {
+      a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer" }),
+    },
+  });
+}
+
+export function embedUrl(value: string) {
+  const url = new URL(value);
+  if (!isHttpsUrl(value)) return null;
+  if (
+    url.hostname === "www.youtube.com" &&
+    /^\/embed\/[^/]+/.test(url.pathname)
+  ) {
+    return url.toString();
+  }
+  if (
+    url.hostname === "www.youtube-nocookie.com" &&
+    /^\/embed\/[^/]+/.test(url.pathname)
+  ) {
+    return url.toString();
+  }
+  return null;
+}
+
+function isHttpsUrl(value: string) {
+  return new URL(value).protocol === "https:";
+}

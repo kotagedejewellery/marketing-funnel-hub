@@ -32,6 +32,15 @@ services:
       - traefik.http.middlewares.kgj-admin-session-rate.ratelimit.average=5
       - traefik.http.middlewares.kgj-admin-session-rate.ratelimit.burst=10
       - traefik.http.middlewares.kgj-admin-session-rate.ratelimit.period=1m
+      - traefik.http.routers.kgj-form-submission.rule=Host(`link.kotagedejewellery.com`) && PathPrefix(`/api/forms/`)
+      - traefik.http.routers.kgj-form-submission.entrypoints=websecure
+      - traefik.http.routers.kgj-form-submission.tls=true
+      - traefik.http.routers.kgj-form-submission.tls.certresolver=letsencrypt
+      - traefik.http.routers.kgj-form-submission.priority=100
+      - traefik.http.routers.kgj-form-submission.middlewares=kgj-form-submission-rate
+      - traefik.http.middlewares.kgj-form-submission-rate.ratelimit.average=10
+      - traefik.http.middlewares.kgj-form-submission-rate.ratelimit.burst=20
+      - traefik.http.middlewares.kgj-form-submission-rate.ratelimit.period=10m
       - traefik.http.routers.kgj-link-bio-http.rule=Host(`link.kotagedejewellery.com`)
       - traefik.http.routers.kgj-link-bio-http.entrypoints=web
       - traefik.http.routers.kgj-link-bio-http.middlewares=kgj-link-bio-https

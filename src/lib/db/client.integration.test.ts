@@ -40,11 +40,11 @@ describe("Drizzle database client", () => {
             'admin_profiles', 'site_settings', 'content_sections', 'campaigns',
             'products', 'branches', 'product_branches', 'links', 'faqs',
             'gallery_items', 'branch_review_sources', 'branch_google_reviews',
-            'branch_meta_tracking_configs', 'events', 'audit_logs',
+            'branch_meta_tracking_configs', 'branch_page_builder_layouts', 'form_submissions', 'events', 'audit_logs',
             'admin_sessions'
           )
       `);
-      expect(rows[0]?.table_count).toBe(16);
+      expect(rows[0]?.table_count).toBe(18);
     } finally {
       await connection.close();
     }
@@ -91,10 +91,10 @@ describe("Drizzle database client", () => {
             'admin_profiles', 'admin_sessions', 'site_settings', 'content_sections',
             'campaigns', 'products', 'branches', 'product_branches', 'links',
             'faqs', 'gallery_items', 'branch_review_sources', 'branch_google_reviews',
-            'branch_meta_tracking_configs', 'events', 'audit_logs'
+            'branch_meta_tracking_configs', 'branch_page_builder_layouts', 'form_submissions', 'events', 'audit_logs'
           )
       `);
-      expect(rows[0]?.protected_tables).toBe(16);
+      expect(rows[0]?.protected_tables).toBe(18);
     } finally {
       await connection.close();
     }

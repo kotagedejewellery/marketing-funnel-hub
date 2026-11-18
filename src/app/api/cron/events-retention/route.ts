@@ -3,7 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { asc, inArray, lt } from "drizzle-orm";
 
 import { getDatabase } from "@/lib/db/client";
-import { events } from "@/lib/db/schema";
+import { events, formSubmissions } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 
 export const runtime = "nodejs";
@@ -26,26 +26,55 @@ export async function GET(request: Request) {
 
   const cutoff = new Date();
   cutoff.setUTCMonth(cutoff.getUTCMonth() - 24);
+  const formCutoff = new Date();
+  formCutoff.setUTCMonth(formCutoff.getUTCMonth() - 6);
   try {
     const db = getDatabase();
-    const expired = await db
-      .select({ id: events.id })
-      .from(events)
-      .where(lt(events.createdAt, cutoff))
-      .orderBy(asc(events.createdAt))
-      .limit(500);
-    if (expired.length === 0) return Response.json({ ok: true, deleted: 0 });
+    const [expiredEvents, expiredForms] = await Promise.all([
+      db
+        .select({ id: events.id })
+        .from(events)
+        .where(lt(events.createdAt, cutoff))
+        .orderBy(asc(events.createdAt))
+        .limit(500),
+      db
+        .select({ id: formSubmissions.id })
+        .from(formSubmissions)
+        .where(lt(formSubmissions.submittedAt, formCutoff))
+        .orderBy(asc(formSubmissions.submittedAt))
+        .limit(500),
+    ]);
+    if (expiredEvents.length === 0 && expiredForms.length === 0)
+      return Response.json({ ok: true, deleted: 0 });
 
-    const deleted = await db
-      .delete(events)
-      .where(
-        inArray(
-          events.id,
-          expired.map((row) => row.id),
-        ),
-      )
-      .returning({ id: events.id });
-    return Response.json({ ok: true, deleted: deleted.length });
+    const [deletedEvents, deletedForms] = await Promise.all([
+      expiredEvents.length
+        ? db
+            .delete(events)
+            .where(
+              inArray(
+                events.id,
+                expiredEvents.map((row) => row.id),
+              ),
+            )
+            .returning({ id: events.id })
+        : [],
+      expiredForms.length
+        ? db
+            .delete(formSubmissions)
+            .where(
+              inArray(
+                formSubmissions.id,
+                expiredForms.map((row) => row.id),
+              ),
+            )
+            .returning({ id: formSubmissions.id })
+        : [],
+    ]);
+    return Response.json({
+      ok: true,
+      deleted: deletedEvents.length + deletedForms.length,
+    });
   } catch {
     return Response.json(
       {

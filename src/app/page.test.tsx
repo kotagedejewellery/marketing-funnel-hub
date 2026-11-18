@@ -73,9 +73,81 @@ const emptyContent: PublicContent = {
     },
   ],
   pageBranch: { id: "branch-1", name: "Solo", slug: "solo" },
+  builderBlocks: null,
 };
 
 describe("public Link Bio", () => {
+  it("keeps campaign content and destination when a builder uses the campaign block", () => {
+    render(
+      <LinkBio
+        content={{
+          ...emptyContent,
+          campaign: {
+            id: "campaign-1",
+            title: "Koleksi baru",
+            description: "Datang ke butik minggu ini.",
+            bannerUrl: "https://example.com/campaign.jpg",
+            targetUrl: "https://example.com/koleksi",
+          },
+          sections: [
+            ...emptyContent.sections,
+            {
+              sectionKey: "campaign_banner",
+              publicTitle: null,
+              spacingAfter: "normal",
+              showDivider: false,
+            },
+          ],
+          builderBlocks: [
+            {
+              id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+              type: "section",
+              sectionKey: "campaign_banner",
+              width: "full",
+              isVisible: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Koleksi baru" })).toHaveAttribute(
+      "href",
+      "https://example.com/koleksi",
+    );
+    expect(screen.getByText("Koleksi baru")).toBeVisible();
+    expect(screen.getByText("Datang ke butik minggu ini.")).toBeVisible();
+  });
+
+  it("does not revive a section that Marketing has hidden", () => {
+    render(
+      <LinkBio
+        content={{
+          ...emptyContent,
+          campaign: {
+            id: "campaign-1",
+            title: "Tidak boleh tampil",
+            description: null,
+            bannerUrl: "https://example.com/campaign.jpg",
+            targetUrl: null,
+          },
+          sections: [],
+          builderBlocks: [
+            {
+              id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+              type: "section",
+              sectionKey: "campaign_banner",
+              width: "full",
+              isVisible: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.queryByText("Tidak boleh tampil")).not.toBeInTheDocument();
+  });
+
   it("uses the viewport-centering container for public content", () => {
     render(<LinkBio content={emptyContent} />);
 
@@ -94,6 +166,14 @@ describe("public Link Bio", () => {
     expect(
       screen.queryByRole("link", { name: /whatsapp/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("falls back to the established page when a published builder layout is empty", () => {
+    render(<LinkBio content={{ ...emptyContent, builderBlocks: [] }} />);
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "KGJ" }),
+    ).toBeVisible();
   });
 
   it("shows multiple branch products with direct WhatsApp links", () => {

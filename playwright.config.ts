@@ -3,7 +3,7 @@ import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
 
-const baseURL = "http://127.0.0.1:3100";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -41,7 +41,7 @@ export default defineConfig({
       TRACKING_ENABLED: "false",
       CRON_SECRET: "test-cron-secret-123456",
     },
-    reuseExistingServer: false,
+    reuseExistingServer: Boolean(process.env.PLAYWRIGHT_BASE_URL),
     timeout: 120_000,
     url: baseURL,
   },

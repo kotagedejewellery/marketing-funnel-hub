@@ -22,25 +22,27 @@ mandiri.
 
 ## Tabel aplikasi
 
-| Tabel                          | Tujuan dan aturan utama                                                                                                |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `admin_profiles`               | Akun CMS: UUID, email unik, hash password `scrypt`, nama tampilan, role `admin`/`technical_admin`, serta status aktif. |
-| `admin_sessions`               | Sesi opaque: hash token unik, expiry, dan FK cascade ke profil. Token plaintext hanya di cookie `HttpOnly`.            |
-| `site_settings`                | Satu baris pengaturan/template KGJ, termasuk cabang Link Bio utama.                                                    |
-| `content_sections`             | Susunan section bersama atau per cabang, visibilitas, jarak, divider, dan judul publik.                                |
-| `page_blocks`                  | Susunan kustom per cabang: satu referensi tervalidasi ke section, assignment produk, atau tautan per blok.             |
-| `branches`                     | Nama, slug unik, nomor WhatsApp, profil override, logo, status, dan urutan cabang.                                     |
-| `products`                     | Kategori produk bersama; slug adalah kategori tracking yang stabil.                                                    |
-| `product_branches`             | Assignment produk–cabang yang unik, override CTA/pesan/event Meta, status, dan urutan.                                |
-| `campaigns`                    | Kampanye scope cabang, gambar banner, periode, URL, status, dan urutan.                                                |
-| `links`                        | Tautan sekunder/sosial atau CTA custom per cabang dengan status, urutan, gaya tombol, ikon, dan event Meta opsional.  |
-| `faqs`                         | FAQ bersama atau per cabang, dengan fallback template pada pembacaan publik.                                           |
-| `gallery_items`                | Gambar galeri wajib milik satu cabang; tidak memiliki CTA atau hubungan produk.                                        |
-| `branch_review_sources`        | Satu konfigurasi sumber ulasan Google/Firecrawl per cabang.                                                            |
-| `branch_google_reviews`        | Ulasan hasil import, terjemahan, status tampilan, pilihan manual, dan urutan.                                          |
-| `branch_meta_tracking_configs` | Konfigurasi Meta per cabang. Token CAPI dan Test Event Code terenkripsi.                                               |
-| `events`                       | Event internal anonim/pseudonim `PageView`, `Contact`, dan `LinkClick`, termasuk attribution dan snapshot historis.    |
-| `audit_logs`                   | Audit mutation tersanitasi tanpa credential, token, atau data customer.                                                |
+| Tabel                          | Tujuan dan aturan utama                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `admin_profiles`               | Akun CMS: UUID, email unik, hash password `scrypt`, nama tampilan, role `admin`/`technical_admin`, serta status aktif.    |
+| `admin_sessions`               | Sesi opaque: hash token unik, expiry, dan FK cascade ke profil. Token plaintext hanya di cookie `HttpOnly`.               |
+| `site_settings`                | Satu baris pengaturan/template KGJ, termasuk cabang Link Bio utama.                                                       |
+| `content_sections`             | Susunan section bersama atau per cabang, visibilitas, jarak, divider, dan judul publik.                                   |
+| `page_blocks`                  | Susunan kustom per cabang: satu referensi tervalidasi ke section, assignment produk, atau tautan per blok.                |
+| `branch_page_builder_layouts`  | Draft dan versi terbit blok builder per cabang; konfigurasi JSON selalu divalidasi server sebelum disimpan atau dirender. |
+| `form_submissions`             | Respons form publik terenkripsi, snapshot schema/form, cabang dan CTA produk; bukan tabel event atau audit.               |
+| `branches`                     | Nama, slug unik, nomor WhatsApp, profil override, logo, status, dan urutan cabang.                                        |
+| `products`                     | Kategori produk bersama; slug adalah kategori tracking yang stabil.                                                       |
+| `product_branches`             | Assignment produk–cabang yang unik, override CTA/pesan/event Meta, status, dan urutan.                                    |
+| `campaigns`                    | Kampanye scope cabang, gambar banner, periode, URL, status, dan urutan.                                                   |
+| `links`                        | Tautan sekunder/sosial atau CTA custom per cabang dengan status, urutan, gaya tombol, ikon, dan event Meta opsional.      |
+| `faqs`                         | FAQ bersama atau per cabang, dengan fallback template pada pembacaan publik.                                              |
+| `gallery_items`                | Gambar galeri wajib milik satu cabang; tidak memiliki CTA atau hubungan produk.                                           |
+| `branch_review_sources`        | Satu konfigurasi sumber ulasan Google/Firecrawl per cabang.                                                               |
+| `branch_google_reviews`        | Ulasan hasil import, terjemahan, status tampilan, pilihan manual, dan urutan.                                             |
+| `branch_meta_tracking_configs` | Konfigurasi Meta per cabang. Token CAPI dan Test Event Code terenkripsi.                                                  |
+| `events`                       | Event internal anonim/pseudonim `PageView`, `Contact`, dan `LinkClick`, termasuk attribution dan snapshot historis.       |
+| `audit_logs`                   | Audit mutation tersanitasi tanpa credential, token, atau data customer.                                                   |
 
 `site_settings.id` memakai UUID singleton
 `00000000-0000-0000-0000-000000000001`. FK konten memakai `RESTRICT` untuk
@@ -63,6 +65,8 @@ menjaga histori, kecuali sesi admin yang cascade bila profil dihapus.
   mempertahankan fallback. CMS hanya menyimpan nama event standar CTA yang
   disetujui; constraint identifier lama dipertahankan agar event custom historis
   tetap terbaca hingga technical admin secara eksplisit memilih penggantinya.
+- Respons form menyimpan payload AES-256-GCM dengan key environment khusus. Nilai
+  field tidak dimasukkan ke event, audit log, atau ekspor analytics.
 
 Index pada schema mendukung daftar aktif/urut per cabang, scope/urut section,
 serta akses event berdasarkan waktu, nama event, sesi, produk, cabang, tautan,
@@ -118,7 +122,7 @@ aman bila target belum dimigrasikan.
 
 ## Retensi
 
-Event internal disimpan maksimal 24 bulan. Endpoint retention terautentikasi
-menghapus batch terbatas hanya setelah pemilik menjadwalkannya dan memverifikasi
-perilakunya di lokal. Audit log mencatat jumlah/status, tidak pernah memuat event
-atau rahasia mentah.
+Event internal disimpan maksimal 24 bulan dan respons form maksimal 180 hari.
+Endpoint retention terautentikasi menghapus batch maksimal 500 baris per jenis
+hanya setelah pemilik menjadwalkannya dan memverifikasi perilakunya di lokal.
+Audit log mencatat jumlah/status, tidak pernah memuat event atau rahasia mentah.

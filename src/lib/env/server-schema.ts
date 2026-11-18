@@ -22,6 +22,9 @@ const serverEnvironmentSchema = z
     META_TRACKING_CONFIG_ENCRYPTION_KEY: optionalEnvironmentString(
       z.string().regex(/^[a-f0-9]{64}$/i),
     ),
+    FORM_SUBMISSION_ENCRYPTION_KEY: optionalEnvironmentString(
+      z.string().regex(/^[a-f0-9]{64}$/i),
+    ),
     META_AD_ACCOUNT_ID: optionalEnvironmentString(
       z.string().regex(/^(act_)?\d+$/),
     ),

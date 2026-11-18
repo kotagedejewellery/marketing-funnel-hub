@@ -1,4 +1,5 @@
 import { CampaignForm } from "@/components/admin/campaign-form";
+import { FocusedPageLinkRow } from "@/components/admin/focused-page-link-row";
 import { FormDialog } from "@/components/admin/form-dialog";
 import { LinkForm } from "@/components/admin/link-form";
 import { MediaUploadField } from "@/components/admin/media-upload-field";
@@ -155,45 +156,15 @@ export function PageLinks({
                 <h3 className="font-semibold">{group.label}</h3>
                 <ul className="mt-2 divide-y divide-border border-t border-border">
                   {group.rows.map((row, index) => (
-                    <li
+                    <FocusedPageLinkRow
                       key={row.id}
-                      className="flex flex-wrap items-center justify-between gap-3 py-4"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold">{row.label}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {row.isActive ? "Aktif" : "Nonaktif"}
-                        </p>
-                        <p
-                          className="mt-1 truncate text-sm text-muted-foreground"
-                          title={row.url}
-                        >
-                          {row.url}
-                        </p>
-                      </div>
-                      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                        {!hasCustomLayout && (
-                          <PageOrderControls
-                            kind="link"
-                            id={row.id}
-                            branchId={branchId}
-                            index={index}
-                            count={group.rows.length}
-                          />
-                        )}
-                        <FormDialog
-                          title={`Edit ${row.label}`}
-                          triggerLabel="Edit"
-                        >
-                          <LinkForm
-                            link={row}
-                            hasCustomLayout={hasCustomLayout}
-                            canManageMeta={canManageMeta}
-                            stayOnPage
-                          />
-                        </FormDialog>
-                      </div>
-                    </li>
+                      row={row}
+                      branchId={branchId}
+                      hasCustomLayout={hasCustomLayout}
+                      canManageMeta={canManageMeta}
+                      index={index}
+                      count={group.rows.length}
+                    />
                   ))}
                 </ul>
               </div>

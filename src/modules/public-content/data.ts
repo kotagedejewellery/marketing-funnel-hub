@@ -7,6 +7,7 @@ import { serverEnv } from "@/lib/env/server";
 import {
   branches,
   branchMetaTrackingConfigs,
+  branchPageBuilderLayouts,
   branchGoogleReviews,
   branchReviewSources,
   campaigns,
@@ -97,6 +98,7 @@ export async function loadBranchPublicContent(
   slug: string,
   now = new Date(),
   includeInactive = false,
+  useBuilderDraft = false,
 ) {
   const [branch] = await getDatabase()
     .select({
@@ -119,13 +121,16 @@ export async function loadBranchPublicContent(
     )
     .limit(1);
 
-  return branch ? loadScopedContent(now, branch, includeInactive) : null;
+  return branch
+    ? loadScopedContent(now, branch, includeInactive, useBuilderDraft)
+    : null;
 }
 
 async function loadScopedContent(
   now: Date,
   branch: BranchScope,
   includeInactive = false,
+  useBuilderDraft = false,
 ) {
   const db = getDatabase();
   const [site] = await db
@@ -158,6 +163,7 @@ async function loadScopedContent(
     pageFaqs,
     trackingConfigRows,
     savedPageBlocks,
+    builderLayouts,
   ] = await Promise.all([
     db
       .select({
@@ -324,6 +330,15 @@ async function loadScopedContent(
       .from(pageBlocks)
       .where(eq(pageBlocks.branchId, branch.id))
       .orderBy(asc(pageBlocks.sortOrder), asc(pageBlocks.id)),
+    db
+      .select({
+        draftBlocks: branchPageBuilderLayouts.draftBlocks,
+        publishedBlocks: branchPageBuilderLayouts.publishedBlocks,
+        isPublished: branchPageBuilderLayouts.isPublished,
+      })
+      .from(branchPageBuilderLayouts)
+      .where(eq(branchPageBuilderLayouts.branchId, branch.id))
+      .limit(1),
   ]);
 
   const campaign = eligibleCampaigns[0];
@@ -514,6 +529,12 @@ async function loadScopedContent(
     blocks,
     tracking,
     pageBranch: { id: branch.id, name: branch.name, slug: branch.slug },
+    builderBlocks:
+      builderLayouts[0]?.isPublished || useBuilderDraft
+        ? useBuilderDraft
+          ? builderLayouts[0]?.draftBlocks
+          : builderLayouts[0]?.publishedBlocks
+        : null,
   };
 }
 

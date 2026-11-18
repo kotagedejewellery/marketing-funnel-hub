@@ -394,6 +394,53 @@ export const pageBlocks = pgTable(
   ],
 ).enableRLS();
 
+export const branchPageBuilderLayouts = pgTable("branch_page_builder_layouts", {
+  branchId: uuid("branch_id")
+    .primaryKey()
+    .references(() => branches.id, { onDelete: "restrict" }),
+  draftBlocks: jsonb("draft_blocks")
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  publishedBlocks: jsonb("published_blocks")
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  isPublished: boolean("is_published").notNull().default(false),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}).enableRLS();
+
+export const formSubmissions = pgTable(
+  "form_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "restrict" }),
+    productBranchId: uuid("product_branch_id")
+      .notNull()
+      .references(() => productBranches.id, { onDelete: "restrict" }),
+    formBlockId: uuid("form_block_id").notNull(),
+    formTitle: text("form_title").notNull(),
+    formSchema: jsonb("form_schema").notNull(),
+    valuesEncrypted: text("values_encrypted").notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("form_submissions_branch_form_submitted_idx").on(
+      table.branchId,
+      table.formBlockId,
+      table.submittedAt,
+    ),
+  ],
+).enableRLS();
+
 export const galleryItems = pgTable(
   "gallery_items",
   {

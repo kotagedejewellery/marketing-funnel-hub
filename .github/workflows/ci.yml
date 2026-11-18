@@ -205,9 +205,10 @@ jobs:
                           '"'"'branch_meta_tracking_configs'"'"', '"'"'branch_review_sources'"'"',
                           '"'"'campaigns'"'"', '"'"'content_sections'"'"', '"'"'events'"'"', '"'"'faqs'"'"',
                           '"'"'gallery_items'"'"', '"'"'links'"'"', '"'"'page_blocks'"'"',
+                          '"'"'branch_page_builder_layouts'"'"', '"'"'form_submissions'"'"',
                           '"'"'product_branches'"'"', '"'"'products'"'"', '"'"'site_settings'"'"'
                         )
-                    ) = 17
+                    ) = 19
                     and not exists (
                       select 1
                       from (

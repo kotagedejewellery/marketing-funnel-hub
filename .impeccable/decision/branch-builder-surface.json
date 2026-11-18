@@ -1,0 +1,49 @@
+{
+  "title": "Pilih komposisi Branch Page Builder",
+  "question": "Ketiganya memakai editor bebas, draft → preview → terbitkan, serta layout responsif. Pilih struktur kerja yang paling cocok untuk Marketing.",
+  "options": [
+    {
+      "id": "studio-split",
+      "kind": "assigned",
+      "label": "Studio Split",
+      "kicker": "THE ROLL",
+      "lineage": "editor konten tiga-pane",
+      "thesis": "Library, kanvas, dan inspector selalu terlihat sehingga penyusunan blok terasa langsung.",
+      "palette": ["#f7f2e9", "#352720", "#f3dfb9", "#845422"],
+      "materials": ["ivory studio", "bronze focus", "charcoal canvas"],
+      "viewport": "Desktop menampilkan library blok di kiri, kanvas halaman di tengah, dan inspector di kanan dengan pratinjau ponsel tetap terlihat.",
+      "risk": "Membutuhkan ruang desktop; mobile berganti menjadi tab Builder, Pengaturan, dan Preview.",
+      "html": ".impeccable/mocks/decision/studio-split.html",
+      "htmlFrame": "1440x900"
+    },
+    {
+      "id": "outline-preview",
+      "kind": "dealt",
+      "label": "Outline & Preview",
+      "lineage": "outline editor dengan pratinjau persisten",
+      "thesis": "Hierarki halaman menjadi pusat kerja; setiap blok diatur dari outline yang ringkas.",
+      "palette": ["#f7f2e9", "#fffdf9", "#28211c", "#845422"],
+      "materials": ["warm paper", "outlined rows", "phone preview"],
+      "viewport": "Satu kolom outline lebar dengan panel properti kontekstual dan pratinjau ponsel mengambang di sisi kanan.",
+      "risk": "Lebih tenang untuk halaman panjang, tetapi penambahan blok terasa satu langkah lebih jauh.",
+      "html": ".impeccable/mocks/decision/outline-preview.html",
+      "htmlFrame": "1440x900"
+    },
+    {
+      "id": "preview-first",
+      "kind": "dealt",
+      "label": "Preview First",
+      "lineage": "mobile-first visual composer",
+      "thesis": "Marketing menyusun halaman langsung di sekitar pratinjau Link Bio berukuran nyata.",
+      "palette": ["#352720", "#fffaf1", "#f3dfb9", "#845422"],
+      "materials": ["dark studio rail", "live device", "soft bronze controls"],
+      "viewport": "Pratinjau ponsel memimpin tengah layar; library dan pengaturan muncul sebagai drawer kerja di kedua sisi.",
+      "risk": "Sangat visual, tetapi mengurangi kepadatan saat mengelola banyak blok sekaligus.",
+      "html": ".impeccable/mocks/decision/preview-first.html",
+      "htmlFrame": "1440x900"
+    }
+  ],
+  "reroll": true,
+  "buildPath": { "value": "code", "toggle": true },
+  "steer": true
+}
