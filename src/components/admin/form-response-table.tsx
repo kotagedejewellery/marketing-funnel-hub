@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 
 type Filters = {
   branchId: string | null;
@@ -172,12 +173,12 @@ export function FormResponseTable({
               Export CSV (maks. 10.000)
             </a>
           )}
-          <a
+          <Link
             href="/admin/form-responses"
             className="inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold underline underline-offset-4"
           >
             Reset filter
-          </a>
+          </Link>
         </div>
       </form>
       {filterError && (

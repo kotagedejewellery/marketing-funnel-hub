@@ -1,4 +1,5 @@
 import { StrictMode } from "react";
+import Link from "next/link";
 import {
   fireEvent,
   render,
@@ -727,7 +728,7 @@ describe("BranchPageBuilder", () => {
         ]}
         catalog={{ sections: [], products: [], links: [], sourceSummary: [] }}
         dataTools={emptyDataTools}
-        preview={<a href="/admin/branches">Keluar builder</a>}
+        preview={<Link href="/admin/branches">Keluar builder</Link>}
       />,
     );
 
