@@ -50,7 +50,7 @@ async function readBody(request: Request): Promise<string | null> {
 
 export async function POST(
   request: Request,
-  context: RouteContext<"/api/forms/[slug]/[formId]">,
+  context: { params: Promise<{ slug: string; formId: string }> },
 ) {
   const { slug, formId } = await context.params;
   const expectedOrigin = new URL(serverEnv.NEXT_PUBLIC_SITE_URL).origin;
