@@ -158,8 +158,18 @@ export function BuilderForm({
       </>
     );
 
+  const showTitle = block.showTitle !== false;
+  const showDescription = block.showDescription !== false;
+  const hasIntroduction = showTitle || (showDescription && block.description);
+  const titleId = `form-title-${block.id}`;
+
   return (
-    <form action={submit} className="rounded-2xl bg-card p-5">
+    <form
+      action={submit}
+      aria-labelledby={showTitle ? titleId : undefined}
+      aria-label={showTitle ? undefined : block.title}
+      className="rounded-2xl bg-card p-5"
+    >
       <input
         name="website"
         tabIndex={-1}
@@ -167,13 +177,17 @@ export function BuilderForm({
         className="hidden"
         aria-hidden="true"
       />
-      <h2 className="font-serif text-xl font-bold">{block.title}</h2>
-      {block.description && (
+      {showTitle && (
+        <h2 id={titleId} className="font-serif text-xl font-bold">
+          {block.title}
+        </h2>
+      )}
+      {showDescription && block.description && (
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           {block.description}
         </p>
       )}
-      <div className="mt-5 space-y-4">
+      <div className={`${hasIntroduction ? "mt-5 " : ""}space-y-4`}>
         {block.fields.map((field) => (
           <label key={field.id} className="block text-sm font-semibold">
             {field.label}

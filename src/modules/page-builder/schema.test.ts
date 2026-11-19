@@ -275,6 +275,39 @@ describe("Branch Page Builder schema", () => {
     ).toBe(true);
   });
 
+  it("keeps legacy form introductions visible and accepts explicit visibility", () => {
+    const form = {
+      id,
+      type: "form",
+      title: "Konsultasi",
+      description: "Isi data Anda.",
+      submitLabel: "Kirim",
+      privacyNotice: "Data disimpan oleh KGJ.",
+      assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+      width: "full",
+      isVisible: true,
+      fields: [
+        {
+          id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+          name: "nama",
+          label: "Nama",
+          type: "text",
+          placeholder: "",
+          help: "",
+          required: true,
+          options: [],
+        },
+      ],
+    };
+
+    expect(pageBuilderBlocksSchema.safeParse([form]).success).toBe(true);
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        { ...form, showTitle: false, showDescription: false },
+      ]).success,
+    ).toBe(true);
+  });
+
   it("accepts controlled thank-you copy without changing form field schema", () => {
     const parsed = pageBuilderBlocksSchema.safeParse([
       {

@@ -33,6 +33,24 @@ const block = {
   ],
 };
 
+const product = {
+  id: "product-1",
+  assignmentId: block.assignmentId,
+  name: "Cincin",
+  slug: "cincin",
+  description: null,
+  branches: [
+    {
+      id: block.assignmentId,
+      name: "Pusat",
+      slug: "pusat",
+      ctaLabel: "Chat Cincin",
+      whatsappUrl: "https://wa.me/628111111111",
+      metaEventName: null,
+    },
+  ],
+};
+
 describe("BuilderForm", () => {
   beforeEach(() => {
     HTMLDialogElement.prototype.showModal = function showModal() {
@@ -53,27 +71,7 @@ describe("BuilderForm", () => {
   it("shows a thank-you dialog only after the response is saved", async () => {
     render(
       <main id="main-content">
-        <BuilderForm
-          block={block}
-          branchSlug="pusat"
-          product={{
-            id: "product-1",
-            assignmentId: block.assignmentId,
-            name: "Cincin",
-            slug: "cincin",
-            description: null,
-            branches: [
-              {
-                id: block.assignmentId,
-                name: "Pusat",
-                slug: "pusat",
-                ctaLabel: "Chat Cincin",
-                whatsappUrl: "https://wa.me/628111111111",
-                metaEventName: null,
-              },
-            ],
-          }}
-        />
+        <BuilderForm block={block} branchSlug="pusat" product={product} />
       </main>,
     );
 
@@ -106,4 +104,35 @@ describe("BuilderForm", () => {
       ),
     );
   });
+
+  it.each([
+    ["judul dan deskripsi tampil", {}, true, true],
+    ["hanya judul tersembunyi", { showTitle: false }, false, true],
+    ["hanya deskripsi tersembunyi", { showDescription: false }, true, false],
+    [
+      "judul dan deskripsi tersembunyi",
+      { showTitle: false, showDescription: false },
+      false,
+      false,
+    ],
+  ])(
+    "renders form introduction when %s",
+    (_state, visibility, hasTitle, hasDescription) => {
+      render(
+        <BuilderForm
+          block={{ ...block, ...visibility }}
+          branchSlug="pusat"
+          product={product}
+        />,
+      );
+
+      expect(screen.queryByRole("heading", { name: "Konsultasi" })).toEqual(
+        hasTitle ? expect.anything() : null,
+      );
+      expect(screen.queryByText("Isi data Anda.")).toEqual(
+        hasDescription ? expect.anything() : null,
+      );
+      expect(screen.getByRole("form", { name: "Konsultasi" })).toBeVisible();
+    },
+  );
 });

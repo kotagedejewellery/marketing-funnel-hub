@@ -793,7 +793,9 @@ export function BranchPageBuilder({
                 add({
                   type: "form",
                   title: "Konsultasi",
+                  showTitle: true,
                   description: "Isi data Anda, lalu lanjut ke WhatsApp.",
+                  showDescription: true,
                   submitLabel: "Simpan data",
                   privacyNotice:
                     "Data Anda disimpan oleh KGJ untuk menindaklanjuti konsultasi.",
@@ -954,6 +956,13 @@ export function BranchPageBuilder({
                     />
                     {block.isVisible ? "Tampil" : "Disembunyikan"} ·{" "}
                     {block.width === "full" ? "Lebar penuh" : "Setengah lebar"}
+                    {block.type === "form" && block.showTitle === false && (
+                      <span>Judul disembunyikan</span>
+                    )}
+                    {block.type === "form" &&
+                      block.showDescription === false && (
+                        <span>Deskripsi disembunyikan</span>
+                      )}
                     {blockConfigurationIssue(block) && (
                       <span className="font-semibold text-destructive">
                         {blockConfigurationIssue(block)}
@@ -1630,8 +1639,56 @@ function FormEditor({
   const usesOptions =
     activeField.type === "select" || activeField.type === "radio";
   const optionError = fieldOptionIssue(activeField);
+  const showTitle = form.showTitle !== false;
+  const showDescription = form.showDescription !== false;
   return (
     <div className="space-y-4">
+      <fieldset className="space-y-3 border-b border-border pb-4">
+        <legend className="font-semibold">Tampilan pengantar form</legend>
+        <div>
+          <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={showTitle}
+              aria-describedby="form-show-title-help"
+              onChange={(event) =>
+                onChange({ showTitle: event.target.checked }, "form-show-title")
+              }
+              className="mt-1 size-4"
+            />
+            Tampilkan judul form
+          </label>
+          <p
+            id="form-show-title-help"
+            className="mt-1 pl-7 text-xs leading-5 text-muted-foreground"
+          >
+            Judul tetap tersimpan untuk nama aksesibel form.
+          </p>
+        </div>
+        <div>
+          <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={showDescription}
+              aria-describedby="form-show-description-help"
+              onChange={(event) =>
+                onChange(
+                  { showDescription: event.target.checked },
+                  "form-show-description",
+                )
+              }
+              className="mt-1 size-4"
+            />
+            Tampilkan deskripsi
+          </label>
+          <p
+            id="form-show-description-help"
+            className="mt-1 pl-7 text-xs leading-5 text-muted-foreground"
+          >
+            Deskripsi tetap tersimpan dan dapat ditampilkan kembali kapan saja.
+          </p>
+        </div>
+      </fieldset>
       <Editor
         label="Judul form"
         value={form.title}

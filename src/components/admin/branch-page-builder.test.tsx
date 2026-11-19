@@ -627,7 +627,12 @@ describe("BranchPageBuilder", () => {
     await waitFor(() => expect(formSetup).toHaveFocus());
   });
 
-  it("names the initial CTA chosen for a new form", () => {
+  it("names the initial CTA chosen for a new form", async () => {
+    actions.savePageBuilderDraft.mockResolvedValue({
+      ok: true,
+      message: "Perubahan tersimpan otomatis.",
+      revision: 1,
+    });
     render(
       <BranchPageBuilder
         branchId="branch-1"
@@ -657,6 +662,35 @@ describe("BranchPageBuilder", () => {
         "CTA saat ini: Cincin. Ubah jika form ditujukan ke CTA lain.",
       ),
     ).toBeVisible();
+    expect(screen.getByLabelText("Tampilkan judul form")).toBeChecked();
+    expect(screen.getByLabelText("Tampilkan deskripsi")).toBeChecked();
+
+    fireEvent.click(screen.getByLabelText("Tampilkan judul form"));
+    fireEvent.click(screen.getByLabelText("Tampilkan deskripsi"));
+
+    expect(screen.getByLabelText("Tampilkan judul form")).not.toBeChecked();
+    expect(screen.getByLabelText("Tampilkan deskripsi")).not.toBeChecked();
+    expect(screen.getByLabelText("Judul form")).toHaveValue("Konsultasi");
+    expect(screen.getByLabelText("Deskripsi")).toHaveValue(
+      "Isi data Anda, lalu lanjut ke WhatsApp.",
+    );
+    expect(screen.getByText("Judul disembunyikan")).toBeVisible();
+    expect(screen.getByText("Deskripsi disembunyikan")).toBeVisible();
+    await waitFor(
+      () =>
+        expect(actions.savePageBuilderDraft).toHaveBeenLastCalledWith(
+          "branch-1",
+          [
+            expect.objectContaining({
+              type: "form",
+              showTitle: false,
+              showDescription: false,
+            }),
+          ],
+          null,
+        ),
+      { timeout: 1_500 },
+    );
   });
 
   it("explains how to repair an existing form whose CTA is no longer active", () => {

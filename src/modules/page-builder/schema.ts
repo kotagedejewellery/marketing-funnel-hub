@@ -151,7 +151,9 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
   blockBase.extend({
     type: z.literal("form"),
     title: z.string().trim().min(1).max(160),
+    showTitle: z.boolean().optional(),
     description: z.string().trim().max(1000).default(""),
+    showDescription: z.boolean().optional(),
     submitLabel: z.string().trim().min(1).max(80).default("Simpan data"),
     privacyNotice: z
       .string()
