@@ -23,6 +23,7 @@ import {
   publishPageBuilder,
   savePageBuilderDraft,
 } from "@/modules/page-builder/actions";
+import { sectionSupportsPublicTitle } from "@/modules/admin/branches/page-validation";
 import {
   pageBuilderBlocksSchema,
   pageBuilderPublishBlocksSchema,
@@ -32,7 +33,11 @@ import {
 } from "@/modules/page-builder/schema";
 
 type Catalog = {
-  sections: { sectionKey: string; label: string }[];
+  sections: {
+    sectionKey: string;
+    label: string;
+    publicTitle?: string | null;
+  }[];
   products: { id: string; name: string; assignment: { id: string } | null }[];
   links: { id: string; label: string }[];
   sourceSummary: { id: string; label: string; detail: string }[];
@@ -47,6 +52,14 @@ type BuilderHistory = {
   past: PageBuilderBlock[][];
   future: PageBuilderBlock[][];
 };
+type SectionBlock = Extract<PageBuilderBlock, { type: "section" }>;
+type SectionTitle = NonNullable<SectionBlock["title"]>;
+type TypographyValues = Partial<
+  Pick<
+    SectionTitle,
+    "fontSize" | "fontUnit" | "lineHeight" | "isBold" | "isItalic" | "textAlign"
+  >
+>;
 
 const pageDataToolGroups: { label: string; tools: PageDataToolKey[] }[] = [
   { label: "Identitas & struktur", tools: ["identity", "sections"] },
@@ -145,6 +158,7 @@ export function BranchPageBuilder({
   } | null>(null);
   const touchDragIdRef = useRef<string | null>(null);
   const historyGroupRef = useRef<string | null>(null);
+  const latestInitialRevisionRef = useRef(initialRevision);
   const sourceDataTriggerRef = useRef<HTMLButtonElement | null>(null);
   const canvasBlockRefs = useRef(new Map<string, HTMLLIElement>());
   const restoreSourceDataFocusRef = useRef(false);
@@ -171,7 +185,8 @@ export function BranchPageBuilder({
     ? "Tambahkan minimal satu CTA WhatsApp produk yang tampil."
     : (referenceIssue ??
       (!publishReadiness.success
-        ? "Lengkapi pengaturan blok yang masih belum valid."
+        ? (publishReadiness.error.issues[0]?.message ??
+          "Lengkapi pengaturan blok yang masih belum valid.")
         : null));
   const hasActiveProductCta = catalog.products.some(
     (product) => product.assignment,
@@ -188,6 +203,7 @@ export function BranchPageBuilder({
   }, [router]);
 
   useEffect(() => {
+    if (latestInitialRevisionRef.current === initialRevision) return;
     if (hasUnsavedChanges) return;
     // Synchronizes fresh server props only when the local canvas is already saved.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -198,6 +214,7 @@ export function BranchPageBuilder({
     setIsPublished(initialIsPublished);
     setPublishedAt(initialPublishedAt);
     setSaveFailure(null);
+    latestInitialRevisionRef.current = initialRevision;
     setSelectedId((current) =>
       initialBlocks.some((block) => block.id === current)
         ? current
@@ -1046,7 +1063,7 @@ export function BranchPageBuilder({
                   />
                   <TypographyEditor
                     key={selected.id}
-                    block={selected}
+                    typography={selected}
                     showFontSize
                     onChange={(patch) => update(patch, "rich-text-style")}
                   />
@@ -1093,11 +1110,38 @@ export function BranchPageBuilder({
                   )}
                   <TypographyEditor
                     key={selected.id}
-                    block={selected}
-                    onChange={(patch) => update(patch, "heading-style")}
+                    typography={selected}
+                    onChange={(patch) =>
+                      update(
+                        {
+                          isBold: patch.isBold,
+                          isItalic: patch.isItalic,
+                          textAlign: patch.textAlign,
+                        },
+                        "heading-style",
+                      )
+                    }
                   />
                 </>
               )}
+              {selected.type === "section" &&
+                sectionSupportsPublicTitle(selected.sectionKey) && (
+                  <SectionTitleEditor
+                    key={selected.id}
+                    block={selected}
+                    sourceTitle={
+                      catalog.sections.find(
+                        (section) => section.sectionKey === selected.sectionKey,
+                      )?.publicTitle ?? null
+                    }
+                    label={
+                      catalog.sections.find(
+                        (section) => section.sectionKey === selected.sectionKey,
+                      )?.label ?? label(selected, catalog)
+                    }
+                    onChange={(title) => update({ title }, "section-title")}
+                  />
+                )}
               {selected.type === "html" && (
                 <>
                   <label className="block">
@@ -2223,24 +2267,157 @@ function Editor({
   );
 }
 
-function TypographyEditor({
+function sectionTitleTextAlign(sectionKey: string): SectionTitle["textAlign"] {
+  return sectionKey === "gallery" ? "center" : "left";
+}
+
+function SectionTitleEditor({
   block,
-  showFontSize = false,
+  sourceTitle,
+  label,
   onChange,
 }: {
-  block: Extract<PageBuilderBlock, { type: "rich_text" | "heading" }>;
-  showFontSize?: boolean;
-  onChange: (
-    patch: Partial<
-      Extract<PageBuilderBlock, { type: "rich_text" | "heading" }>
-    >,
-  ) => void;
+  block: SectionBlock;
+  sourceTitle: string | null;
+  label: string;
+  onChange: (title: SectionTitle) => void;
 }) {
+  const title: SectionTitle = block.title ?? {
+    mode: "inherit",
+    level: "h2",
+    isBold: true,
+    isItalic: false,
+    textAlign: sectionTitleTextAlign(block.sectionKey),
+  };
+  const update = (patch: Partial<SectionTitle>) =>
+    onChange({ ...title, ...patch });
+  const titleTextError =
+    title.mode === "custom" && !title.text?.trim()
+      ? "Judul kustom tidak boleh kosong."
+      : null;
+  const titleInputId = `section-title-${block.id}`;
+  const titleTextErrorId = `${titleInputId}-error`;
+
+  return (
+    <fieldset className="space-y-4 border-t border-border pt-4">
+      <legend className="font-semibold">Judul bagian</legend>
+      <label className="block">
+        Mode judul bagian
+        <select
+          value={title.mode}
+          onChange={(event) => {
+            const mode = event.target.value as SectionTitle["mode"];
+            update({
+              mode,
+              text:
+                mode === "custom"
+                  ? (title.text ?? sourceTitle ?? label)
+                  : title.text,
+            });
+          }}
+          className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2"
+        >
+          <option value="inherit">Gunakan judul bawaan</option>
+          <option value="custom">Judul kustom</option>
+          <option value="hidden">Sembunyikan judul</option>
+        </select>
+      </label>
+      {title.mode === "inherit" && (
+        <p className="text-xs leading-5 text-muted-foreground">
+          {sourceTitle
+            ? `Judul bawaan saat ini: ${sourceTitle}`
+            : "Belum ada judul bawaan. Pilih Judul kustom untuk menambahkannya."}
+        </p>
+      )}
+      {title.mode === "custom" && (
+        <div>
+          <label htmlFor={titleInputId} className="block">
+            Teks judul bagian
+          </label>
+          <input
+            id={titleInputId}
+            value={title.text ?? ""}
+            maxLength={160}
+            onChange={(event) => update({ text: event.target.value })}
+            aria-invalid={Boolean(titleTextError)}
+            aria-describedby={titleTextError ? titleTextErrorId : undefined}
+            className={`mt-1 min-h-11 w-full rounded-lg border bg-background px-3 py-2 ${
+              titleTextError ? "border-destructive" : "border-border"
+            }`}
+          />
+          {titleTextError ? (
+            <p
+              id={titleTextErrorId}
+              role="alert"
+              className="mt-1 text-xs leading-5 text-destructive"
+            >
+              {titleTextError}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Judul kustom tidak mengikuti perubahan judul di Sumber Data
+              Halaman.
+            </p>
+          )}
+        </div>
+      )}
+      {title.mode !== "hidden" && (
+        <>
+          <label className="block">
+            Level judul bagian
+            <select
+              value={title.level}
+              onChange={(event) =>
+                update({
+                  level: event.target.value as SectionTitle["level"],
+                })
+              }
+              className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2"
+            >
+              <option value="h2">H2</option>
+              <option value="h3">H3</option>
+              <option value="h4">H4</option>
+              <option value="h5">H5</option>
+              <option value="h6">H6</option>
+            </select>
+          </label>
+          <TypographyEditor
+            key={`${block.id}-${title.mode}`}
+            typography={title}
+            showFontSize
+            labelSuffix="judul bagian"
+            onChange={update}
+          />
+        </>
+      )}
+    </fieldset>
+  );
+}
+
+function TypographyEditor({
+  typography,
+  showFontSize = false,
+  labelSuffix,
+  onChange,
+}: {
+  typography: TypographyValues;
+  showFontSize?: boolean;
+  labelSuffix?: string;
+  onChange: (patch: Partial<TypographyValues>) => void;
+}) {
+  const textLabel = labelSuffix ? `Ukuran ${labelSuffix}` : "Ukuran teks";
+  const unitLabel = labelSuffix ? `Unit ${labelSuffix}` : "Unit";
+  const lineHeightLabel = labelSuffix
+    ? `Jarak baris ${labelSuffix}`
+    : "Jarak baris";
+  const displayLabel = labelSuffix
+    ? `Tampilan ${labelSuffix}`
+    : "Tampilan teks";
   const [fontSizeValue, setFontSizeValue] = useState(
-    block.type === "rich_text" ? String(block.fontSize ?? 16) : "",
+    showFontSize ? String(typography.fontSize ?? 16) : "",
   );
   const [lineHeightValue, setLineHeightValue] = useState(
-    block.type === "rich_text" ? String(block.lineHeight ?? 1.5) : "",
+    showFontSize ? String(typography.lineHeight ?? 1.5) : "",
   );
   const [fontSizeError, setFontSizeError] = useState<string | null>(null);
   const [lineHeightError, setLineHeightError] = useState<string | null>(null);
@@ -2249,7 +2426,7 @@ function TypographyEditor({
     setFontSizeValue(value);
     const size = Number(value);
     if (!Number.isInteger(size) || size < 8 || size > 200) {
-      setFontSizeError("Ukuran teks harus antara 8 dan 200.");
+      setFontSizeError(`${textLabel} harus antara 8 dan 200.`);
       return;
     }
     setFontSizeError(null);
@@ -2260,7 +2437,7 @@ function TypographyEditor({
     setLineHeightValue(value);
     const lineHeight = Number(value);
     if (!Number.isFinite(lineHeight) || lineHeight < 1 || lineHeight > 2.5) {
-      setLineHeightError("Jarak baris harus antara 1 dan 2,5.");
+      setLineHeightError(`${lineHeightLabel} harus antara 1 dan 2,5.`);
       return;
     }
     setLineHeightError(null);
@@ -2269,11 +2446,11 @@ function TypographyEditor({
 
   return (
     <fieldset className="space-y-3 border-t border-border pt-4">
-      <legend className="font-semibold">Tampilan teks</legend>
-      {showFontSize && block.type === "rich_text" && (
+      <legend className="font-semibold">{displayLabel}</legend>
+      {showFontSize && (
         <div className="grid gap-3">
           <label className="block">
-            Ukuran teks
+            {textLabel}
             <input
               type="number"
               min={8}
@@ -2294,9 +2471,9 @@ function TypographyEditor({
             )}
           </label>
           <label className="block">
-            Unit
+            {unitLabel}
             <select
-              value={block.fontUnit ?? "px"}
+              value={typography.fontUnit ?? "px"}
               onChange={(event) =>
                 onChange({ fontUnit: event.target.value as "px" | "pt" })
               }
@@ -2307,7 +2484,7 @@ function TypographyEditor({
             </select>
           </label>
           <label className="block">
-            Jarak baris
+            {lineHeightLabel}
             <input
               type="number"
               min={1}
@@ -2334,19 +2511,24 @@ function TypographyEditor({
       )}
       <div className="flex flex-wrap gap-2">
         <ToggleButton
-          pressed={block.isBold ?? false}
-          onClick={() => onChange({ isBold: !(block.isBold ?? false) })}
+          pressed={typography.isBold ?? false}
+          onClick={() => onChange({ isBold: !(typography.isBold ?? false) })}
         >
           Tebal
         </ToggleButton>
         <ToggleButton
-          pressed={block.isItalic ?? false}
-          onClick={() => onChange({ isItalic: !(block.isItalic ?? false) })}
+          pressed={typography.isItalic ?? false}
+          onClick={() =>
+            onChange({ isItalic: !(typography.isItalic ?? false) })
+          }
         >
           Miring
         </ToggleButton>
       </div>
-      <div className="grid grid-cols-3 gap-2" aria-label="Perataan teks">
+      <div
+        className="grid grid-cols-3 gap-2"
+        aria-label={labelSuffix ? `Perataan ${labelSuffix}` : "Perataan teks"}
+      >
         {(
           [
             ["left", "Kiri"],
@@ -2356,7 +2538,7 @@ function TypographyEditor({
         ).map(([value, label]) => (
           <ToggleButton
             key={value}
-            pressed={(block.textAlign ?? "left") === value}
+            pressed={(typography.textAlign ?? "left") === value}
             onClick={() => onChange({ textAlign: value })}
           >
             {label}

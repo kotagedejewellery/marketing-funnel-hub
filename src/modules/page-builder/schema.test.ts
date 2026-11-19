@@ -146,6 +146,58 @@ describe("Branch Page Builder schema", () => {
     ).toBe(false);
   });
 
+  it("accepts a styled custom section title and rejects an empty one", () => {
+    const section = {
+      id,
+      type: "section",
+      sectionKey: "faq",
+      title: {
+        mode: "custom",
+        text: "Pertanyaan umum",
+        level: "h3",
+        fontSize: 20,
+        fontUnit: "pt",
+        lineHeight: 1.4,
+        isBold: true,
+        isItalic: false,
+        textAlign: "center",
+      },
+      width: "full",
+      isVisible: true,
+    };
+
+    expect(pageBuilderBlocksSchema.safeParse([section]).success).toBe(true);
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        { ...section, title: { ...section.title, text: "" } },
+      ]).success,
+    ).toBe(false);
+  });
+
+  it("keeps legacy duplicate sections editable but prevents publishing them", () => {
+    const sections = [
+      {
+        id,
+        type: "section",
+        sectionKey: "faq",
+        width: "full",
+        isVisible: true,
+      },
+      {
+        id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        type: "section",
+        sectionKey: "faq",
+        width: "full",
+        isVisible: true,
+      },
+    ];
+
+    expect(pageBuilderBlocksSchema.safeParse(sections).success).toBe(true);
+    expect(pageBuilderPublishBlocksSchema.safeParse(sections).success).toBe(
+      false,
+    );
+  });
+
   it("removes executable HTML on every sanitization pass", () => {
     expect(
       sanitizePageBuilderHtml(

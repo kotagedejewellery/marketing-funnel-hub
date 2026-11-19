@@ -98,7 +98,11 @@ export default async function BranchLinkBioPage({
         catalog={{
           sections: sections
             .filter((section) => section.isActive)
-            .map(({ sectionKey, label }) => ({ sectionKey, label })),
+            .map(({ sectionKey, label, publicTitle }) => ({
+              sectionKey,
+              label,
+              publicTitle,
+            })),
           products: activeProducts,
           links: activeLinks.map(({ id: linkId, label }) => ({
             id: linkId,

@@ -66,6 +66,8 @@ Blok form publik memakai Route Handler same-origin yang memvalidasi field terhad
 
 Event kanonis memuat `eventId`, `eventName`, `eventTime`, `anonymousSessionId`, `pageUrl`, konteks `product`/`branch`/`cta`, lima UTM dan `source`/`campaign` bila diketahui, serta `metadata` kecil. Browser mengirim ID produk/cabang; server mengambil slug/nama yang berwenang dari database dan memastikan assignment Contact aktif. `PageView` tidak memiliki produk/cabang/CTA; `Contact` wajib produk, cabang, dan `whatsapp`; `LinkClick` wajib tautan aktif pada cabang. Retry `eventId` identik mengembalikan sukses `duplicate: true`; payload yang berubah material mendapat 409 tanpa menimpa event. Batas body 32 KiB dan `metadata` 4 KiB; validasi UUID, waktu, origin URL, panjang field, dan konteks dilakukan server-side. Rate limiting edge diterapkan pada `/api/events`, tanpa menjadikannya satu-satunya perlindungan.
 
+Judul section disimpan opsional di blok layout terautentikasi, sehingga mode `inherit` membaca `content_sections.public_title`, `custom` memakai copy layout, dan `hidden` tidak merender heading. Satu referensi section data hanya boleh muncul sekali pada versi terbit, sedangkan draft lama yang duplikat tetap dapat dibaca untuk diperbaiki. Konfigurasi ini tervalidasi bersama draft/published blocks dan tidak mengubah data section, CTA, tautan, event, ataupun konfigurasi Meta.
+
 ## Tracking, navigasi, dan privasi
 
 ### Ulasan Google manual melalui Firecrawl (disetujui 24 September 2026)

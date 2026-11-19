@@ -150,18 +150,69 @@ function LinkCta({ link }: { link: PublicContent["links"][number] }) {
   );
 }
 
-function BuilderSection({
+type BuilderSectionBlock = Extract<PageBuilderBlock, { type: "section" }>;
+
+function resolvedSectionTitle(
+  sourceTitle: string | null,
+  config: BuilderSectionBlock["title"],
+) {
+  if (config?.mode === "hidden") return null;
+  return config?.mode === "custom" ? (config.text ?? null) : sourceTitle;
+}
+
+function SectionTitle({
+  id,
+  title,
+  config,
+  className,
+}: {
+  id: string;
+  title: string;
+  config: BuilderSectionBlock["title"];
+  className: string;
+}) {
+  const Heading = config?.level ?? "h2";
+  return (
+    <Heading
+      id={id}
+      className={`max-w-full break-words ${className} ${
+        config?.isBold === false ? "font-normal" : ""
+      } ${config?.isItalic ? "italic" : ""}`}
+      style={{
+        fontSize:
+          config?.fontSize === undefined
+            ? undefined
+            : `${config.fontSize}${config.fontUnit ?? "px"}`,
+        lineHeight:
+          config?.fontSize === undefined && config?.lineHeight === undefined
+            ? undefined
+            : (config?.lineHeight ?? 1.5),
+        fontWeight: config?.isBold ? 700 : undefined,
+        fontStyle: config?.isItalic ? "italic" : undefined,
+        textAlign: config?.textAlign,
+      }}
+    >
+      {title}
+    </Heading>
+  );
+}
+
+export function BuilderSection({
   content,
   section,
+  block,
 }: {
   content: PublicContent;
   section: PublicContent["sections"][number];
+  block: BuilderSectionBlock;
 }) {
   const layoutClass = sectionLayoutClass(
     section.spacingAfter,
     section.showDivider,
   );
-  const { publicTitle, sectionKey } = section;
+  const { sectionKey } = section;
+  const publicTitle = resolvedSectionTitle(section.publicTitle, block.title);
+  const titleId = `${sectionKey}-title-${block.id}`;
 
   switch (sectionKey) {
     case "profile_logo": {
@@ -315,15 +366,15 @@ function BuilderSection({
       return (
         <section
           className={`scroll-mt-6 ${layoutClass}`}
-          aria-labelledby={publicTitle ? "gallery-title" : undefined}
+          aria-labelledby={publicTitle ? titleId : undefined}
         >
           {publicTitle && (
-            <h2
-              id="gallery-title"
+            <SectionTitle
+              id={titleId}
+              title={publicTitle}
+              config={block.title}
               className="text-center font-serif text-3xl leading-tight font-bold text-balance sm:text-4xl"
-            >
-              {publicTitle}
-            </h2>
+            />
           )}
           <GalleryCarousel
             aria-label="Galeri produk"
@@ -358,16 +409,13 @@ function BuilderSection({
     case "secondary_links":
     case "social_links":
       return publicTitle ? (
-        <section
-          className={layoutClass}
-          aria-labelledby={`${sectionKey}-title`}
-        >
-          <h2
-            id={`${sectionKey}-title`}
+        <section className={layoutClass} aria-labelledby={titleId}>
+          <SectionTitle
+            id={titleId}
+            title={publicTitle}
+            config={block.title}
             className="font-serif text-3xl font-bold text-balance sm:text-4xl"
-          >
-            {publicTitle}
-          </h2>
+          />
         </section>
       ) : null;
     case "google_reviews": {
@@ -376,15 +424,15 @@ function BuilderSection({
       return (
         <section
           className={layoutClass}
-          aria-labelledby={publicTitle ? "google-reviews-title" : undefined}
+          aria-labelledby={publicTitle ? titleId : undefined}
         >
           {publicTitle && (
-            <h2
-              id="google-reviews-title"
+            <SectionTitle
+              id={titleId}
+              title={publicTitle}
+              config={block.title}
               className="font-serif text-3xl font-bold text-balance sm:text-4xl"
-            >
-              {publicTitle}
-            </h2>
+            />
           )}
           <div className={publicTitle ? "mt-5" : ""}>
             <ReviewCarousel itemCount={reviews.items.length}>
@@ -456,15 +504,15 @@ function BuilderSection({
       return content.faqs.length ? (
         <section
           className={layoutClass}
-          aria-labelledby={publicTitle ? "faq-title" : undefined}
+          aria-labelledby={publicTitle ? titleId : undefined}
         >
           {publicTitle && (
-            <h2
-              id="faq-title"
+            <SectionTitle
+              id={titleId}
+              title={publicTitle}
+              config={block.title}
               className="font-serif text-3xl font-bold text-balance sm:text-4xl"
-            >
-              {publicTitle}
-            </h2>
+            />
           )}
           <div
             className={`${publicTitle ? "mt-5" : ""} divide-y divide-border overflow-hidden rounded-2xl bg-card px-5 sm:px-8`}
@@ -690,7 +738,11 @@ export function BuilderLinkBio({
               const section = sections.get(block.sectionKey);
               return section ? (
                 <div key={block.id} className={wrapperClass}>
-                  <BuilderSection content={content} section={section} />
+                  <BuilderSection
+                    content={content}
+                    section={section}
+                    block={block}
+                  />
                 </div>
               ) : null;
             }

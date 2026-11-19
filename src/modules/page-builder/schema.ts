@@ -1,7 +1,10 @@
 import sanitizeHtml from "sanitize-html";
 import * as z from "zod";
 
-import { branchSectionKeys } from "@/modules/admin/branches/page-validation";
+import {
+  branchSectionKeys,
+  sectionSupportsPublicTitle,
+} from "@/modules/admin/branches/page-validation";
 
 const blockBase = z.object({
   id: z.uuid(),
@@ -20,6 +23,26 @@ const headingTypographyFields = {
   isItalic: z.boolean().default(false),
   textAlign: z.enum(["left", "center", "right"]).default("left"),
 };
+
+const sectionTitleSchema = z
+  .object({
+    mode: z.enum(["inherit", "custom", "hidden"]).default("inherit"),
+    text: z.string().trim().max(160).optional(),
+    level: z.enum(["h2", "h3", "h4", "h5", "h6"]).default("h2"),
+    fontSize: z.number().int().min(8).max(200).optional(),
+    fontUnit: z.enum(["px", "pt"]).optional(),
+    lineHeight: z.number().min(1).max(2.5).optional(),
+    ...headingTypographyFields,
+  })
+  .superRefine((title, context) => {
+    if (title.mode === "custom" && !title.text) {
+      context.addIssue({
+        code: "custom",
+        path: ["text"],
+        message: "Judul kustom tidak boleh kosong.",
+      });
+    }
+  });
 
 export const pageBuilderFormFieldSchema = z
   .object({
@@ -147,6 +170,7 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
   blockBase.extend({
     type: z.literal("section"),
     sectionKey: z.enum(branchSectionKeys),
+    title: sectionTitleSchema.optional(),
   }),
 ]);
 
@@ -173,7 +197,19 @@ export const pageBuilderBlocksSchema = z
 
 export const pageBuilderPublishBlocksSchema =
   pageBuilderBlocksSchema.superRefine((blocks, context) => {
+    const publishedSections = new Set<string>();
     blocks.forEach((block, index) => {
+      if (block.type === "section") {
+        if (!sectionSupportsPublicTitle(block.sectionKey)) return;
+        if (publishedSections.has(block.sectionKey)) {
+          context.addIssue({
+            code: "custom",
+            path: [index, "sectionKey"],
+            message: "Bagian data hanya boleh ditampilkan sekali.",
+          });
+        }
+        publishedSections.add(block.sectionKey);
+      }
       if (block.type === "image" && !block.url) {
         context.addIssue({
           code: "custom",

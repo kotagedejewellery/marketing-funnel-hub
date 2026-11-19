@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { saveBranchPage } from "@/modules/admin/branches/page-actions";
+import { sectionSupportsPublicTitle } from "@/modules/admin/branches/page-validation";
 
 type Section = {
   sectionKey: string;
@@ -16,11 +17,6 @@ type Section = {
 };
 
 type VisibilityOverride = "inherit" | "show" | "hide";
-
-const sectionSupportsPublicTitle = (sectionKey: string) =>
-  !["profile_logo", "brand_header", "campaign_banner", "footer"].includes(
-    sectionKey,
-  );
 
 const sectionSupportsLayout = (sectionKey: string) => sectionKey !== "footer";
 

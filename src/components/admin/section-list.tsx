@@ -4,6 +4,7 @@ import { useActionState, type ReactNode } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { changeContentSection } from "@/modules/admin/content/actions";
+import { sectionSupportsPublicTitle } from "@/modules/admin/branches/page-validation";
 
 type Section = {
   id: string;
@@ -14,11 +15,6 @@ type Section = {
   spacingAfter: string;
   showDivider: boolean;
 };
-
-const sectionSupportsPublicTitle = (sectionKey: string) =>
-  !["profile_logo", "brand_header", "campaign_banner", "footer"].includes(
-    sectionKey,
-  );
 
 const sectionSupportsLayout = (sectionKey: string) => sectionKey !== "footer";
 

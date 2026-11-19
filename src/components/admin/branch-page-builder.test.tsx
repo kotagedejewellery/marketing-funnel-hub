@@ -146,6 +146,7 @@ describe("BranchPageBuilder", () => {
     actions.savePageBuilderDraft.mockResolvedValue({
       ok: true,
       message: "Perubahan tersimpan otomatis.",
+      revision: 1,
     });
     render(
       <BranchPageBuilder
@@ -784,6 +785,118 @@ describe("BranchPageBuilder", () => {
 
     expect(screen.getByLabelText("Level judul")).toHaveValue("h2");
     expect(screen.queryByRole("button", { name: "+ HTML kustom" })).toBeNull();
+  });
+
+  it("lets Marketing style a section title on its canvas block", async () => {
+    actions.savePageBuilderDraft.mockResolvedValue({
+      ok: true,
+      message: "Perubahan tersimpan otomatis.",
+    });
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[
+          {
+            id: "6f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            type: "section",
+            sectionKey: "faq",
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{
+          sections: [{ sectionKey: "faq", label: "FAQ", publicTitle: "FAQ" }],
+          products: [],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    expect(screen.getByLabelText("Mode judul bagian")).toHaveValue("inherit");
+    fireEvent.change(screen.getByLabelText("Mode judul bagian"), {
+      target: { value: "custom" },
+    });
+    expect(screen.getByLabelText("Mode judul bagian")).toHaveValue("custom");
+    const sectionTitle = await screen.findByLabelText("Teks judul bagian");
+    fireEvent.change(sectionTitle, {
+      target: { value: "Tanya jawab" },
+    });
+    fireEvent.change(screen.getByLabelText("Level judul bagian"), {
+      target: { value: "h3" },
+    });
+    fireEvent.change(screen.getByLabelText("Ukuran judul bagian"), {
+      target: { value: "20" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tengah" }));
+
+    await waitFor(
+      () =>
+        expect(actions.savePageBuilderDraft).toHaveBeenCalledWith(
+          "branch-1",
+          [
+            expect.objectContaining({
+              title: expect.objectContaining({
+                mode: "custom",
+                text: "Tanya jawab",
+                level: "h3",
+                fontSize: 20,
+                textAlign: "center",
+              }),
+            }),
+          ],
+          null,
+        ),
+      { timeout: 1_500 },
+    );
+    expect(screen.getByLabelText("Teks judul bagian")).toHaveValue(
+      "Tanya jawab",
+    );
+  });
+
+  it("explains a custom section title and validates it beside the field", async () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[
+          {
+            id: "6f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            type: "section",
+            sectionKey: "faq",
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{
+          sections: [{ sectionKey: "faq", label: "FAQ", publicTitle: "FAQ" }],
+          products: [],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Mode judul bagian"), {
+      target: { value: "custom" },
+    });
+    expect(screen.getByLabelText("Mode judul bagian")).toHaveValue("custom");
+    const title = await screen.findByLabelText("Teks judul bagian");
+    expect(
+      screen.getByText(
+        "Judul kustom tidak mengikuti perubahan judul di Sumber Data Halaman.",
+      ),
+    ).toBeVisible();
+
+    fireEvent.change(title, { target: { value: "" } });
+
+    expect(title).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Judul kustom tidak boleh kosong.")).toBeVisible();
   });
 
   it("keeps legacy HTML available for reference but not editable", () => {

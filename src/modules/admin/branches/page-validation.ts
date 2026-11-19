@@ -31,6 +31,15 @@ export const branchSectionLabels: Record<
   footer: "Footer",
 };
 
+export function sectionSupportsPublicTitle(sectionKey: string) {
+  return ![
+    "profile_logo",
+    "brand_header",
+    "campaign_banner",
+    "footer",
+  ].includes(sectionKey);
+}
+
 export const branchPageSchema = z.object({
   branchId: z.uuid(),
   profileName: z
