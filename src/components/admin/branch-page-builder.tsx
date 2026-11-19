@@ -714,11 +714,15 @@ export function BranchPageBuilder({
               }
             />
             <BuilderButton
-              label="HTML kustom"
+              label="Judul"
               onClick={() =>
                 add({
-                  type: "html",
-                  html: "<p>Konten baru</p>",
+                  type: "heading",
+                  text: "Judul bagian",
+                  level: "h2",
+                  isBold: true,
+                  isItalic: false,
+                  textAlign: "left",
                   width: "full",
                   isVisible: true,
                 })
@@ -1033,25 +1037,83 @@ export function BranchPageBuilder({
                 </label>
               </fieldset>
               {selected.type === "rich_text" && (
-                <Editor
-                  label="Teks"
-                  value={selected.text}
-                  onChange={(text) => update({ text }, "rich-text")}
-                  onBlur={endHistoryGroup}
-                />
+                <>
+                  <Editor
+                    label="Teks"
+                    value={selected.text}
+                    onChange={(text) => update({ text }, "rich-text")}
+                    onBlur={endHistoryGroup}
+                  />
+                  <TypographyEditor
+                    key={selected.id}
+                    block={selected}
+                    showFontSize
+                    onChange={(patch) => update(patch, "rich-text-style")}
+                  />
+                </>
+              )}
+              {selected.type === "heading" && (
+                <>
+                  <Editor
+                    label="Judul"
+                    value={selected.text}
+                    onChange={(text) => update({ text }, "heading")}
+                    onBlur={endHistoryGroup}
+                  />
+                  <label className="block">
+                    Level judul
+                    <select
+                      value={selected.level}
+                      onChange={(event) =>
+                        update(
+                          {
+                            level: event.target.value as Extract<
+                              PageBuilderBlock,
+                              { type: "heading" }
+                            >["level"],
+                          },
+                          "heading-level",
+                        )
+                      }
+                      className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2"
+                    >
+                      <option value="h1">H1</option>
+                      <option value="h2">H2</option>
+                      <option value="h3">H3</option>
+                      <option value="h4">H4</option>
+                      <option value="h5">H5</option>
+                      <option value="h6">H6</option>
+                    </select>
+                  </label>
+                  {selected.level === "h1" && (
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Periksa pratinjau: bila Profil menampilkan nama, halaman
+                      sudah memiliki H1. Gunakan H2 untuk judul bagian.
+                    </p>
+                  )}
+                  <TypographyEditor
+                    key={selected.id}
+                    block={selected}
+                    onChange={(patch) => update(patch, "heading-style")}
+                  />
+                </>
               )}
               {selected.type === "html" && (
                 <>
-                  <Editor
-                    label="Kode HTML"
-                    value={selected.html}
-                    onChange={(html) => update({ html }, "html")}
-                    onBlur={endHistoryGroup}
-                  />
+                  <label className="block">
+                    Kode HTML lama
+                    <textarea
+                      readOnly
+                      value={selected.html}
+                      className="mt-1 min-h-20 w-full rounded-lg border border-border bg-secondary px-3 py-2 text-muted-foreground"
+                    />
+                  </label>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Tempel HTML untuk teks dan tautan dengan format khusus.
-                    Script, iframe, dan kode yang tidak didukung tidak akan
-                    ditampilkan. Untuk video, gunakan blok Embed YouTube.
+                    Blok lama ini dipertahankan agar konten yang sudah terbit
+                    tidak berubah dan tidak dapat diedit. Blok baru menggunakan
+                    Teks atau Judul. Script, iframe, dan kode yang tidak
+                    didukung tidak akan ditampilkan. Untuk video, gunakan blok
+                    Embed YouTube.
                   </p>
                 </>
               )}
@@ -2161,6 +2223,175 @@ function Editor({
   );
 }
 
+function TypographyEditor({
+  block,
+  showFontSize = false,
+  onChange,
+}: {
+  block: Extract<PageBuilderBlock, { type: "rich_text" | "heading" }>;
+  showFontSize?: boolean;
+  onChange: (
+    patch: Partial<
+      Extract<PageBuilderBlock, { type: "rich_text" | "heading" }>
+    >,
+  ) => void;
+}) {
+  const [fontSizeValue, setFontSizeValue] = useState(
+    block.type === "rich_text" ? String(block.fontSize ?? 16) : "",
+  );
+  const [lineHeightValue, setLineHeightValue] = useState(
+    block.type === "rich_text" ? String(block.lineHeight ?? 1.5) : "",
+  );
+  const [fontSizeError, setFontSizeError] = useState<string | null>(null);
+  const [lineHeightError, setLineHeightError] = useState<string | null>(null);
+
+  function updateFontSize(value: string) {
+    setFontSizeValue(value);
+    const size = Number(value);
+    if (!Number.isInteger(size) || size < 8 || size > 200) {
+      setFontSizeError("Ukuran teks harus antara 8 dan 200.");
+      return;
+    }
+    setFontSizeError(null);
+    onChange({ fontSize: size });
+  }
+
+  function updateLineHeight(value: string) {
+    setLineHeightValue(value);
+    const lineHeight = Number(value);
+    if (!Number.isFinite(lineHeight) || lineHeight < 1 || lineHeight > 2.5) {
+      setLineHeightError("Jarak baris harus antara 1 dan 2,5.");
+      return;
+    }
+    setLineHeightError(null);
+    onChange({ lineHeight });
+  }
+
+  return (
+    <fieldset className="space-y-3 border-t border-border pt-4">
+      <legend className="font-semibold">Tampilan teks</legend>
+      {showFontSize && block.type === "rich_text" && (
+        <div className="grid gap-3">
+          <label className="block">
+            Ukuran teks
+            <input
+              type="number"
+              min={8}
+              max={200}
+              value={fontSizeValue}
+              onChange={(event) => updateFontSize(event.target.value)}
+              aria-invalid={Boolean(fontSizeError)}
+              aria-describedby={fontSizeError ? "font-size-error" : undefined}
+              className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2"
+            />
+            {fontSizeError && (
+              <span
+                id="font-size-error"
+                className="mt-1 block text-xs text-destructive"
+              >
+                {fontSizeError}
+              </span>
+            )}
+          </label>
+          <label className="block">
+            Unit
+            <select
+              value={block.fontUnit ?? "px"}
+              onChange={(event) =>
+                onChange({ fontUnit: event.target.value as "px" | "pt" })
+              }
+              className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2"
+            >
+              <option value="px">px</option>
+              <option value="pt">pt</option>
+            </select>
+          </label>
+          <label className="block">
+            Jarak baris
+            <input
+              type="number"
+              min={1}
+              max={2.5}
+              step={0.1}
+              value={lineHeightValue}
+              onChange={(event) => updateLineHeight(event.target.value)}
+              aria-invalid={Boolean(lineHeightError)}
+              aria-describedby={
+                lineHeightError ? "line-height-error" : undefined
+              }
+              className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2"
+            />
+            {lineHeightError && (
+              <span
+                id="line-height-error"
+                className="mt-1 block text-xs text-destructive"
+              >
+                {lineHeightError}
+              </span>
+            )}
+          </label>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <ToggleButton
+          pressed={block.isBold ?? false}
+          onClick={() => onChange({ isBold: !(block.isBold ?? false) })}
+        >
+          Tebal
+        </ToggleButton>
+        <ToggleButton
+          pressed={block.isItalic ?? false}
+          onClick={() => onChange({ isItalic: !(block.isItalic ?? false) })}
+        >
+          Miring
+        </ToggleButton>
+      </div>
+      <div className="grid grid-cols-3 gap-2" aria-label="Perataan teks">
+        {(
+          [
+            ["left", "Kiri"],
+            ["center", "Tengah"],
+            ["right", "Kanan"],
+          ] as const
+        ).map(([value, label]) => (
+          <ToggleButton
+            key={value}
+            pressed={(block.textAlign ?? "left") === value}
+            onClick={() => onChange({ textAlign: value })}
+          >
+            {label}
+          </ToggleButton>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function ToggleButton({
+  children,
+  pressed,
+  onClick,
+}: {
+  children: ReactNode;
+  pressed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`min-h-10 rounded-lg border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 ${
+        pressed
+          ? "border-[var(--kgj-accent)] bg-secondary"
+          : "border-border bg-background hover:bg-secondary"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function legacySpacerPx(size: "sm" | "md" | "lg" | undefined) {
   return size === "sm" ? 16 : size === "lg" ? 64 : 32;
 }
@@ -2254,7 +2485,8 @@ function pageDataToolLabel(tool: PageDataToolKey) {
 
 function label(block: PageBuilderBlock, catalog: Catalog) {
   if (block.type === "rich_text") return "Teks";
-  if (block.type === "html") return "HTML kustom";
+  if (block.type === "heading") return "Judul";
+  if (block.type === "html") return "HTML lama";
   if (block.type === "image") return "Gambar";
   if (block.type === "spacer") return "Pemisah & jarak";
   if (block.type === "embed") return "Embed YouTube";

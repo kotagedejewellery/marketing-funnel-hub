@@ -507,9 +507,53 @@ function BuilderSection({
   }
 }
 
-function FreeBlock({ block }: { block: PageBuilderBlock }) {
+export function BuilderFreeBlock({ block }: { block: PageBuilderBlock }) {
   if (block.type === "rich_text")
-    return <p className="whitespace-pre-wrap leading-7">{block.text}</p>;
+    return (
+      <p
+        className={`max-w-full break-words whitespace-pre-wrap ${
+          block.fontSize === undefined && block.lineHeight === undefined
+            ? "leading-7"
+            : ""
+        }`}
+        style={{
+          fontSize:
+            block.fontSize === undefined
+              ? undefined
+              : `${block.fontSize}${block.fontUnit ?? "px"}`,
+          lineHeight:
+            block.fontSize === undefined && block.lineHeight === undefined
+              ? undefined
+              : (block.lineHeight ?? 1.5),
+          fontWeight: block.isBold ? 700 : undefined,
+          fontStyle: block.isItalic ? "italic" : undefined,
+          textAlign: block.textAlign ?? "left",
+        }}
+      >
+        {block.text}
+      </p>
+    );
+  if (block.type === "heading") {
+    const Heading = block.level;
+    const headingClass = {
+      h1: "text-4xl leading-tight sm:text-5xl",
+      h2: "text-3xl leading-tight sm:text-4xl",
+      h3: "text-2xl leading-tight sm:text-3xl",
+      h4: "text-xl leading-snug sm:text-2xl",
+      h5: "text-lg leading-snug sm:text-xl",
+      h6: "text-base leading-snug sm:text-lg",
+    }[block.level];
+    return (
+      <Heading
+        className={`max-w-full break-words ${headingClass} font-serif ${
+          block.isBold === false ? "font-normal" : "font-bold"
+        } ${block.isItalic ? "italic" : ""}`}
+        style={{ textAlign: block.textAlign ?? "left" }}
+      >
+        {block.text}
+      </Heading>
+    );
+  }
   if (block.type === "html")
     return (
       <div
@@ -664,7 +708,7 @@ export function BuilderLinkBio({
             }
             return (
               <div key={block.id} className={`${wrapperClass} mb-6 sm:mb-8`}>
-                <FreeBlock block={block} />
+                <BuilderFreeBlock block={block} />
               </div>
             );
           })}

@@ -9,6 +9,18 @@ const blockBase = z.object({
   isVisible: z.boolean().default(true),
 });
 
+const typographyFields = {
+  isBold: z.boolean().optional(),
+  isItalic: z.boolean().optional(),
+  textAlign: z.enum(["left", "center", "right"]).optional(),
+};
+
+const headingTypographyFields = {
+  isBold: z.boolean().default(true),
+  isItalic: z.boolean().default(false),
+  textAlign: z.enum(["left", "center", "right"]).default("left"),
+};
+
 export const pageBuilderFormFieldSchema = z
   .object({
     id: z.uuid(),
@@ -59,6 +71,16 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
   blockBase.extend({
     type: z.literal("rich_text"),
     text: z.string().trim().max(4000),
+    fontSize: z.number().int().min(8).max(200).optional(),
+    fontUnit: z.enum(["px", "pt"]).optional(),
+    lineHeight: z.number().min(1).max(2.5).optional(),
+    ...typographyFields,
+  }),
+  blockBase.extend({
+    type: z.literal("heading"),
+    text: z.string().trim().min(1).max(4000),
+    level: z.enum(["h1", "h2", "h3", "h4", "h5", "h6"]),
+    ...headingTypographyFields,
   }),
   blockBase.extend({
     type: z.literal("html"),

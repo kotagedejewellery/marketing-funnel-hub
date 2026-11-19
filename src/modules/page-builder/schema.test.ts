@@ -96,6 +96,56 @@ describe("Branch Page Builder schema", () => {
     );
   });
 
+  it("accepts precise text styles and semantic heading levels", () => {
+    const blocks = pageBuilderBlocksSchema.safeParse([
+      {
+        id,
+        type: "rich_text",
+        text: "Pesan konsultasi",
+        fontSize: 18,
+        fontUnit: "pt",
+        isBold: true,
+        isItalic: true,
+        textAlign: "center",
+        width: "full",
+        isVisible: true,
+      },
+      {
+        id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        type: "heading",
+        text: "Koleksi cincin",
+        level: "h2",
+        width: "full",
+        isVisible: true,
+      },
+    ]);
+
+    expect(blocks.success).toBe(true);
+    if (blocks.success) {
+      expect(blocks.data[1]).toMatchObject({
+        isBold: true,
+        isItalic: false,
+        textAlign: "left",
+      });
+    }
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        {
+          id,
+          type: "rich_text",
+          text: "Terlalu besar",
+          fontSize: 201,
+          fontUnit: "px",
+          isBold: false,
+          isItalic: false,
+          textAlign: "left",
+          width: "full",
+          isVisible: true,
+        },
+      ]).success,
+    ).toBe(false);
+  });
+
   it("removes executable HTML on every sanitization pass", () => {
     expect(
       sanitizePageBuilderHtml(

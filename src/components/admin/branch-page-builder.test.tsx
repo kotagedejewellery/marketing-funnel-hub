@@ -169,12 +169,30 @@ describe("BranchPageBuilder", () => {
     fireEvent.change(screen.getByLabelText("Teks"), {
       target: { value: "Halo terbaru" },
     });
+    fireEvent.change(screen.getByLabelText("Ukuran teks"), {
+      target: { value: "18" },
+    });
+    fireEvent.change(screen.getByLabelText("Unit"), {
+      target: { value: "pt" },
+    });
+    fireEvent.change(screen.getByLabelText("Jarak baris"), {
+      target: { value: "1.6" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tebal" }));
 
     await waitFor(
       () =>
         expect(actions.savePageBuilderDraft).toHaveBeenCalledWith(
           "branch-1",
-          [expect.objectContaining({ text: "Halo terbaru" })],
+          [
+            expect.objectContaining({
+              text: "Halo terbaru",
+              fontSize: 18,
+              fontUnit: "pt",
+              lineHeight: 1.6,
+              isBold: true,
+            }),
+          ],
           null,
         ),
       { timeout: 1_500 },
@@ -741,7 +759,7 @@ describe("BranchPageBuilder", () => {
     ).toBeVisible();
   });
 
-  it("explains the limits of custom HTML in plain language", () => {
+  it("adds a semantic heading block instead of exposing custom HTML", () => {
     render(
       <BranchPageBuilder
         branchId="branch-1"
@@ -749,8 +767,8 @@ describe("BranchPageBuilder", () => {
         initialBlocks={[
           {
             id: "block-1",
-            type: "html",
-            html: "<p>Halo</p>",
+            type: "rich_text",
+            text: "Halo",
             width: "full",
             isVisible: true,
           },
@@ -761,9 +779,34 @@ describe("BranchPageBuilder", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "+ HTML kustom" })).toBeVisible();
-    expect(screen.getByLabelText("Kode HTML")).toHaveValue("<p>Halo</p>");
-    expect(screen.getByText(/Script, iframe/i)).toBeVisible();
+    expect(screen.getByLabelText("Ukuran teks")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "+ Judul" }));
+
+    expect(screen.getByLabelText("Level judul")).toHaveValue("h2");
+    expect(screen.queryByRole("button", { name: "+ HTML kustom" })).toBeNull();
+  });
+
+  it("keeps legacy HTML available for reference but not editable", () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[
+          {
+            id: "legacy-html",
+            type: "html",
+            html: "<p>Konten lama</p>",
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{ sections: [], products: [], links: [], sourceSummary: [] }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    expect(screen.getByLabelText("Kode HTML lama")).toHaveAttribute("readonly");
   });
 
   it("reorders blocks with a touch drag handle", () => {
