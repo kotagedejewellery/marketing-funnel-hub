@@ -1,6 +1,6 @@
 import "server-only";
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { serverEnv } from "@/lib/env/server";
@@ -33,4 +33,8 @@ export async function uploadPublicAsset(path: string, bytes: Uint8Array) {
 
 export async function readPublicAsset(path: string) {
   return readFile(resolveMediaPath(path));
+}
+
+export async function deletePublicAsset(path: string) {
+  await rm(resolveMediaPath(path), { force: true });
 }

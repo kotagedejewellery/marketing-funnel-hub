@@ -1,6 +1,11 @@
 import "server-only";
 
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "node:crypto";
 
 import { serverEnv } from "@/lib/env/server";
 
@@ -40,4 +45,12 @@ export function decryptFormValues(value: string) {
     decipher.final(),
   ]).toString("utf8");
   return JSON.parse(plaintext) as Record<string, string | boolean>;
+}
+
+export function createFormContinuationToken() {
+  return randomBytes(32).toString("base64url");
+}
+
+export function hashFormContinuationToken(value: string) {
+  return createHash("sha256").update(value).digest("hex");
 }

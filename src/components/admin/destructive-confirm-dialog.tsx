@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export function DestructiveConfirmDialog({
   open,
@@ -12,6 +12,9 @@ export function DestructiveConfirmDialog({
   description = "Ulasan yang dihapus tidak dapat dikembalikan. Pastikan hanya ulasan dummy atau yang memang tidak diperlukan yang dipilih.",
   confirmLabel = `Hapus ${count} ulasan`,
   pendingLabel = "Menghapus...",
+  confirmationValue,
+  confirmationInputName,
+  confirmationFormId,
 }: {
   open: boolean;
   count: number;
@@ -22,11 +25,19 @@ export function DestructiveConfirmDialog({
   description?: string;
   confirmLabel?: string;
   pendingLabel?: string;
+  confirmationValue?: string;
+  confirmationInputName?: string;
+  confirmationFormId?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const descriptionId = useId();
+  const confirmationId = useId();
+  const [confirmation, setConfirmation] = useState("");
+  const requiresConfirmation = Boolean(confirmationValue);
+  const canConfirm =
+    !requiresConfirmation || confirmation === confirmationValue;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -47,7 +58,10 @@ export function DestructiveConfirmDialog({
         if (pending) event.preventDefault();
       }}
       onClose={() => {
-        if (!pending) onClose();
+        if (!pending) {
+          setConfirmation("");
+          onClose();
+        }
       }}
       className="kgj-admin-dialog m-auto w-[min(30rem,calc(100vw-2rem))] rounded-2xl border-0 bg-card p-0 text-foreground shadow-[0_24px_80px_-24px_rgba(40,33,28,0.5)] backdrop:bg-[rgba(40,33,28,0.6)]"
     >
@@ -75,6 +89,22 @@ export function DestructiveConfirmDialog({
         >
           {description}
         </p>
+        {requiresConfirmation && confirmationValue && confirmationInputName ? (
+          <div className="mt-5">
+            <label htmlFor={confirmationId} className="text-sm font-semibold">
+              Ketik {confirmationValue} untuk melanjutkan
+            </label>
+            <input
+              id={confirmationId}
+              name={confirmationInputName}
+              form={confirmationFormId}
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              autoComplete="off"
+              className="mt-2 min-h-11 w-full rounded-xl border border-border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+            />
+          </div>
+        ) : null}
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             ref={cancelRef}
@@ -88,7 +118,7 @@ export function DestructiveConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={pending}
+            disabled={pending || !canConfirm}
             aria-busy={pending || undefined}
             className="min-h-11 rounded-full bg-destructive px-5 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50"
           >

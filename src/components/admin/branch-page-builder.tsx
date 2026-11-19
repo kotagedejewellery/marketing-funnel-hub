@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 
 import {
   PageDataManagerProvider,
+  type PageDataCanvasBlock,
   type PageDataSelection,
   type PageDataToolKey,
 } from "@/components/admin/page-data-manager-context";
@@ -24,8 +25,10 @@ import {
 } from "@/modules/page-builder/actions";
 import {
   pageBuilderBlocksSchema,
+  pageBuilderPublishBlocksSchema,
   type PageBuilderBlock,
   type PageBuilderBlockInput,
+  type PageBuilderFormField,
 } from "@/modules/page-builder/schema";
 
 type Catalog = {
@@ -87,6 +90,10 @@ export function BranchPageBuilder({
   branchId,
   branchName,
   initialBlocks,
+  initialRevision = null,
+  publishedBlocks: initialPublishedBlocks = initialBlocks,
+  isPublished: initialIsPublished = false,
+  publishedAt: initialPublishedAt = null,
   catalog,
   dataTools,
   preview,
@@ -94,6 +101,10 @@ export function BranchPageBuilder({
   branchId: string;
   branchName: string;
   initialBlocks: PageBuilderBlock[];
+  initialRevision?: number | null;
+  publishedBlocks?: PageBuilderBlock[];
+  isPublished?: boolean;
+  publishedAt?: string | null;
   catalog: Catalog;
   dataTools: Record<PageDataToolKey, ReactNode>;
   preview: ReactNode;
@@ -101,6 +112,16 @@ export function BranchPageBuilder({
   const router = useRouter();
   const [blocks, setBlocks] = useState(initialBlocks);
   const [savedBlocks, setSavedBlocks] = useState(initialBlocks);
+  const [savedRevision, setSavedRevision] = useState(initialRevision);
+  const [publishedBlocks, setPublishedBlocks] = useState(
+    initialPublishedBlocks,
+  );
+  const [isPublished, setIsPublished] = useState(initialIsPublished);
+  const [publishedAt, setPublishedAt] = useState(initialPublishedAt);
+  const [saveFailure, setSaveFailure] = useState<"error" | "conflict" | null>(
+    null,
+  );
+  const [saveRetry, setSaveRetry] = useState(0);
   const [history, setHistory] = useState<BuilderHistory>({
     past: [],
     future: [],
@@ -109,12 +130,13 @@ export function BranchPageBuilder({
     initialBlocks[0]?.id ?? null,
   );
   const [message, setMessage] = useState("");
-  const [pendingKind, setPendingKind] = useState<"draft" | "publish" | null>(
+  const [pendingKind, setPendingKind] = useState<"autosave" | "publish" | null>(
     null,
   );
   const [sourceDataOpen, setSourceDataOpen] = useState(false);
   const [activeDataSelection, setActiveDataSelection] =
     useState<PageDataSelection | null>(null);
+  const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
   const [touchDragId, setTouchDragId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [removedBlock, setRemovedBlock] = useState<{
@@ -124,6 +146,7 @@ export function BranchPageBuilder({
   const touchDragIdRef = useRef<string | null>(null);
   const historyGroupRef = useRef<string | null>(null);
   const sourceDataTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const canvasBlockRefs = useRef(new Map<string, HTMLLIElement>());
   const restoreSourceDataFocusRef = useRef(false);
   const selected = blocks.find((block) => block.id === selectedId) ?? null;
   const selectedDataContext = selected
@@ -132,9 +155,16 @@ export function BranchPageBuilder({
   const pending = pendingKind !== null;
   const hasUnsavedChanges =
     JSON.stringify(blocks) !== JSON.stringify(savedBlocks);
-  const publishReadiness = pageBuilderBlocksSchema.safeParse(blocks);
+  const hasUnpublishedChanges =
+    !isPublished || JSON.stringify(blocks) !== JSON.stringify(publishedBlocks);
+  const draftReadiness = pageBuilderBlocksSchema.safeParse(blocks);
+  const publishReadiness = pageBuilderPublishBlocksSchema.safeParse(blocks);
   const referenceIssue = unavailableReferenceIssue(blocks, catalog);
-  const saveIssue = referenceIssue;
+  const saveIssue =
+    referenceIssue ??
+    (!draftReadiness.success
+      ? "Lengkapi pengaturan blok yang masih belum valid."
+      : null);
   const publishIssue = !blocks.some(
     (block) => block.type === "product_cta" && block.isVisible,
   )
@@ -148,17 +178,54 @@ export function BranchPageBuilder({
   );
 
   useEffect(() => {
-    const refreshSourceData = () => router.refresh();
+    const refreshSourceData = () => {
+      window.dispatchEvent(new Event("kgj:admin-saved"));
+      router.refresh();
+    };
     window.addEventListener("kgj:branch-source-saved", refreshSourceData);
     return () =>
       window.removeEventListener("kgj:branch-source-saved", refreshSourceData);
   }, [router]);
 
   useEffect(() => {
+    if (hasUnsavedChanges) return;
+    // Synchronizes fresh server props only when the local canvas is already saved.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setBlocks(initialBlocks);
+    setSavedBlocks(initialBlocks);
+    setSavedRevision(initialRevision);
+    setPublishedBlocks(initialPublishedBlocks);
+    setIsPublished(initialIsPublished);
+    setPublishedAt(initialPublishedAt);
+    setSaveFailure(null);
+    setSelectedId((current) =>
+      initialBlocks.some((block) => block.id === current)
+        ? current
+        : (initialBlocks[0]?.id ?? null),
+    );
+  }, [
+    hasUnsavedChanges,
+    initialBlocks,
+    initialIsPublished,
+    initialPublishedAt,
+    initialPublishedBlocks,
+    initialRevision,
+  ]);
+
+  useEffect(() => {
     if (sourceDataOpen || !restoreSourceDataFocusRef.current) return;
     sourceDataTriggerRef.current?.focus();
     restoreSourceDataFocusRef.current = false;
   }, [sourceDataOpen]);
+
+  useEffect(() => {
+    if (sourceDataOpen || !canvasFocusId) return;
+    const block = canvasBlockRefs.current.get(canvasFocusId);
+    if (!block) return;
+    block.scrollIntoView?.({ block: "nearest" });
+    block.querySelector<HTMLButtonElement>("button")?.focus();
+    setCanvasFocusId(null);
+  }, [blocks, canvasFocusId, sourceDataOpen]);
 
   useEffect(() => {
     if (!hasUnsavedChanges) return;
@@ -186,7 +253,7 @@ export function BranchPageBuilder({
         nextUrl.href === window.location.href
       )
         return;
-      if (!window.confirm("Perubahan draft belum disimpan. Tetap keluar?"))
+      if (!window.confirm("Perubahan belum tersimpan otomatis. Tetap keluar?"))
         event.preventDefault();
     };
     window.addEventListener("beforeunload", warnBeforeUnload);
@@ -197,6 +264,47 @@ export function BranchPageBuilder({
     };
   }, [hasUnsavedChanges]);
 
+  useEffect(() => {
+    if (!hasUnsavedChanges || saveIssue || saveFailure) return;
+    const blocksToSave = blocks;
+    const timer = window.setTimeout(() => {
+      startTransition(async () => {
+        setPendingKind("autosave");
+        try {
+          const result = await savePageBuilderDraft(
+            branchId,
+            blocksToSave,
+            savedRevision,
+          );
+          setMessage(
+            result.ok ? "Perubahan tersimpan otomatis." : result.message,
+          );
+          if (result.ok) {
+            setSavedBlocks(blocksToSave);
+            setSavedRevision(result.revision);
+            window.dispatchEvent(new Event("kgj:admin-saved"));
+          } else {
+            setSaveFailure(result.conflict ? "conflict" : "error");
+          }
+        } catch {
+          setMessage("Penyimpanan otomatis belum berhasil. Coba lagi.");
+          setSaveFailure("error");
+        } finally {
+          setPendingKind(null);
+        }
+      });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [
+    blocks,
+    branchId,
+    hasUnsavedChanges,
+    saveFailure,
+    saveIssue,
+    saveRetry,
+    savedRevision,
+  ]);
+
   function commitBlocks(
     transform: (current: PageBuilderBlock[]) => PageBuilderBlock[],
     historyGroup?: string,
@@ -204,6 +312,7 @@ export function BranchPageBuilder({
     setBlocks((current) => {
       const next = transform(current);
       if (JSON.stringify(next) === JSON.stringify(current)) return current;
+      setSaveFailure(null);
       if (historyGroup !== historyGroupRef.current) {
         setHistory(({ past }) => ({
           past: [...past, current].slice(-50),
@@ -267,13 +376,52 @@ export function BranchPageBuilder({
         (item) =>
           item.type === "section" && item.sectionKey === next.sectionKey,
       );
+    if (duplicate) {
+      const existing = blocks.find(
+        (item) =>
+          item.type === "section" && item.sectionKey === next.sectionKey,
+      );
+      if (existing) {
+        setSelectedId(existing.id);
+        setMessage(`${label(existing, catalog)} sudah ada di kanvas.`);
+        return existing.id;
+      }
+    }
     commitBlocks((current) => [...current, next]);
     setSelectedId(next.id);
     setRemovedBlock(null);
-    setMessage(
-      duplicate
-        ? `${label(next, catalog)} sudah ada; blok kedua tetap ditambahkan.`
-        : `${label(next, catalog)} ditambahkan ke kanvas.`,
+    setMessage(`${label(next, catalog)} ditambahkan ke kanvas.`);
+    return next.id;
+  }
+
+  function addPageDataBlock(block: PageDataCanvasBlock) {
+    const duplicate = blocks.find(
+      (item) =>
+        (block.type === "product_cta" &&
+          item.type === "product_cta" &&
+          item.assignmentId === block.assignmentId) ||
+        (block.type === "link" &&
+          item.type === "link" &&
+          item.linkId === block.linkId),
+    );
+    if (duplicate) {
+      setMessage(`${label(duplicate, catalog)} sudah ada di kanvas.`);
+      closeSourceDataForCanvas(duplicate.id);
+      return;
+    }
+    const id = add({ ...block, width: "full", isVisible: true });
+    closeSourceDataForCanvas(id);
+  }
+
+  function isPageDataBlockOnCanvas(block: PageDataCanvasBlock) {
+    return blocks.some(
+      (item) =>
+        (block.type === "product_cta" &&
+          item.type === "product_cta" &&
+          item.assignmentId === block.assignmentId) ||
+        (block.type === "link" &&
+          item.type === "link" &&
+          item.linkId === block.linkId),
     );
   }
 
@@ -291,6 +439,22 @@ export function BranchPageBuilder({
 
   function endHistoryGroup() {
     historyGroupRef.current = null;
+  }
+
+  function retrySave() {
+    if (saveFailure === "conflict") {
+      if (
+        !window.confirm(
+          "Perubahan lokal belum tersimpan akan hilang. Muat versi terbaru?",
+        )
+      )
+        return;
+      window.location.reload();
+      return;
+    }
+    setMessage("Mencoba menyimpan kembali...");
+    setSaveFailure(null);
+    setSaveRetry((current) => current + 1);
   }
 
   function remove(id: string) {
@@ -375,30 +539,46 @@ export function BranchPageBuilder({
     setSourceDataOpen(false);
   }
 
-  function save(publish: boolean) {
-    const issue = publish ? publishIssue : saveIssue;
-    if (issue) {
-      setMessage(issue);
+  function closeSourceDataForCanvas(id: string) {
+    restoreSourceDataFocusRef.current = false;
+    setActiveDataSelection(null);
+    setCanvasFocusId(id);
+    setSourceDataOpen(false);
+  }
+
+  function publish() {
+    if (publishIssue) {
+      setMessage(publishIssue);
       return;
     }
     historyGroupRef.current = null;
     startTransition(async () => {
-      setPendingKind(publish ? "publish" : "draft");
+      setPendingKind("publish");
       try {
-        const result = publish
-          ? await publishPageBuilder(branchId, blocks)
-          : await savePageBuilderDraft(branchId, blocks);
+        const result = await publishPageBuilder(
+          branchId,
+          blocks,
+          savedRevision,
+        );
         setMessage(result.message);
         if (result.ok) {
           setSavedBlocks(blocks);
+          setSavedRevision(result.revision);
+          setPublishedBlocks(blocks);
+          setIsPublished(true);
+          setPublishedAt(new Date().toISOString());
+          setSaveFailure(null);
           setHistory({ past: [], future: [] });
           setRemovedBlock(null);
           window.dispatchEvent(new Event("kgj:admin-saved"));
+        } else {
+          setSaveFailure(result.conflict ? "conflict" : "error");
         }
       } catch {
         setMessage(
           "Penyimpanan belum berhasil. Periksa koneksi lalu coba lagi.",
         );
+        setSaveFailure("error");
       } finally {
         setPendingKind(null);
       }
@@ -416,7 +596,7 @@ export function BranchPageBuilder({
             Builder Link Bio
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {branchName} · susun draft, pratinjau, lalu terbitkan.
+            {branchName} · susun halaman, pratinjau tersimpan, lalu terbitkan.
           </p>
           <p
             role="status"
@@ -426,10 +606,32 @@ export function BranchPageBuilder({
             {pending
               ? pendingKind === "publish"
                 ? "Menerbitkan perubahan..."
-                : "Menyimpan draft..."
+                : "Menyimpan otomatis..."
               : hasUnsavedChanges
-                ? "Perubahan belum disimpan"
-                : "Draft tersimpan"}
+                ? saveFailure === "conflict"
+                  ? "Versi lain sudah tersimpan"
+                  : saveFailure
+                    ? "Penyimpanan otomatis belum berhasil"
+                    : saveIssue
+                      ? "Lengkapi pengaturan sebelum perubahan dapat disimpan"
+                      : "Perubahan akan tersimpan otomatis"
+                : "Perubahan tersimpan otomatis"}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            <span className="font-semibold">
+              {hasUnpublishedChanges ? "Belum diterbitkan" : "Sudah terbit"}
+            </span>{" "}
+            {hasUnpublishedChanges
+              ? "Perubahan tersimpan belum tampil di halaman publik."
+              : publishedAt
+                ? `Sama dengan halaman publik sejak ${new Intl.DateTimeFormat(
+                    "id-ID",
+                    {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    },
+                  ).format(new Date(publishedAt))}.`
+                : "Sama dengan halaman publik."}
           </p>
           <p
             role="status"
@@ -469,25 +671,29 @@ export function BranchPageBuilder({
           >
             Semua data halaman
           </button>
+          {saveFailure && (
+            <button
+              type="button"
+              onClick={retrySave}
+              className="min-h-11 rounded-full border border-border px-4 text-sm font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              {saveFailure === "conflict" ? "Muat versi terbaru" : "Coba lagi"}
+            </button>
+          )}
           <button
             type="button"
-            disabled={pending || Boolean(saveIssue)}
-            onClick={() => save(false)}
-            aria-busy={pendingKind === "draft" || undefined}
-            className="min-h-11 rounded-full border border-border px-4 text-sm font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
-          >
-            {pendingKind === "draft" ? "Menyimpan draft..." : "Simpan draft"}
-          </button>
-          <button
-            type="button"
-            disabled={pending || Boolean(publishIssue)}
-            onClick={() => save(true)}
+            disabled={
+              pending || Boolean(publishIssue) || !hasUnpublishedChanges
+            }
+            onClick={publish}
             aria-busy={pendingKind === "publish" || undefined}
             className="min-h-11 rounded-full bg-primary px-4 text-sm font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
           >
             {pendingKind === "publish"
               ? "Menerbitkan..."
-              : "Terbitkan perubahan"}
+              : hasUnpublishedChanges
+                ? "Terbitkan perubahan"
+                : "Sudah diterbitkan"}
           </button>
         </div>
       </header>
@@ -523,7 +729,7 @@ export function BranchPageBuilder({
               onClick={() =>
                 add({
                   type: "image",
-                  url: "https://",
+                  url: "",
                   alt: "",
                   width: "full",
                   isVisible: true,
@@ -547,7 +753,7 @@ export function BranchPageBuilder({
               onClick={() =>
                 add({
                   type: "embed",
-                  url: "https://www.youtube-nocookie.com/embed/",
+                  url: "",
                   width: "full",
                   isVisible: true,
                 })
@@ -570,6 +776,10 @@ export function BranchPageBuilder({
                   submitLabel: "Simpan data",
                   privacyNotice:
                     "Data Anda disimpan oleh KGJ untuk menindaklanjuti konsultasi.",
+                  thankYouTitle: "Terima kasih",
+                  thankYouMessage:
+                    "Data Anda sudah kami terima. Lanjutkan ke WhatsApp untuk menghubungi cabang.",
+                  continueLabel: "Lanjut ke WhatsApp",
                   assignmentId: catalog.products.find(
                     (product) => product.assignment,
                   )!.assignment!.id,
@@ -599,11 +809,11 @@ export function BranchPageBuilder({
                 key={section.sectionKey}
                 label={
                   section.sectionKey === "products"
-                    ? "Judul Tombol WhatsApp"
+                    ? "Judul daftar WhatsApp"
                     : section.sectionKey === "secondary_links"
-                      ? "Judul Tautan tambahan"
+                      ? "Judul daftar tautan"
                       : section.sectionKey === "social_links"
-                        ? "Judul Media sosial"
+                        ? "Judul daftar media sosial"
                         : section.label
                 }
                 onClick={() =>
@@ -619,47 +829,11 @@ export function BranchPageBuilder({
                 }
               />
             ))}
-            {catalog.products.flatMap((product) =>
-              product.assignment
-                ? [
-                    <BuilderButton
-                      key={product.id}
-                      label={`CTA ${product.name}`}
-                      onClick={() =>
-                        add({
-                          type: "product_cta",
-                          assignmentId: product.assignment!.id,
-                          width: "full",
-                          isVisible: true,
-                        })
-                      }
-                    />,
-                  ]
-                : [],
-            )}
-            {catalog.links.map((link) => (
-              <BuilderButton
-                key={link.id}
-                label={link.label}
-                onClick={() =>
-                  add({
-                    type: "link",
-                    linkId: link.id,
-                    width: "full",
-                    isVisible: true,
-                  })
-                }
-              />
-            ))}
           </div>
-
-          <button
-            type="button"
-            onClick={openSourceData}
-            className="mt-7 w-full border-t border-border pt-5 text-left text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            Semua data halaman
-          </button>
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">
+            Kelola CTA dan tautan, lalu tambahkan item individual melalui Semua
+            data halaman.
+          </p>
         </aside>
 
         <div className="min-h-[38rem] bg-[var(--kgj-accent-soft)]/35 p-5 sm:p-7">
@@ -676,6 +850,10 @@ export function BranchPageBuilder({
             {blocks.map((block, index) => (
               <li
                 key={block.id}
+                ref={(element) => {
+                  if (element) canvasBlockRefs.current.set(block.id, element);
+                  else canvasBlockRefs.current.delete(block.id);
+                }}
                 data-builder-index={index}
                 draggable
                 onDragStart={(event) => {
@@ -755,6 +933,16 @@ export function BranchPageBuilder({
                     />
                     {block.isVisible ? "Tampil" : "Disembunyikan"} ·{" "}
                     {block.width === "full" ? "Lebar penuh" : "Setengah lebar"}
+                    {blockConfigurationIssue(block) && (
+                      <span className="font-semibold text-destructive">
+                        {blockConfigurationIssue(block)}
+                      </span>
+                    )}
+                    {sourceReferenceIssue(block, catalog) && (
+                      <span className="font-semibold text-destructive">
+                        {sourceReferenceIssue(block, catalog)}
+                      </span>
+                    )}
                   </span>
                 </button>
                 <button
@@ -789,8 +977,8 @@ export function BranchPageBuilder({
           </ol>
           {blocks.length === 0 && (
             <p className="mt-8 rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm leading-6 text-muted-foreground">
-              Tambahkan blok bebas atau blok yang memakai data cabang dari panel
-              kiri.
+              Tambahkan blok bebas atau section data dari panel kiri. CTA dan
+              tautan individual ditambahkan dari Semua data halaman.
             </p>
           )}
           {removedBlock && (
@@ -882,7 +1070,8 @@ export function BranchPageBuilder({
                     onBlur={endHistoryGroup}
                   />
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Masukkan URL gambar HTTPS sebelum menyimpan draft.
+                    Belum dikonfigurasi. Masukkan URL gambar HTTPS sebelum
+                    menerbitkan halaman.
                   </p>
                 </>
               )}
@@ -895,8 +1084,8 @@ export function BranchPageBuilder({
                     onBlur={endHistoryGroup}
                   />
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Gunakan URL YouTube berformat /embed/ID-VIDEO sebelum
-                    menyimpan draft.
+                    Belum dikonfigurasi. Gunakan URL YouTube berformat
+                    /embed/ID-VIDEO sebelum menerbitkan halaman.
                   </p>
                 </>
               )}
@@ -929,6 +1118,14 @@ export function BranchPageBuilder({
                 selectedDataContext.actions.length > 0 && (
                   <div className="border-t border-border pt-5">
                     <p className="font-semibold">Data untuk blok ini</p>
+                    {sourceReferenceIssue(selected, catalog) && (
+                      <p
+                        role="alert"
+                        className="mt-2 text-sm leading-6 text-destructive"
+                      >
+                        {sourceReferenceIssue(selected, catalog)}
+                      </p>
+                    )}
                     <div className="mt-3 grid gap-2">
                       {selectedDataContext.actions.map((action) => (
                         <button
@@ -968,6 +1165,8 @@ export function BranchPageBuilder({
           tools={dataTools}
           onShowAll={() => setActiveDataSelection(null)}
           onSelect={setActiveDataSelection}
+          onAddToCanvas={addPageDataBlock}
+          isOnCanvas={isPageDataBlockOnCanvas}
           onClose={closeSourceData}
         />
       )}
@@ -986,6 +1185,8 @@ function SourceDataDrawer({
   tools,
   onShowAll,
   onSelect,
+  onAddToCanvas,
+  isOnCanvas,
   onClose,
 }: {
   summary: Catalog["sourceSummary"];
@@ -993,6 +1194,8 @@ function SourceDataDrawer({
   tools: Record<PageDataToolKey, ReactNode>;
   onShowAll: () => void;
   onSelect: (selection: PageDataSelection) => void;
+  onAddToCanvas: (block: PageDataCanvasBlock) => void;
+  isOnCanvas: (block: PageDataCanvasBlock) => boolean;
   onClose: () => void;
 }) {
   const activeTool = activeSelection?.tool ?? null;
@@ -1063,7 +1266,12 @@ function SourceDataDrawer({
   }
 
   return createPortal(
-    <PageDataManagerProvider selection={activeSelection} onSelect={onSelect}>
+    <PageDataManagerProvider
+      selection={activeSelection}
+      onSelect={onSelect}
+      onAddToCanvas={onAddToCanvas}
+      isOnCanvas={isOnCanvas}
+    >
       <div ref={portalRef} className="kgj-admin fixed inset-0 z-50">
         <div
           aria-hidden="true"
@@ -1125,7 +1333,7 @@ function SourceDataDrawer({
               <>
                 <p className="rounded-xl bg-secondary px-4 py-3 text-sm leading-6 text-muted-foreground">
                   Perubahan data di sini disimpan langsung. Posisi dan blok
-                  halaman tetap perlu disimpan sebagai draft lalu diterbitkan.
+                  halaman tersimpan otomatis; terbitkan perubahan saat siap.
                 </p>
                 {pageDataToolSummaryIds[activeTool] && (
                   <p className="text-sm leading-6 text-muted-foreground">
@@ -1186,6 +1394,26 @@ const formFieldTypes = [
   ["checkbox", "Persetujuan / centang"],
 ] as const;
 
+function fieldOptionIssue(field: PageBuilderFormField) {
+  if (field.type !== "select" && field.type !== "radio") return null;
+  if (field.options.length < 2) return "Tambahkan minimal dua pilihan.";
+  if (field.options.some((option) => !option.trim()))
+    return "Setiap pilihan harus diisi.";
+  const options = field.options.map((option) =>
+    option.trim().toLocaleLowerCase("id-ID"),
+  );
+  return new Set(options).size !== options.length
+    ? "Pilihan tidak boleh sama."
+    : null;
+}
+
+function nextOptionLabel(options: string[]) {
+  const used = new Set(options.map((option) => option.trim()));
+  let number = 1;
+  while (used.has(`Pilihan ${number}`)) number += 1;
+  return `Pilihan ${number}`;
+}
+
 function generatedFieldName(label: string, existingNames: string[]) {
   const base =
     label
@@ -1219,25 +1447,83 @@ function FormEditor({
   onManageCta: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   const ctaProducts = products.filter((product) => product.assignment);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
+    form.fields[0]?.id ?? null,
+  );
+  const [dragOverFieldIndex, setDragOverFieldIndex] = useState<number | null>(
+    null,
+  );
+  const [dragOverOptionIndex, setDragOverOptionIndex] = useState<number | null>(
+    null,
+  );
+  const [touchDragFieldId, setTouchDragFieldId] = useState<string | null>(null);
+  const touchDragFieldIdRef = useRef<string | null>(null);
   const hasSelectedCta = ctaProducts.some(
     (product) => product.assignment?.id === form.assignmentId,
   );
   const selectedCta = ctaProducts.find(
     (product) => product.assignment?.id === form.assignmentId,
   );
+  const activeField =
+    form.fields.find((field) => field.id === selectedFieldId) ?? form.fields[0];
+  const updateFields = (
+    transform: (fields: PageBuilderFormField[]) => PageBuilderFormField[],
+    historyGroup?: string,
+  ) => onChange({ fields: transform(form.fields) }, historyGroup);
   const updateField = (
-    index: number,
+    id: string,
     patch: Partial<(typeof form.fields)[number]>,
     historyGroup?: string,
   ) =>
-    onChange(
-      {
-        fields: form.fields.map((field, fieldIndex) =>
-          fieldIndex === index ? { ...field, ...patch } : field,
+    updateFields(
+      (fields) =>
+        fields.map((field) =>
+          field.id === id ? { ...field, ...patch } : field,
         ),
-      },
       historyGroup,
     );
+
+  function moveField(from: number, to: number) {
+    if (from === to) return;
+    updateFields((fields) => moveItem(fields, from, to));
+  }
+
+  function endTouchFieldDrag() {
+    touchDragFieldIdRef.current = null;
+    setTouchDragFieldId(null);
+    setDragOverFieldIndex(null);
+  }
+
+  function addField(
+    label: string,
+    type: PageBuilderFormField["type"],
+    required: boolean,
+  ) {
+    const field: PageBuilderFormField = {
+      id: crypto.randomUUID(),
+      name: generatedFieldName(
+        label,
+        form.fields.map((item) => item.name),
+      ),
+      label,
+      type,
+      placeholder: "",
+      help: "",
+      required,
+      options:
+        type === "select" || type === "radio" ? ["Pilihan 1", "Pilihan 2"] : [],
+    };
+    updateFields((fields) => [...fields, field]);
+    setSelectedFieldId(field.id);
+  }
+
+  if (!activeField) return null;
+  const activeFieldIndex = form.fields.findIndex(
+    (field) => field.id === activeField.id,
+  );
+  const usesOptions =
+    activeField.type === "select" || activeField.type === "radio";
+  const optionError = fieldOptionIssue(activeField);
   return (
     <div className="space-y-4">
       <Editor
@@ -1270,6 +1556,44 @@ function FormEditor({
         }
         onBlur={onEditEnd}
       />
+      <details className="border-t border-border pt-4">
+        <summary className="cursor-pointer text-sm font-semibold">
+          Pesan setelah form dikirim
+        </summary>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          Ditampilkan saat data berhasil tersimpan, sebelum pengunjung memilih
+          untuk membuka WhatsApp.
+        </p>
+        <div className="mt-3 space-y-3">
+          <Editor
+            label="Judul terima kasih"
+            value={form.thankYouTitle ?? "Terima kasih"}
+            onChange={(thankYouTitle) =>
+              onChange({ thankYouTitle }, "form-thank-you-title")
+            }
+            onBlur={onEditEnd}
+          />
+          <Editor
+            label="Pesan terima kasih"
+            value={
+              form.thankYouMessage ??
+              "Data Anda sudah kami terima. Lanjutkan ke WhatsApp untuk menghubungi cabang."
+            }
+            onChange={(thankYouMessage) =>
+              onChange({ thankYouMessage }, "form-thank-you-message")
+            }
+            onBlur={onEditEnd}
+          />
+          <Editor
+            label="Label tombol lanjut"
+            value={form.continueLabel ?? "Lanjut ke WhatsApp"}
+            onChange={(continueLabel) =>
+              onChange({ continueLabel }, "form-continue-label")
+            }
+            onBlur={onEditEnd}
+          />
+        </div>
+      </details>
       {ctaProducts.length ? (
         <div>
           <label className="block">
@@ -1317,132 +1641,360 @@ function FormEditor({
         </div>
       )}
       <div className="space-y-3 border-t border-border pt-4">
-        <p className="font-semibold">Field form</p>
-        {form.fields.map((field, index) => (
-          <div key={field.id} className="rounded-lg border border-border p-3">
-            <label className="block font-semibold">
-              Pertanyaan
-              <input
-                value={field.label}
-                onChange={(event) =>
-                  updateField(
-                    index,
-                    { label: event.target.value },
-                    `form-field-${field.id}-label`,
-                  )
+        <fieldset>
+          <legend className="font-semibold">Pertanyaan form</legend>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Seret untuk mengurutkan. Pilih pertanyaan untuk mengubah isinya.
+          </p>
+          <ol
+            className="mt-3 space-y-2"
+            onDragOver={(event) => event.preventDefault()}
+          >
+            {form.fields.map((field, index) => (
+              <li
+                key={field.id}
+                data-form-field-index={index}
+                draggable
+                onDragStart={(event) =>
+                  event.dataTransfer.setData("text/plain", String(index))
                 }
-                onBlur={onEditEnd}
-                className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3 font-normal"
-              />
-            </label>
-            <label className="mt-3 block">
-              Jenis jawaban
-              <select
-                value={field.type}
-                onChange={(event) =>
-                  updateField(index, {
-                    type: event.target.value as typeof field.type,
-                    options:
-                      event.target.value === "select" ||
-                      event.target.value === "radio"
-                        ? field.options.length >= 2
-                          ? field.options
-                          : ["Pilihan 1", "Pilihan 2"]
-                        : [],
-                  })
-                }
-                className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                onDragEnd={() => setDragOverFieldIndex(null)}
+                onDragEnter={() => setDragOverFieldIndex(index)}
+                onDrop={(event) => {
+                  const from = Number(event.dataTransfer.getData("text/plain"));
+                  if (Number.isInteger(from)) moveField(from, index);
+                  setDragOverFieldIndex(null);
+                }}
+                className={`flex min-h-12 items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${
+                  activeField.id === field.id
+                    ? "border-[var(--kgj-accent)] bg-secondary"
+                    : "border-border bg-background"
+                } ${
+                  dragOverFieldIndex === index
+                    ? "border-dashed border-[var(--kgj-accent)]"
+                    : ""
+                }`}
               >
-                {formFieldTypes.map(([type, label]) => (
-                  <option key={type} value={type}>
-                    {label}
-                  </option>
+                <span
+                  aria-hidden="true"
+                  data-form-field-drag-handle
+                  data-dragging={touchDragFieldId === field.id || undefined}
+                  className="touch-none cursor-grab text-[var(--kgj-accent)]"
+                  onPointerDown={(event) => {
+                    if (event.pointerType === "mouse") return;
+                    event.currentTarget.setPointerCapture?.(event.pointerId);
+                    touchDragFieldIdRef.current = field.id;
+                    setTouchDragFieldId(field.id);
+                  }}
+                  onPointerMove={(event) => {
+                    const draggedId = touchDragFieldIdRef.current;
+                    if (!draggedId) return;
+                    const target = document
+                      .elementFromPoint(event.clientX, event.clientY)
+                      ?.closest<HTMLElement>("[data-form-field-index]");
+                    const targetIndex = Number(target?.dataset.formFieldIndex);
+                    const from = form.fields.findIndex(
+                      (item) => item.id === draggedId,
+                    );
+                    if (from >= 0 && Number.isInteger(targetIndex))
+                      moveField(from, targetIndex);
+                  }}
+                  onPointerUp={endTouchFieldDrag}
+                  onPointerCancel={endTouchFieldDrag}
+                  onLostPointerCapture={endTouchFieldDrag}
+                >
+                  <DragHandleIcon />
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFieldId(field.id)}
+                  className="min-w-0 flex-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  <span className="block truncate font-semibold">
+                    {field.label}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {formFieldTypes.find(([type]) => type === field.type)?.[1]}
+                    {field.required ? " · Wajib" : " · Opsional"}
+                    {(field.type === "select" || field.type === "radio") &&
+                      ` · ${field.options.length} pilihan`}
+                    {fieldOptionIssue(field) && (
+                      <span className="ml-1 font-semibold text-destructive">
+                        · Perlu diperbaiki
+                      </span>
+                    )}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={index === 0}
+                  onClick={() => moveField(index, index - 1)}
+                  className="min-h-10 px-1 text-xs font-bold disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2"
+                  aria-label={`Naikkan ${field.label}`}
+                >
+                  Naik
+                </button>
+                <button
+                  type="button"
+                  disabled={index === form.fields.length - 1}
+                  onClick={() => moveField(index, index + 1)}
+                  className="min-h-10 px-1 text-xs font-bold disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2"
+                  aria-label={`Turunkan ${field.label}`}
+                >
+                  Turun
+                </button>
+              </li>
+            ))}
+          </ol>
+        </fieldset>
+        <fieldset className="rounded-xl border border-border p-4">
+          <legend className="px-1 font-semibold">Atur pertanyaan</legend>
+          <label className="block font-semibold">
+            Pertanyaan
+            <input
+              value={activeField.label}
+              onChange={(event) =>
+                updateField(
+                  activeField.id,
+                  { label: event.target.value },
+                  `form-field-${activeField.id}-label`,
+                )
+              }
+              onBlur={onEditEnd}
+              className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3 font-normal"
+            />
+          </label>
+          <label className="mt-3 block">
+            Jenis jawaban
+            <select
+              value={activeField.type}
+              onChange={(event) => {
+                const type = event.target.value as PageBuilderFormField["type"];
+                updateField(activeField.id, {
+                  type,
+                  options:
+                    (type === "select" || type === "radio") &&
+                    activeField.options.length < 2
+                      ? ["Pilihan 1", "Pilihan 2"]
+                      : activeField.options,
+                });
+              }}
+              className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+            >
+              {formFieldTypes.map(([type, label]) => (
+                <option key={type} value={type}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {usesOptions && (
+            <fieldset className="mt-4 border-t border-border pt-4">
+              <legend className="font-semibold">Pilihan jawaban</legend>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Tambahkan 2–20 pilihan berbeda. Seret atau gunakan Naik/Turun
+                untuk mengurutkan.
+              </p>
+              <ol
+                className="mt-3 space-y-2"
+                onDragOver={(event) => event.preventDefault()}
+              >
+                {activeField.options.map((option, index) => (
+                  <li
+                    key={`${activeField.id}-${index}`}
+                    draggable
+                    onDragStart={(event) =>
+                      event.dataTransfer.setData("text/plain", String(index))
+                    }
+                    onDragEnd={() => setDragOverOptionIndex(null)}
+                    onDragEnter={() => setDragOverOptionIndex(index)}
+                    onDrop={(event) => {
+                      const from = Number(
+                        event.dataTransfer.getData("text/plain"),
+                      );
+                      if (Number.isInteger(from) && from !== index) {
+                        updateField(activeField.id, {
+                          options: moveItem(activeField.options, from, index),
+                        });
+                      }
+                      setDragOverOptionIndex(null);
+                    }}
+                    className={`flex items-center gap-2 rounded-lg border p-2 ${
+                      dragOverOptionIndex === index
+                        ? "border-dashed border-[var(--kgj-accent)]"
+                        : "border-border"
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="cursor-grab text-[var(--kgj-accent)]"
+                    >
+                      <DragHandleIcon />
+                    </span>
+                    <input
+                      aria-label={`Pilihan ${index + 1}`}
+                      value={option}
+                      onChange={(event) =>
+                        updateField(
+                          activeField.id,
+                          {
+                            options: activeField.options.map(
+                              (item, itemIndex) =>
+                                itemIndex === index ? event.target.value : item,
+                            ),
+                          },
+                          `form-field-${activeField.id}-options`,
+                        )
+                      }
+                      onBlur={onEditEnd}
+                      className="min-h-10 min-w-0 flex-1 rounded-lg border border-border bg-background px-3"
+                    />
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() =>
+                        updateField(activeField.id, {
+                          options: moveItem(
+                            activeField.options,
+                            index,
+                            index - 1,
+                          ),
+                        })
+                      }
+                      className="min-h-10 px-1 text-xs font-bold disabled:opacity-40"
+                      aria-label={`Naikkan pilihan ${index + 1}`}
+                    >
+                      Naik
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === activeField.options.length - 1}
+                      onClick={() =>
+                        updateField(activeField.id, {
+                          options: moveItem(
+                            activeField.options,
+                            index,
+                            index + 1,
+                          ),
+                        })
+                      }
+                      className="min-h-10 px-1 text-xs font-bold disabled:opacity-40"
+                      aria-label={`Turunkan pilihan ${index + 1}`}
+                    >
+                      Turun
+                    </button>
+                    <button
+                      type="button"
+                      disabled={activeField.options.length <= 2}
+                      onClick={() =>
+                        updateField(activeField.id, {
+                          options: activeField.options.filter(
+                            (_, optionIndex) => optionIndex !== index,
+                          ),
+                        })
+                      }
+                      className="min-h-10 px-1 text-xs font-bold text-destructive disabled:opacity-40"
+                      aria-label={`Hapus pilihan ${index + 1}`}
+                    >
+                      Hapus
+                    </button>
+                  </li>
                 ))}
-              </select>
-            </label>
-            {(field.type === "select" || field.type === "radio") && (
-              <Editor
-                label="Pilihan (satu per baris)"
-                value={field.options.join("\n")}
-                onChange={(value) =>
-                  updateField(
-                    index,
-                    {
-                      options: value
-                        .split("\n")
-                        .map((item) => item.trim())
-                        .filter(Boolean),
-                    },
-                    `form-field-${field.id}-options`,
-                  )
-                }
-                onBlur={onEditEnd}
-              />
-            )}
-            <label className="mt-3 flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={field.required}
-                onChange={(event) =>
-                  updateField(index, { required: event.target.checked })
-                }
-              />{" "}
-              Wajib diisi
-            </label>
-            <details className="mt-3 border-t border-border pt-3">
-              <summary className="cursor-pointer text-sm font-semibold">
-                Pengaturan tambahan
-              </summary>
-              <div className="mt-3 space-y-3">
-                <label className="block">
-                  Contoh jawaban (opsional)
-                  <input
-                    value={field.placeholder}
-                    onChange={(event) =>
-                      updateField(
-                        index,
-                        { placeholder: event.target.value },
-                        `form-field-${field.id}-placeholder`,
-                      )
-                    }
-                    onBlur={onEditEnd}
-                    className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
-                  />
-                </label>
-                <label className="block">
-                  Teks bantuan (opsional)
-                  <input
-                    value={field.help}
-                    onChange={(event) =>
-                      updateField(
-                        index,
-                        { help: event.target.value },
-                        `form-field-${field.id}-help`,
-                      )
-                    }
-                    onBlur={onEditEnd}
-                    className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
-                  />
-                </label>
-              </div>
-            </details>
-            {form.fields.length > 1 && (
+              </ol>
               <button
                 type="button"
+                disabled={activeField.options.length >= 20}
                 onClick={() =>
-                  onChange({
-                    fields: form.fields.filter(
-                      (_, fieldIndex) => fieldIndex !== index,
-                    ),
+                  updateField(activeField.id, {
+                    options: [
+                      ...activeField.options,
+                      nextOptionLabel(activeField.options),
+                    ],
                   })
                 }
-                className="mt-3 text-sm font-semibold underline"
+                className="mt-3 min-h-10 rounded-lg border border-border px-3 text-sm font-semibold hover:bg-secondary disabled:opacity-40"
               >
-                Hapus field
+                Tambah pilihan
               </button>
-            )}
-          </div>
-        ))}
+              {optionError && (
+                <p
+                  role="alert"
+                  className="mt-2 text-xs leading-5 text-destructive"
+                >
+                  {optionError}
+                </p>
+              )}
+            </fieldset>
+          )}
+          <label className="mt-3 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={activeField.required}
+              onChange={(event) =>
+                updateField(activeField.id, { required: event.target.checked })
+              }
+            />{" "}
+            Wajib diisi
+          </label>
+          <details className="mt-3 border-t border-border pt-3">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Pengaturan tambahan
+            </summary>
+            <div className="mt-3 space-y-3">
+              <label className="block">
+                Contoh jawaban (opsional)
+                <input
+                  value={activeField.placeholder}
+                  onChange={(event) =>
+                    updateField(
+                      activeField.id,
+                      { placeholder: event.target.value },
+                      `form-field-${activeField.id}-placeholder`,
+                    )
+                  }
+                  onBlur={onEditEnd}
+                  className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                />
+              </label>
+              <label className="block">
+                Teks bantuan (opsional)
+                <input
+                  value={activeField.help}
+                  onChange={(event) =>
+                    updateField(
+                      activeField.id,
+                      { help: event.target.value },
+                      `form-field-${activeField.id}-help`,
+                    )
+                  }
+                  onBlur={onEditEnd}
+                  className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                />
+              </label>
+              <p className="text-xs leading-5 text-muted-foreground">
+                ID respons dibuat otomatis dan tidak berubah agar respons serta
+                ekspor lama tetap terbaca.
+              </p>
+            </div>
+          </details>
+          {form.fields.length > 1 && (
+            <button
+              type="button"
+              onClick={() => {
+                updateFields((fields) =>
+                  fields.filter((field) => field.id !== activeField.id),
+                );
+                setSelectedFieldId(
+                  form.fields[activeFieldIndex === 0 ? 1 : activeFieldIndex - 1]
+                    ?.id ?? null,
+                );
+              }}
+              className="mt-3 text-sm font-semibold text-destructive underline"
+            >
+              Hapus pertanyaan
+            </button>
+          )}
+        </fieldset>
         <div className="flex flex-wrap gap-2">
           {[
             ["Nama lengkap", "text", true],
@@ -1456,25 +2008,11 @@ function FormEditor({
               type="button"
               disabled={form.fields.length >= 20}
               onClick={() =>
-                onChange({
-                  fields: [
-                    ...form.fields,
-                    {
-                      id: crypto.randomUUID(),
-                      name: generatedFieldName(
-                        label as string,
-                        form.fields.map((item) => item.name),
-                      ),
-                      label: label as string,
-                      type: type as (typeof form.fields)[number]["type"],
-                      placeholder: "",
-                      help: "",
-                      required: required as boolean,
-                      options:
-                        type === "select" ? ["Pilihan 1", "Pilihan 2"] : [],
-                    },
-                  ],
-                })
+                addField(
+                  label as string,
+                  type as PageBuilderFormField["type"],
+                  required as boolean,
+                )
               }
               className="min-h-11 rounded-lg border border-border px-3 text-sm font-semibold hover:bg-secondary disabled:opacity-40"
             >
@@ -1485,6 +2023,21 @@ function FormEditor({
       </div>
     </div>
   );
+}
+
+function moveItem<T>(items: T[], from: number, to: number) {
+  if (
+    from === to ||
+    from < 0 ||
+    to < 0 ||
+    from >= items.length ||
+    to >= items.length
+  )
+    return items;
+  const next = [...items];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
 }
 
 function SpacerEditor({
@@ -1571,6 +2124,19 @@ function BuilderButton({
   );
 }
 
+function DragHandleIcon() {
+  return (
+    <svg viewBox="0 0 12 20" className="size-4 shrink-0" fill="currentColor">
+      <circle cx="3" cy="3" r="1.25" />
+      <circle cx="9" cy="3" r="1.25" />
+      <circle cx="3" cy="10" r="1.25" />
+      <circle cx="9" cy="10" r="1.25" />
+      <circle cx="3" cy="17" r="1.25" />
+      <circle cx="9" cy="17" r="1.25" />
+    </svg>
+  );
+}
+
 function Editor({
   label,
   value,
@@ -1604,33 +2170,35 @@ function unavailableReferenceIssue(
   catalog: Catalog,
 ) {
   for (const block of blocks) {
-    if (
-      (block.type === "product_cta" || block.type === "form") &&
-      !catalog.products.some(
-        (product) => product.assignment?.id === block.assignmentId,
-      )
-    ) {
-      const target =
-        block.type === "form"
-          ? `CTA WhatsApp untuk form ${block.title}`
-          : "CTA WhatsApp untuk blok ini";
-      return `${target} sudah tidak aktif. Atur data terkait terlebih dahulu.`;
-    }
-    if (
-      block.type === "link" &&
-      !catalog.links.some((link) => link.id === block.linkId)
-    ) {
-      return "Tautan untuk blok ini sudah tidak aktif. Atur data terkait terlebih dahulu.";
-    }
-    if (
-      block.type === "section" &&
-      !catalog.sections.some(
-        (section) => section.sectionKey === block.sectionKey,
-      )
-    ) {
-      return "Section untuk blok ini sudah tidak aktif. Atur data terkait terlebih dahulu.";
-    }
+    const issue = sourceReferenceIssue(block, catalog);
+    if (issue) return issue;
   }
+  return null;
+}
+
+function sourceReferenceIssue(block: PageBuilderBlock, catalog: Catalog) {
+  if (
+    (block.type === "product_cta" || block.type === "form") &&
+    !catalog.products.some(
+      (product) => product.assignment?.id === block.assignmentId,
+    )
+  ) {
+    const target =
+      block.type === "form"
+        ? `CTA WhatsApp untuk form ${block.title}`
+        : "CTA WhatsApp";
+    return `${target} tidak aktif. Atur data terkait.`;
+  }
+  if (
+    block.type === "link" &&
+    !catalog.links.some((link) => link.id === block.linkId)
+  )
+    return "Tautan tidak aktif. Atur data terkait.";
+  if (
+    block.type === "section" &&
+    !catalog.sections.some((section) => section.sectionKey === block.sectionKey)
+  )
+    return "Section tidak aktif. Atur data terkait.";
   return null;
 }
 
@@ -1707,4 +2275,10 @@ function label(block: PageBuilderBlock, catalog: Catalog) {
   return (
     catalog.links.find((item) => item.id === block.linkId)?.label ?? "Tautan"
   );
+}
+
+function blockConfigurationIssue(block: PageBuilderBlock) {
+  if (block.type === "image" && !block.url) return "Gambar belum diisi";
+  if (block.type === "embed" && !block.url) return "Video belum diisi";
+  return null;
 }

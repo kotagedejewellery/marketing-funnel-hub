@@ -4,7 +4,11 @@ import { useActionState, useEffect, useRef, useState } from "react";
 
 import { FormFeedback } from "@/components/admin/admin-toast";
 import { FormDialog } from "@/components/admin/form-dialog";
-import { usePageDataManager } from "@/components/admin/page-data-manager-context";
+import {
+  useAddPageDataToCanvas,
+  useIsPageDataOnCanvas,
+  usePageDataManager,
+} from "@/components/admin/page-data-manager-context";
 import { ProductForm } from "@/components/admin/product-form";
 import {
   addExistingProductToBranch,
@@ -51,6 +55,8 @@ export function BranchProductManager({
   canManageMeta?: boolean;
 }) {
   const selection = usePageDataManager();
+  const addToCanvas = useAddPageDataToCanvas();
+  const isOnCanvas = useIsPageDataOnCanvas();
   const [moveState, moveAction, moving] = useActionState(moveBranchProduct, {
     message: "",
     errors: {},
@@ -84,7 +90,8 @@ export function BranchProductManager({
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
             Atur pilihan produk yang membuka WhatsApp cabang ini. Gambar tetap
             dikelola terpisah melalui Galeri Produk.
-            {hasCustomLayout && " Posisi tombol diatur dari Susunan halaman."}
+            {hasCustomLayout &&
+              " Tambahkan tombol yang ingin ditampilkan dari daftar ini."}
           </p>
         </div>
         <FormDialog
@@ -105,6 +112,15 @@ export function BranchProductManager({
         <ul className="mt-6 divide-y divide-border border-y border-border">
           {visible.map((product, index) => {
             const isFocused = product.assignment?.id === selectedAssignmentId;
+            const canvasBlock = product.assignment
+              ? {
+                  type: "product_cta" as const,
+                  assignmentId: product.assignment.id,
+                }
+              : null;
+            const alreadyOnCanvas = canvasBlock
+              ? isOnCanvas?.(canvasBlock)
+              : false;
             return (
               <li
                 key={product.id}
@@ -167,6 +183,20 @@ export function BranchProductManager({
                         canManageMeta={canManageMeta}
                       />
                     </FormDialog>
+                    {hasCustomLayout &&
+                      product.isActive &&
+                      canvasBlock &&
+                      addToCanvas && (
+                        <button
+                          type="button"
+                          onClick={() => addToCanvas(canvasBlock)}
+                          className="min-h-11 rounded-full border border-border bg-card px-3 text-sm font-bold hover:border-[var(--kgj-accent)] hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
+                        >
+                          {alreadyOnCanvas
+                            ? "Lihat di kanvas"
+                            : "Tambahkan ke kanvas"}
+                        </button>
+                      )}
                   </div>
                 </div>
               </li>

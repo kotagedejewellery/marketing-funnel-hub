@@ -25,6 +25,16 @@ const fields: PageBuilderFormField[] = [
     required: false,
     options: ["Classic", "Custom"],
   },
+  {
+    id: "b6a8d891-8c7b-4555-a9a1-f72c2a88491b",
+    name: "tanggal_kunjungan",
+    label: "Tanggal kunjungan",
+    type: "date",
+    placeholder: "",
+    help: "",
+    required: false,
+    options: [],
+  },
 ];
 
 describe("form submission validation", () => {
@@ -33,16 +43,46 @@ describe("form submission validation", () => {
       validatedFormValues(fields, {
         email: "  hello@kgj.test ",
         model: "Classic",
+        tanggal_kunjungan: "",
       }),
-    ).toEqual({ email: "hello@kgj.test", model: "Classic" });
+    ).toEqual({
+      email: "hello@kgj.test",
+      model: "Classic",
+      tanggal_kunjungan: "",
+    });
   });
 
   it("rejects unknown fields and invalid choices", () => {
     expect(
-      validatedFormValues(fields, { email: "hello@kgj.test", extra: "x" }),
+      validatedFormValues(fields, {
+        email: "hello@kgj.test",
+        tanggal_kunjungan: "",
+        extra: "x",
+      }),
     ).toBeNull();
     expect(
-      validatedFormValues(fields, { email: "hello@kgj.test", model: "Other" }),
+      validatedFormValues(fields, {
+        email: "hello@kgj.test",
+        model: "Other",
+        tanggal_kunjungan: "",
+      }),
     ).toBeNull();
+  });
+
+  it("rejects date values that are not real ISO calendar dates", () => {
+    expect(
+      validatedFormValues(fields, {
+        email: "hello@kgj.test",
+        model: "Classic",
+        tanggal_kunjungan: "2026-02-30",
+      }),
+    ).toBeNull();
+    expect(
+      validatedFormValues(fields, {
+        email: "hello@kgj.test",
+        model: "Classic",
+        tanggal_kunjungan: "2026-02-28",
+      }),
+    ).toMatchObject({ tanggal_kunjungan: "2026-02-28" });
   });
 });

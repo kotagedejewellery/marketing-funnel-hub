@@ -21,6 +21,7 @@ describe("form response filters", () => {
       productBranchId: null,
       start: "2026-11-01",
       end: "2026-11-17",
+      whatsappStatus: null,
       page: 1,
     });
   });
@@ -34,6 +35,7 @@ describe("form response filters", () => {
       productBranchId: null,
       start: null,
       end: null,
+      whatsappStatus: null,
       page: 1,
     });
   });
@@ -45,5 +47,18 @@ describe("form response filters", () => {
     expect(
       parseFormResponseFilters({ start: "2026-11-18", end: "2026-11-17" }),
     ).toMatchObject({ start: null, end: null });
+  });
+
+  it("accepts the WhatsApp continuation status filter", () => {
+    expect(
+      parseFormResponseFilters({ whatsappStatus: "continued" }),
+    ).toMatchObject({
+      whatsappStatus: "continued",
+    });
+    expect(parseFormResponseFilters({ whatsappStatus: "other" })).toMatchObject(
+      {
+        whatsappStatus: null,
+      },
+    );
   });
 });

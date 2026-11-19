@@ -28,14 +28,17 @@ describe("FormResponseTable", () => {
           productBranchId: null,
           start: null,
           end: null,
+          whatsappStatus: null,
           page: 1,
         }}
         total={1}
+        summary={{ submitted: 1, continued: 0 }}
         pageCount={1}
         rows={[
           {
             id: "0c6b5a8d-c36b-43d6-a183-876aaea89eb1",
             submittedAt: new Date("2026-11-17T00:00:00Z"),
+            whatsappContinuedAt: null,
             formTitle: "Konsultasi",
             branchName: "KGJ Pusat",
             productName: "Cincin",

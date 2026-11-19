@@ -41,6 +41,18 @@ export const pageBuilderFormFieldSchema = z
         message: "Pilihan membutuhkan minimal dua opsi.",
       });
     }
+    if (field.type === "select" || field.type === "radio") {
+      const normalizedOptions = field.options.map((option) =>
+        option.toLocaleLowerCase("id-ID"),
+      );
+      if (new Set(normalizedOptions).size !== normalizedOptions.length) {
+        context.addIssue({
+          code: "custom",
+          path: ["options"],
+          message: "Pilihan tidak boleh sama.",
+        });
+      }
+    }
   });
 
 export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
@@ -55,9 +67,13 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
   blockBase.extend({
     type: z.literal("image"),
     url: z
-      .url()
+      .string()
+      .trim()
       .max(2048)
-      .refine(isHttpsUrl, "Gambar harus memakai URL HTTPS."),
+      .refine(
+        (value) => value === "" || isHttpsUrl(value),
+        "Gambar harus memakai URL HTTPS.",
+      ),
     alt: z.string().trim().max(250),
   }),
   blockBase
@@ -79,10 +95,11 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
   blockBase.extend({
     type: z.literal("embed"),
     url: z
-      .url()
+      .string()
+      .trim()
       .max(2048)
       .refine(
-        (value) => embedUrl(value) !== null,
+        (value) => value === "" || embedUrl(value) !== null,
         "Embed harus berupa URL YouTube /embed yang aman.",
       ),
   }),
@@ -97,6 +114,9 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
       .min(1)
       .max(500)
       .default("Data Anda disimpan oleh KGJ untuk menindaklanjuti konsultasi."),
+    thankYouTitle: z.string().trim().min(1).max(160).optional(),
+    thankYouMessage: z.string().trim().min(1).max(500).optional(),
+    continueLabel: z.string().trim().min(1).max(80).optional(),
     assignmentId: z.uuid(),
     fields: z.array(pageBuilderFormFieldSchema).min(1).max(20),
   }),
@@ -127,6 +147,26 @@ export const pageBuilderBlocksSchema = z
         });
       }
     }
+  });
+
+export const pageBuilderPublishBlocksSchema =
+  pageBuilderBlocksSchema.superRefine((blocks, context) => {
+    blocks.forEach((block, index) => {
+      if (block.type === "image" && !block.url) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "url"],
+          message: "Masukkan URL gambar HTTPS sebelum menerbitkan.",
+        });
+      }
+      if (block.type === "embed" && !block.url) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "url"],
+          message: "Masukkan URL embed YouTube sebelum menerbitkan.",
+        });
+      }
+    });
   });
 
 export type PageBuilderBlock = z.infer<typeof pageBuilderBlockSchema>;
@@ -164,8 +204,13 @@ export function sanitizePageBuilderHtml(value: string) {
 }
 
 export function embedUrl(value: string) {
-  const url = new URL(value);
-  if (!isHttpsUrl(value)) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
   if (
     url.hostname === "www.youtube.com" &&
     /^\/embed\/[^/]+/.test(url.pathname)
@@ -182,5 +227,9 @@ export function embedUrl(value: string) {
 }
 
 function isHttpsUrl(value: string) {
-  return new URL(value).protocol === "https:";
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }

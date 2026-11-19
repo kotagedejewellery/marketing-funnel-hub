@@ -50,6 +50,27 @@ describe("Drizzle database client", () => {
     }
   });
 
+  it("keeps form continuation metadata separate from encrypted values", async () => {
+    const connection = createDatabaseClient(process.env.DATABASE_URL, false);
+
+    try {
+      const rows = await connection.db.execute(sql`
+        select column_name
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'form_submissions'
+          and column_name in ('continuation_token_hash', 'whatsapp_continued_at')
+        order by column_name
+      `);
+      expect(rows.map((row) => row.column_name)).toEqual([
+        "continuation_token_hash",
+        "whatsapp_continued_at",
+      ]);
+    } finally {
+      await connection.close();
+    }
+  });
+
   it("enables RLS and grants access only through the application policy", async () => {
     const connection = createDatabaseClient(process.env.DATABASE_URL, false);
 

@@ -4,7 +4,11 @@ import { useEffect, useRef } from "react";
 
 import { FormDialog } from "@/components/admin/form-dialog";
 import { LinkForm } from "@/components/admin/link-form";
-import { usePageDataManager } from "@/components/admin/page-data-manager-context";
+import {
+  useAddPageDataToCanvas,
+  useIsPageDataOnCanvas,
+  usePageDataManager,
+} from "@/components/admin/page-data-manager-context";
 import { PageOrderControls } from "@/components/admin/page-order-controls";
 import type { links } from "@/lib/db/schema";
 
@@ -26,6 +30,8 @@ export function FocusedPageLinkRow({
   count: number;
 }) {
   const selection = usePageDataManager();
+  const addToCanvas = useAddPageDataToCanvas();
+  const isOnCanvas = useIsPageDataOnCanvas();
   const isFocused =
     selection?.tool === "links" &&
     selection.target?.kind === "link" &&
@@ -78,6 +84,17 @@ export function FocusedPageLinkRow({
             stayOnPage
           />
         </FormDialog>
+        {hasCustomLayout && row.isActive && addToCanvas && (
+          <button
+            type="button"
+            onClick={() => addToCanvas({ type: "link", linkId: row.id })}
+            className="min-h-11 rounded-full border border-border bg-card px-3 text-sm font-bold hover:border-[var(--kgj-accent)] hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            {isOnCanvas?.({ type: "link", linkId: row.id })
+              ? "Lihat di kanvas"
+              : "Tambahkan ke kanvas"}
+          </button>
+        )}
       </div>
     </li>
   );

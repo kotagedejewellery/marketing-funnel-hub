@@ -48,3 +48,10 @@ export const branchSchema = z.object({
       "Urutan terlalu besar.",
     ),
 });
+
+export const branchDeleteSchema = z.object({
+  id: z.uuid(),
+  confirmationSlug: z.string().trim().min(1),
+});
+
+export const branchIdSchema = z.object({ id: z.uuid() });

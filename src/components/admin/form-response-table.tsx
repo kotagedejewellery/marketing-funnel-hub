@@ -9,12 +9,14 @@ type Filters = {
   productBranchId: string | null;
   start: string | null;
   end: string | null;
+  whatsappStatus: "continued" | "pending" | null;
   page: number;
 };
 
 type Row = {
   id: string;
   submittedAt: Date;
+  whatsappContinuedAt: Date | null;
   formTitle: string;
   branchName: string;
   productName: string;
@@ -25,6 +27,14 @@ type Detail = {
   decryptable: boolean;
   values: { label: string; value: string }[];
 };
+
+function formatDate(value: Date) {
+  return `${new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Jakarta",
+  }).format(value)} WIB`;
+}
 
 function queryFor(filters: Filters, override: Partial<Filters> = {}) {
   const values = { ...filters, ...override };
@@ -39,6 +49,7 @@ function queryFor(filters: Filters, override: Partial<Filters> = {}) {
 export function FormResponseTable({
   filters,
   total,
+  summary,
   pageCount,
   rows,
   branches,
@@ -48,6 +59,7 @@ export function FormResponseTable({
 }: {
   filters: Filters;
   total: number;
+  summary: { submitted: number; continued: number };
   pageCount: number;
   rows: Row[];
   branches: { id: string; name: string }[];
@@ -102,12 +114,17 @@ export function FormResponseTable({
             laporan sesuai filter.
           </p>
         </div>
-        <p className="text-sm font-semibold tabular-nums">{total} respons</p>
+        <div className="text-right text-sm tabular-nums">
+          <p className="font-semibold">{total} respons cocok</p>
+          <p className="mt-1 text-muted-foreground">
+            {summary.continued} dari {summary.submitted} lanjut WhatsApp
+          </p>
+        </div>
       </div>
 
       <form
         method="get"
-        className="mt-7 grid gap-4 border-y border-border py-5 md:grid-cols-2 xl:grid-cols-5"
+        className="mt-7 grid gap-4 border-y border-border py-5 md:grid-cols-2 xl:grid-cols-6"
       >
         <FilterSelect
           name="branchId"
@@ -136,6 +153,16 @@ export function FormResponseTable({
           }))}
           allLabel="Semua CTA"
         />
+        <FilterSelect
+          name="whatsappStatus"
+          label="Status WhatsApp"
+          value={filters.whatsappStatus ?? ""}
+          options={[
+            { value: "continued", label: "Lanjut WhatsApp diklik" },
+            { value: "pending", label: "Belum dilanjutkan" },
+          ]}
+          allLabel="Semua status"
+        />
         <label className="block text-sm font-semibold">
           Dari tanggal
           <input
@@ -154,7 +181,7 @@ export function FormResponseTable({
             className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 font-normal"
           />
         </label>
-        <div className="flex flex-wrap gap-3 md:col-span-2 xl:col-span-5">
+        <div className="flex flex-wrap gap-3 md:col-span-2 xl:col-span-6">
           <button
             type="submit"
             className="min-h-11 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2"
@@ -221,6 +248,16 @@ export function FormResponseTable({
                     </dt>
                     <dd className="mt-1 font-semibold">{row.formTitle}</dd>
                   </div>
+                  <div>
+                    <dt className="text-xs font-semibold text-muted-foreground">
+                      WhatsApp
+                    </dt>
+                    <dd className="mt-1 tabular-nums">
+                      {row.whatsappContinuedAt
+                        ? `Lanjut diklik ${formatDate(row.whatsappContinuedAt)}`
+                        : "Belum dilanjutkan"}
+                    </dd>
+                  </div>
                 </dl>
                 <button
                   type="button"
@@ -241,6 +278,7 @@ export function FormResponseTable({
                   <th className="px-5 py-3">Cabang</th>
                   <th className="px-5 py-3">Form</th>
                   <th className="px-5 py-3">CTA WhatsApp</th>
+                  <th className="px-5 py-3">Status WhatsApp</th>
                   <th className="px-5 py-3">
                     <span className="sr-only">Aksi</span>
                   </th>
@@ -260,6 +298,11 @@ export function FormResponseTable({
                     <td className="px-5 py-4 font-medium">{row.branchName}</td>
                     <td className="px-5 py-4">{row.formTitle}</td>
                     <td className="px-5 py-4">{row.productName}</td>
+                    <td className="whitespace-nowrap px-5 py-4 tabular-nums">
+                      {row.whatsappContinuedAt
+                        ? `Lanjut diklik ${formatDate(row.whatsappContinuedAt)}`
+                        : "Belum dilanjutkan"}
+                    </td>
                     <td className="px-5 py-4 text-right">
                       <button
                         type="button"

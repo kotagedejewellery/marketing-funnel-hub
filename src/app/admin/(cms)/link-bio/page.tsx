@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BranchForm } from "@/components/admin/branch-form";
+import { BranchDeleteControl } from "@/components/admin/branch-delete-control";
 import { BranchPublicUrl } from "@/components/admin/branch-public-url";
 import { FormDialog } from "@/components/admin/form-dialog";
 import { PageOrderControls } from "@/components/admin/page-order-controls";
@@ -68,6 +69,12 @@ export default async function LinkBioPagesPage({
                 >
                   Pratinjau
                 </Link>
+                <BranchDeleteControl
+                  branchId={branch.id}
+                  slug={branch.slug}
+                  blockedReason={branch.deletionBlockReason}
+                  canDeactivate={branch.canDeactivate}
+                />
               </div>
               <PageOrderControls
                 kind="branch"

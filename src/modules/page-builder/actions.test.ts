@@ -45,6 +45,9 @@ function databaseFor(productRows: unknown[]) {
     insert: vi.fn(() => ({
       values: vi.fn(() => ({
         onConflictDoUpdate: vi.fn().mockResolvedValue(undefined),
+        onConflictDoNothing: vi.fn(() => ({
+          returning: vi.fn().mockResolvedValue([{ revision: 0 }]),
+        })),
       })),
     })),
   };
@@ -80,7 +83,7 @@ describe("page builder actions", () => {
       },
     ]);
 
-    expect(result).toMatchObject({ ok: true });
+    expect(result).toMatchObject({ ok: true, revision: 0 });
   });
 
   it("rejects a CTA assignment that is unavailable for the branch", async () => {
@@ -120,6 +123,32 @@ describe("page builder actions", () => {
     expect(result).toEqual({
       ok: false,
       message: "Terbitkan minimal satu CTA WhatsApp produk yang tampil.",
+    });
+  });
+
+  it("saves an unfinished free block as a draft but rejects it at publication", async () => {
+    mocks.getDatabase
+      .mockReturnValueOnce(databaseFor([]))
+      .mockReturnValueOnce(databaseFor([]));
+    const blocks = [
+      {
+        id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        type: "image" as const,
+        url: "",
+        alt: "",
+        width: "full" as const,
+        isVisible: true,
+      },
+    ];
+
+    await expect(savePageBuilderDraft(branchId, blocks)).resolves.toMatchObject(
+      {
+        ok: true,
+      },
+    );
+    await expect(publishPageBuilder(branchId, blocks)).resolves.toEqual({
+      ok: false,
+      message: "Masukkan URL gambar HTTPS sebelum menerbitkan.",
     });
   });
 });

@@ -26,6 +26,10 @@ import {
   isMetaCapiTokenDecryptable,
   whatsappCtaMetaEventForConfig,
 } from "@/modules/tracking/branch-meta-config";
+import {
+  initialPageBuilderBlocks,
+  type LegacyBuilderBlock,
+} from "@/modules/page-builder/initial-blocks";
 
 function withSectionLabel<T extends { sectionKey: string; label: string }>(
   section: T,
@@ -37,6 +41,14 @@ function withSectionLabel<T extends { sectionKey: string; label: string }>(
     ...section,
     label: sectionKey ? branchSectionLabels[sectionKey] : section.label,
   };
+}
+
+function isBranchSectionKey(
+  value: string | null,
+): value is (typeof branchSectionKeys)[number] {
+  return Boolean(
+    value && branchSectionKeys.some((sectionKey) => sectionKey === value),
+  );
 }
 
 export async function getBranchPageSettings(id: string) {
@@ -144,6 +156,8 @@ export async function getBranchPageSettings(id: string) {
         draftBlocks: branchPageBuilderLayouts.draftBlocks,
         publishedBlocks: branchPageBuilderLayouts.publishedBlocks,
         isPublished: branchPageBuilderLayouts.isPublished,
+        revision: branchPageBuilderLayouts.revision,
+        publishedAt: branchPageBuilderLayouts.publishedAt,
       })
       .from(branchPageBuilderLayouts)
       .where(eq(branchPageBuilderLayouts.branchId, branch.id))
@@ -189,6 +203,65 @@ export async function getBranchPageSettings(id: string) {
     ),
   );
   const linksById = new Map(branchLinks.map((link) => [link.id, link]));
+  const draftBlocks =
+    pageBuilderBlocksSchema.safeParse(builderLayouts[0]?.draftBlocks).data ??
+    [];
+  const publishedBlocks =
+    pageBuilderBlocksSchema.safeParse(builderLayouts[0]?.publishedBlocks)
+      .data ?? [];
+  const legacyBuilderBlocks: LegacyBuilderBlock[] = [];
+  for (const block of pageBlockRows) {
+    if (block.kind === "section" && isBranchSectionKey(block.sectionKey)) {
+      legacyBuilderBlocks.push({
+        id: block.id,
+        kind: "section",
+        sectionKey: block.sectionKey,
+      });
+    } else if (block.kind === "product" && block.productBranchId) {
+      legacyBuilderBlocks.push({
+        id: block.id,
+        kind: "product",
+        productBranchId: block.productBranchId,
+      });
+    } else if (block.kind === "link" && block.linkId) {
+      legacyBuilderBlocks.push({
+        id: block.id,
+        kind: "link",
+        linkId: block.linkId,
+      });
+    }
+  }
+  const initialBlocks = initialPageBuilderBlocks({
+    draftBlocks,
+    publishedBlocks,
+    legacyBlocks: legacyBuilderBlocks,
+    sections: sections.flatMap((section) =>
+      isBranchSectionKey(section.sectionKey)
+        ? [
+            {
+              id: section.id,
+              sectionKey: section.sectionKey,
+              isActive: section.isActive,
+            },
+          ]
+        : [],
+    ),
+    assignments: branchProducts.flatMap((product) =>
+      product.assignment
+        ? [
+            {
+              id: product.assignment.id,
+              isActive: product.isActive && product.assignment.isActive,
+            },
+          ]
+        : [],
+    ),
+    links: branchLinks.map((link) => ({
+      id: link.id,
+      linkType: link.linkType,
+      isActive: link.isActive,
+    })),
+  });
   const layoutBlocks: {
     id: string;
     kind: "section" | "product" | "link";
@@ -245,13 +318,12 @@ export async function getBranchPageSettings(id: string) {
     products: branchProducts,
     layoutBlocks,
     builderLayout: {
-      draftBlocks:
-        pageBuilderBlocksSchema.safeParse(builderLayouts[0]?.draftBlocks)
-          .data ?? [],
-      publishedBlocks:
-        pageBuilderBlocksSchema.safeParse(builderLayouts[0]?.publishedBlocks)
-          .data ?? [],
+      draftBlocks,
+      publishedBlocks,
+      initialBlocks,
       isPublished: builderLayouts[0]?.isPublished ?? false,
+      revision: builderLayouts[0]?.revision ?? null,
+      publishedAt: builderLayouts[0]?.publishedAt?.toISOString() ?? null,
     },
     metaTracking: {
       mode: metaTrackingMode,

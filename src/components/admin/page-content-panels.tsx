@@ -130,7 +130,8 @@ export function PageLinks({
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Tautan tambahan, tombol custom, dan media sosial halaman ini.
-            {hasCustomLayout && " Posisi diatur dari Susunan halaman."}
+            {hasCustomLayout &&
+              " Tambahkan tautan yang ingin ditampilkan dari tiap item."}
           </p>
         </div>
         <FormDialog title="Tambah tautan" triggerLabel="Tambah tautan">

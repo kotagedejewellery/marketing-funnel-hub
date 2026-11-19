@@ -1,6 +1,17 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, gte, lt, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  isNotNull,
+  isNull,
+  lt,
+  type SQL,
+} from "drizzle-orm";
 import * as z from "zod";
 
 import { getDatabase } from "@/lib/db/client";
@@ -33,6 +44,9 @@ const searchSchema = z
     productBranchId: z.union([z.uuid(), z.literal("")]).optional(),
     start: z.union([dateSchema, z.literal("")]).optional(),
     end: z.union([dateSchema, z.literal("")]).optional(),
+    whatsappStatus: z
+      .union([z.enum(["continued", "pending"]), z.literal("")])
+      .optional(),
     page: z.coerce.number().int().positive().max(10_000).default(1),
   })
   .superRefine((value, context) => {
@@ -49,6 +63,7 @@ export type FormResponseFilters = {
   productBranchId: string | null;
   start: string | null;
   end: string | null;
+  whatsappStatus: "continued" | "pending" | null;
   page: number;
 };
 
@@ -65,6 +80,7 @@ function filterInput(input: QueryInput) {
     productBranchId: firstValue(input.productBranchId),
     start: firstValue(input.start),
     end: firstValue(input.end),
+    whatsappStatus: firstValue(input.whatsappStatus),
     page: firstValue(input.page),
   };
 }
@@ -84,6 +100,7 @@ export function parseFormResponseFilters(
     productBranchId: value.productBranchId || null,
     start: value.start || null,
     end: value.end || null,
+    whatsappStatus: value.whatsappStatus || null,
     page: value.page,
   };
 }
@@ -108,6 +125,10 @@ function conditions(filters: FormResponseFilters) {
     end.setUTCDate(end.getUTCDate() + 1);
     result.push(lt(formSubmissions.submittedAt, end));
   }
+  if (filters.whatsappStatus === "continued")
+    result.push(isNotNull(formSubmissions.whatsappContinuedAt));
+  if (filters.whatsappStatus === "pending")
+    result.push(isNull(formSubmissions.whatsappContinuedAt));
   return result;
 }
 
@@ -121,6 +142,7 @@ async function responseRows(
     .select({
       id: formSubmissions.id,
       submittedAt: formSubmissions.submittedAt,
+      whatsappContinuedAt: formSubmissions.whatsappContinuedAt,
       formTitle: formSubmissions.formTitle,
       branchId: branches.id,
       branchName: branches.name,
@@ -144,8 +166,22 @@ export async function getFormResponseManagement(filters: FormResponseFilters) {
   await requireAdmin();
   const db = getDatabase();
   const where = and(...conditions(filters));
-  const [totalRow, branchRows, formRows, productRows] = await Promise.all([
+  const summaryFilters = { ...filters, whatsappStatus: null };
+  const summaryWhere = and(...conditions(summaryFilters));
+  const [
+    totalRow,
+    summaryTotalRow,
+    continuedRow,
+    branchRows,
+    formRows,
+    productRows,
+  ] = await Promise.all([
     db.select({ value: count() }).from(formSubmissions).where(where),
+    db.select({ value: count() }).from(formSubmissions).where(summaryWhere),
+    db
+      .select({ value: count() })
+      .from(formSubmissions)
+      .where(and(summaryWhere, isNotNull(formSubmissions.whatsappContinuedAt))),
     db
       .select({ id: branches.id, name: branches.name })
       .from(branches)
@@ -185,6 +221,10 @@ export async function getFormResponseManagement(filters: FormResponseFilters) {
   return {
     filters: normalizedFilters,
     total,
+    summary: {
+      submitted: Number(summaryTotalRow[0]?.value ?? 0),
+      continued: Number(continuedRow[0]?.value ?? 0),
+    },
     pageCount,
     rows,
     branches: branchRows,
@@ -202,6 +242,7 @@ export async function getFormResponseExportRows(filters: FormResponseFilters) {
     .select({
       id: formSubmissions.id,
       submittedAt: formSubmissions.submittedAt,
+      whatsappContinuedAt: formSubmissions.whatsappContinuedAt,
       formTitle: formSubmissions.formTitle,
       formSchema: formSubmissions.formSchema,
       valuesEncrypted: formSubmissions.valuesEncrypted,

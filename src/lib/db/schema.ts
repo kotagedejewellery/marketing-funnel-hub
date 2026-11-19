@@ -405,6 +405,7 @@ export const branchPageBuilderLayouts = pgTable("branch_page_builder_layouts", {
     .notNull()
     .default(sql`'[]'::jsonb`),
   isPublished: boolean("is_published").notNull().default(false),
+  revision: integer("revision").notNull().default(0),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -428,6 +429,10 @@ export const formSubmissions = pgTable(
     formTitle: text("form_title").notNull(),
     formSchema: jsonb("form_schema").notNull(),
     valuesEncrypted: text("values_encrypted").notNull(),
+    continuationTokenHash: text("continuation_token_hash"),
+    whatsappContinuedAt: timestamp("whatsapp_continued_at", {
+      withTimezone: true,
+    }),
     submittedAt: timestamp("submitted_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

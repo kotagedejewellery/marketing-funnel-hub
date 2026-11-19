@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { getDatabase } from "@/lib/db/client";
@@ -15,9 +15,15 @@ import {
 } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
 
-import { pageBuilderBlocksSchema, sanitizePageBuilderHtml } from "./schema";
+import {
+  pageBuilderBlocksSchema,
+  pageBuilderPublishBlocksSchema,
+  sanitizePageBuilderHtml,
+} from "./schema";
 
-type ActionResult = { ok: boolean; message: string };
+type ActionResult =
+  | { ok: true; message: string; revision: number }
+  | { ok: false; message: string; conflict?: true };
 type BuilderInput = {
   branch: { id: string; slug: string };
   blocks: ReturnType<typeof pageBuilderBlocksSchema.parse>;
@@ -144,20 +150,38 @@ async function readInput(
 export async function savePageBuilderDraft(
   branchId: string,
   blocks: unknown,
+  expectedRevision: number | null = null,
 ): Promise<ActionResult> {
   const profile = await requireAdmin();
   const result = await readInput(branchId, blocks);
   if ("message" in result) return { ok: false, message: result.message };
 
   const db = getDatabase();
-  await db.transaction(async (tx) => {
-    await tx
-      .insert(branchPageBuilderLayouts)
-      .values({ branchId, draftBlocks: result.input.blocks })
-      .onConflictDoUpdate({
-        target: branchPageBuilderLayouts.branchId,
-        set: { draftBlocks: result.input.blocks, updatedAt: new Date() },
-      });
+  const layout = await db.transaction(async (tx) => {
+    const updatedAt = new Date();
+    const rows =
+      expectedRevision === null
+        ? await tx
+            .insert(branchPageBuilderLayouts)
+            .values({ branchId, draftBlocks: result.input.blocks, revision: 0 })
+            .onConflictDoNothing()
+            .returning({ revision: branchPageBuilderLayouts.revision })
+        : await tx
+            .update(branchPageBuilderLayouts)
+            .set({
+              draftBlocks: result.input.blocks,
+              revision: sql`${branchPageBuilderLayouts.revision} + 1`,
+              updatedAt,
+            })
+            .where(
+              and(
+                eq(branchPageBuilderLayouts.branchId, branchId),
+                eq(branchPageBuilderLayouts.revision, expectedRevision),
+              ),
+            )
+            .returning({ revision: branchPageBuilderLayouts.revision });
+    const [layout] = rows;
+    if (!layout) return null;
     await tx.insert(auditLogs).values({
       adminId: profile.id,
       action: "update",
@@ -165,18 +189,41 @@ export async function savePageBuilderDraft(
       entityId: branchId,
       changes: { draftBlockCount: result.input.blocks.length },
     });
+    return layout;
   });
+  if (!layout)
+    return {
+      ok: false,
+      conflict: true,
+      message: "Halaman telah diubah oleh editor lain. Muat versi terbaru.",
+    };
   revalidatePath(`/admin/branches/${branchId}/link-bio`);
-  return { ok: true, message: "Draft builder tersimpan." };
+  return {
+    ok: true,
+    message: "Draft builder tersimpan.",
+    revision: layout.revision,
+  };
 }
 
 export async function publishPageBuilder(
   branchId: string,
   blocks: unknown,
+  expectedRevision: number | null = null,
 ): Promise<ActionResult> {
   const profile = await requireAdmin();
   const result = await readInput(branchId, blocks);
   if ("message" in result) return { ok: false, message: result.message };
+  const publishable = pageBuilderPublishBlocksSchema.safeParse(
+    result.input.blocks,
+  );
+  if (!publishable.success) {
+    return {
+      ok: false,
+      message:
+        publishable.error.issues[0]?.message ??
+        "Halaman belum siap diterbitkan.",
+    };
+  }
   if (
     result.input.blocks.length === 0 ||
     !result.input.blocks.some(
@@ -190,26 +237,41 @@ export async function publishPageBuilder(
   }
 
   const db = getDatabase();
-  await db.transaction(async (tx) => {
-    await tx
-      .insert(branchPageBuilderLayouts)
-      .values({
-        branchId,
-        draftBlocks: result.input.blocks,
-        publishedBlocks: result.input.blocks,
-        isPublished: true,
-        publishedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: branchPageBuilderLayouts.branchId,
-        set: {
-          draftBlocks: result.input.blocks,
-          publishedBlocks: result.input.blocks,
-          isPublished: true,
-          publishedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
+  const layout = await db.transaction(async (tx) => {
+    const now = new Date();
+    const rows =
+      expectedRevision === null
+        ? await tx
+            .insert(branchPageBuilderLayouts)
+            .values({
+              branchId,
+              draftBlocks: result.input.blocks,
+              publishedBlocks: result.input.blocks,
+              isPublished: true,
+              publishedAt: now,
+              revision: 0,
+            })
+            .onConflictDoNothing()
+            .returning({ revision: branchPageBuilderLayouts.revision })
+        : await tx
+            .update(branchPageBuilderLayouts)
+            .set({
+              draftBlocks: result.input.blocks,
+              publishedBlocks: result.input.blocks,
+              isPublished: true,
+              publishedAt: now,
+              revision: sql`${branchPageBuilderLayouts.revision} + 1`,
+              updatedAt: now,
+            })
+            .where(
+              and(
+                eq(branchPageBuilderLayouts.branchId, branchId),
+                eq(branchPageBuilderLayouts.revision, expectedRevision),
+              ),
+            )
+            .returning({ revision: branchPageBuilderLayouts.revision });
+    const [layout] = rows;
+    if (!layout) return null;
     await tx.insert(auditLogs).values({
       adminId: profile.id,
       action: "update",
@@ -217,8 +279,19 @@ export async function publishPageBuilder(
       entityId: branchId,
       changes: { publishedBlockCount: result.input.blocks.length },
     });
+    return layout;
   });
+  if (!layout)
+    return {
+      ok: false,
+      conflict: true,
+      message: "Halaman telah diubah oleh editor lain. Muat versi terbaru.",
+    };
   revalidatePath(`/${result.input.branch.slug}`);
   revalidatePath(`/admin/branches/${branchId}/link-bio`);
-  return { ok: true, message: "Halaman builder diterbitkan." };
+  return {
+    ok: true,
+    message: "Halaman builder diterbitkan.",
+    revision: layout.revision,
+  };
 }

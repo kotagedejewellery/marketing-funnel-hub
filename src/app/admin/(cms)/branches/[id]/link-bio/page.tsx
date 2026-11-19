@@ -90,7 +90,11 @@ export default async function BranchLinkBioPage({
       <BranchPageBuilder
         branchId={branch.id}
         branchName={branch.name}
-        initialBlocks={builderLayout.draftBlocks}
+        initialBlocks={builderLayout.initialBlocks}
+        initialRevision={builderLayout.revision}
+        publishedBlocks={builderLayout.publishedBlocks}
+        isPublished={builderLayout.isPublished}
+        publishedAt={builderLayout.publishedAt}
         catalog={{
           sections: sections
             .filter((section) => section.isActive)

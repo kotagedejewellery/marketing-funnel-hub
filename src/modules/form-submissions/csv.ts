@@ -3,6 +3,7 @@ import type { PageBuilderFormField } from "@/modules/page-builder/schema";
 type SubmissionCsvRow = {
   id: string;
   submittedAt: Date;
+  whatsappContinuedAt: Date | null;
   branchName: string;
   formTitle: string;
   productName: string;
@@ -29,6 +30,7 @@ export function formSubmissionCsv(rows: SubmissionCsvRow[]) {
   const header = [
     "ID Respons",
     "Waktu (UTC)",
+    "Waktu klik lanjut WhatsApp (UTC)",
     "Cabang",
     "Form",
     "CTA WhatsApp",
@@ -41,6 +43,7 @@ export function formSubmissionCsv(rows: SubmissionCsvRow[]) {
       [
         row.id,
         row.submittedAt.toISOString(),
+        row.whatsappContinuedAt?.toISOString() ?? "",
         row.branchName,
         row.formTitle,
         row.productName,

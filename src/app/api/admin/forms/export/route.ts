@@ -41,6 +41,7 @@ export async function GET(request: Request) {
       return {
         id: row.id,
         submittedAt: row.submittedAt,
+        whatsappContinuedAt: row.whatsappContinuedAt,
         branchName: row.branchName,
         formTitle: row.formTitle,
         productName: row.productName,

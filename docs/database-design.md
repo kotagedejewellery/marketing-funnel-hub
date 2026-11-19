@@ -29,8 +29,8 @@ mandiri.
 | `site_settings`                | Satu baris pengaturan/template KGJ, termasuk cabang Link Bio utama.                                                       |
 | `content_sections`             | Susunan section bersama atau per cabang, visibilitas, jarak, divider, dan judul publik.                                   |
 | `page_blocks`                  | Susunan kustom per cabang: satu referensi tervalidasi ke section, assignment produk, atau tautan per blok.                |
-| `branch_page_builder_layouts`  | Draft dan versi terbit blok builder per cabang; konfigurasi JSON selalu divalidasi server sebelum disimpan atau dirender. |
-| `form_submissions`             | Respons form publik terenkripsi, snapshot schema/form, cabang dan CTA produk; bukan tabel event atau audit.               |
+| `branch_page_builder_layouts`  | Draft dan versi terbit blok builder per cabang, termasuk revision untuk mencegah dua editor saling menimpa; konfigurasi JSON selalu divalidasi server sebelum disimpan atau dirender. |
+| `form_submissions`             | Respons form publik terenkripsi, snapshot schema/form, cabang, CTA produk, serta token hash/waktu klik lanjut WhatsApp; bukan tabel event atau audit. |
 | `branches`                     | Nama, slug unik, nomor WhatsApp, profil override, logo, status, dan urutan cabang.                                        |
 | `products`                     | Kategori produk bersama; slug adalah kategori tracking yang stabil.                                                       |
 | `product_branches`             | Assignment produk–cabang yang unik, override CTA/pesan/event Meta, status, dan urutan.                                    |
@@ -47,6 +47,15 @@ mandiri.
 `site_settings.id` memakai UUID singleton
 `00000000-0000-0000-0000-000000000001`. FK konten memakai `RESTRICT` untuk
 menjaga histori, kecuali sesi admin yang cascade bila profil dihapus.
+
+Cabang umumnya dinonaktifkan, bukan dihapus. Aksi permanen **Hapus halaman uji**
+hanya boleh menghapus cabang yang bukan `default_link_bio_branch_id` dan tidak
+memiliki baris `events` atau `form_submissions`; `PageView` juga dianggap
+histori cabang melalui URL halaman yang tersimpan. Action server memeriksa ulang
+syarat itu di dalam transaksi sebelum menghapus data khusus cabang. Audit log
+tetap disimpan, sedangkan event dan respons form tidak pernah dihapus oleh aksi
+ini. Aset media hanya dihapus bila berada pada direktori milik cabang atau
+kampanye cabang tersebut.
 
 ## Integritas dan pembacaan
 
@@ -67,6 +76,9 @@ menjaga histori, kecuali sesi admin yang cascade bila profil dihapus.
   tetap terbaca hingga technical admin secara eksplisit memilih penggantinya.
 - Respons form menyimpan payload AES-256-GCM dengan key environment khusus. Nilai
   field tidak dimasukkan ke event, audit log, atau ekspor analytics.
+- Token kelanjutan form hanya disimpan sebagai hash acak dan waktu klik lanjut
+  WhatsApp bersifat nullable; keduanya dipakai untuk status operasional respons,
+  bukan identitas pengunjung atau event kanonis.
 
 Index pada schema mendukung daftar aktif/urut per cabang, scope/urut section,
 serta akses event berdasarkan waktu, nama event, sesi, produk, cabang, tautan,

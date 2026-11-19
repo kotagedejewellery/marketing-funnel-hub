@@ -30,7 +30,7 @@ export function PagePreview({
         <div>
           <h2 className="font-serif text-2xl">Pratinjau</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Versi tersimpan · tanpa tracking
+            Pratinjau tersimpan otomatis · tanpa tracking
           </p>
         </div>
         <div className="flex items-center gap-3">

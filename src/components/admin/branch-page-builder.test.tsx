@@ -10,6 +10,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BranchPageBuilder } from "./branch-page-builder";
+import { useAddPageDataToCanvas } from "./page-data-manager-context";
 
 const actions = vi.hoisted(() => ({
   publishPageBuilder: vi.fn(),
@@ -33,12 +34,26 @@ const emptyDataTools = {
   tracking: null,
 };
 
+function AddCincinFromSource() {
+  const addToCanvas = useAddPageDataToCanvas();
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        addToCanvas?.({ type: "product_cta", assignmentId: "assignment-1" })
+      }
+    >
+      Tambahkan Cincin ke kanvas
+    </button>
+  );
+}
+
 describe("BranchPageBuilder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("keeps connected data controls inside the builder workspace and saves its draft", async () => {
+  it("keeps connected data controls inside the builder workspace", async () => {
     actions.savePageBuilderDraft.mockResolvedValue({
       ok: true,
       message: "Draft builder tersimpan.",
@@ -50,7 +65,7 @@ describe("BranchPageBuilder", () => {
         branchName="KGJ Pusat"
         initialBlocks={[
           {
-            id: "block-1",
+            id: "1f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
             type: "rich_text",
             text: "Halo",
             width: "full",
@@ -121,14 +136,53 @@ describe("BranchPageBuilder", () => {
     await waitFor(() => expect(router.refresh).toHaveBeenCalled());
     router.refresh.mockClear();
 
-    fireEvent.click(screen.getByRole("button", { name: "Simpan draft" }));
-    await waitFor(() =>
-      expect(actions.savePageBuilderDraft).toHaveBeenCalledWith("branch-1", [
-        expect.objectContaining({ id: "block-1", type: "rich_text" }),
-      ]),
-    );
-    expect(await screen.findByText("Draft builder tersimpan.")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Simpan draft" }),
+    ).not.toBeInTheDocument();
     expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("saves a changed canvas automatically without a draft button", async () => {
+    actions.savePageBuilderDraft.mockResolvedValue({
+      ok: true,
+      message: "Perubahan tersimpan otomatis.",
+    });
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[
+          {
+            id: "2f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            type: "rich_text",
+            text: "Halo",
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{ sections: [], products: [], links: [], sourceSummary: [] }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Teks"), {
+      target: { value: "Halo terbaru" },
+    });
+
+    await waitFor(
+      () =>
+        expect(actions.savePageBuilderDraft).toHaveBeenCalledWith(
+          "branch-1",
+          [expect.objectContaining({ text: "Halo terbaru" })],
+          null,
+        ),
+      { timeout: 1_500 },
+    );
+    expect(
+      screen.queryByRole("button", { name: "Simpan draft" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Perubahan tersimpan otomatis.")).toBeVisible();
   });
 
   it("keeps the source-data drawer open during development strict effects", () => {
@@ -301,13 +355,210 @@ describe("BranchPageBuilder", () => {
       "href",
       "/admin/form-responses?branchId=branch-1&formId=block-1",
     );
-    expect(screen.getByRole("button", { name: /Nama lengkap/i })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "+ Nama lengkap" }),
+    ).toBeVisible();
     fireEvent.change(screen.getByLabelText("Jenis jawaban"), {
       target: { value: "select" },
     });
-    expect(screen.getByLabelText("Pilihan (satu per baris)")).toHaveValue(
-      "Pilihan 1\nPilihan 2",
+    expect(screen.getByLabelText("Pilihan 1")).toHaveValue("Pilihan 1");
+    expect(screen.getByLabelText("Pilihan 2")).toHaveValue("Pilihan 2");
+    fireEvent.click(screen.getByRole("button", { name: "Tambah pilihan" }));
+    expect(screen.getByLabelText("Pilihan 3")).toHaveValue("Pilihan 3");
+    fireEvent.click(screen.getByRole("button", { name: "Hapus pilihan 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tambah pilihan" }));
+    expect(screen.getByLabelText("Pilihan 3")).toHaveValue("Pilihan 2");
+  });
+
+  it("shows a repair marker and reorders form questions by touch without changing their response IDs", () => {
+    const { container } = render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[
+          {
+            id: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            type: "form",
+            title: "Konsultasi",
+            description: "",
+            submitLabel: "Kirim",
+            privacyNotice: "Data disimpan KGJ.",
+            assignmentId: "assignment-1",
+            fields: [
+              {
+                id: "field-1",
+                name: "nama",
+                label: "Nama",
+                type: "text",
+                placeholder: "",
+                help: "",
+                required: true,
+                options: [],
+              },
+              {
+                id: "field-2",
+                name: "model",
+                label: "Model",
+                type: "select",
+                placeholder: "",
+                help: "",
+                required: false,
+                options: ["Classic", "Custom"],
+              },
+            ],
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: { id: "assignment-1" },
+            },
+          ],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
     );
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Model/ })[0]);
+    fireEvent.change(screen.getByLabelText("Pilihan 2"), {
+      target: { value: "classic" },
+    });
+    expect(screen.getByText(/Perlu diperbaiki/)).toBeVisible();
+    const fields = container.querySelectorAll("[data-form-field-index]");
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: () => fields[1],
+    });
+    const handle = container.querySelector("[data-form-field-drag-handle]");
+    if (!handle) throw new Error("Drag handle field form tidak ditemukan.");
+    fireEvent.pointerDown(handle, { pointerId: 1, pointerType: "touch" });
+    fireEvent.pointerMove(handle, {
+      clientX: 0,
+      clientY: 0,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+    fireEvent.pointerUp(handle, { pointerId: 1, pointerType: "touch" });
+
+    expect(
+      container.querySelectorAll("[data-form-field-index]")[0],
+    ).toHaveTextContent("Model");
+    expect(screen.getByText(/ID respons dibuat otomatis/i)).toBeInTheDocument();
+  });
+
+  it("keeps CTA and links out of the block library", () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: { id: "assignment-1" },
+            },
+            {
+              id: "product-2",
+              name: "Kalung",
+              assignment: { id: "assignment-2" },
+            },
+          ],
+          links: [{ id: "link-1", label: "Katalog" }],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    expect(
+      screen.queryByLabelText("Produk CTA WhatsApp"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Tautan halaman")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tambah Tombol WhatsApp" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: "Semua data halaman" }),
+    ).toHaveLength(1);
+  });
+
+  it("returns to the selected canvas block after adding data from its manager", async () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: { id: "assignment-1" },
+            },
+          ],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={{ ...emptyDataTools, cta: <AddCincinFromSource /> }}
+        preview={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Semua data halaman" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Tambahkan Cincin ke kanvas" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: /Cincin/ })[0],
+      ).toHaveFocus(),
+    );
+  });
+
+  it("selects an existing data section instead of adding a duplicate", () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[]}
+        catalog={{
+          sections: [{ sectionKey: "products", label: "Pilihan produk" }],
+          products: [],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    const addSection = screen.getByRole("button", {
+      name: "+ Judul daftar WhatsApp",
+    });
+    fireEvent.click(addSection);
+    fireEvent.click(addSection);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    expect(
+      screen.getByText("Pilihan produk sudah ada di kanvas."),
+    ).toBeVisible();
   });
 
   it("routes form setup to CTA management when this branch has no active CTA", () => {
@@ -574,7 +825,7 @@ describe("BranchPageBuilder", () => {
         branchName="KGJ Pusat"
         initialBlocks={[
           {
-            id: "block-1",
+            id: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
             type: "spacer",
             size: "lg",
             showDivider: false,
@@ -595,16 +846,19 @@ describe("BranchPageBuilder", () => {
     fireEvent.click(screen.getByLabelText("Tampilkan garis pemisah"));
 
     expect(screen.getByText("37 px")).toBeVisible();
-    expect(screen.getByText("Perubahan belum disimpan")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Simpan draft" }));
-    await waitFor(() =>
-      expect(actions.savePageBuilderDraft).toHaveBeenCalledWith("branch-1", [
-        expect.objectContaining({ spacingPx: 37, showDivider: true }),
-      ]),
+    expect(screen.getByText("Perubahan akan tersimpan otomatis")).toBeVisible();
+    await waitFor(
+      () =>
+        expect(actions.savePageBuilderDraft).toHaveBeenCalledWith(
+          "branch-1",
+          [expect.objectContaining({ spacingPx: 37, showDivider: true })],
+          null,
+        ),
+      { timeout: 1_500 },
     );
   });
 
-  it("lets a deleted block be restored before the draft is saved", () => {
+  it("lets a deleted block be restored before automatic saving", () => {
     render(
       <BranchPageBuilder
         branchId="branch-1"
@@ -631,7 +885,7 @@ describe("BranchPageBuilder", () => {
     expect(screen.getByLabelText("Teks")).toHaveValue("Halo");
   });
 
-  it("restores the save controls after an action failure", async () => {
+  it("shows a recovery message after automatic saving fails", async () => {
     actions.savePageBuilderDraft.mockRejectedValue(new Error("offline"));
 
     render(
@@ -645,13 +899,11 @@ describe("BranchPageBuilder", () => {
       />,
     );
 
-    const save = screen.getByRole("button", { name: "Simpan draft" });
-    fireEvent.click(save);
+    fireEvent.click(screen.getByRole("button", { name: "+ Teks" }));
 
     expect(
-      await screen.findByText(/Penyimpanan belum berhasil/i),
+      await screen.findByRole("button", { name: "Coba lagi" }),
     ).toBeVisible();
-    expect(save).toBeEnabled();
   });
 
   it("groups a continuous text edit into one undo step", () => {
@@ -745,7 +997,7 @@ describe("BranchPageBuilder", () => {
       .dispatchEvent(navigation);
 
     expect(confirm).toHaveBeenCalledWith(
-      "Perubahan draft belum disimpan. Tetap keluar?",
+      "Perubahan belum tersimpan otomatis. Tetap keluar?",
     );
     expect(navigation.defaultPrevented).toBe(true);
   });
@@ -799,12 +1051,12 @@ describe("BranchPageBuilder", () => {
     );
 
     expect(screen.getByText("Belum siap diterbitkan")).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "CTA WhatsApp tidak aktif. Atur data terkait.",
+    );
     expect(
-      screen.getByText(
-        "CTA WhatsApp untuk blok ini sudah tidak aktif. Atur data terkait terlebih dahulu.",
-      ),
-    ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Simpan draft" })).toBeDisabled();
+      screen.queryByRole("button", { name: "Simpan draft" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Terbitkan perubahan" }),
     ).toBeDisabled();

@@ -12,7 +12,11 @@ import {
 import { serverEnv } from "@/lib/env/server";
 import { resolveWhatsappCta } from "@/modules/public-content/links";
 import { pageBuilderBlocksSchema } from "@/modules/page-builder/schema";
-import { encryptFormValues } from "@/modules/form-submissions/crypto";
+import {
+  createFormContinuationToken,
+  encryptFormValues,
+  hashFormContinuationToken,
+} from "@/modules/form-submissions/crypto";
 import { canSubmitForm } from "@/modules/form-submissions/rate-limit";
 import { validatedFormValues } from "@/modules/form-submissions/validation";
 
@@ -142,6 +146,7 @@ export async function POST(
     .limit(1);
   if (!site) return error(503, "FORM_UNAVAILABLE", "Form belum siap.");
 
+  const continuationToken = createFormContinuationToken();
   try {
     await db.insert(formSubmissions).values({
       branchId: branch.id,
@@ -150,6 +155,7 @@ export async function POST(
       formTitle: form.title,
       formSchema: { fields: form.fields },
       valuesEncrypted: encryptFormValues(values),
+      continuationTokenHash: hashFormContinuationToken(continuationToken),
     });
   } catch {
     return error(
@@ -173,6 +179,7 @@ export async function POST(
       ok: true,
       whatsappUrl: destination.whatsappUrl,
       ctaLabel: destination.ctaLabel,
+      continuationToken,
     },
     { headers: { "Cache-Control": "no-store" } },
   );

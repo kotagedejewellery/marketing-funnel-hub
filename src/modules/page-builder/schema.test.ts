@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { pageBuilderBlocksSchema, sanitizePageBuilderHtml } from "./schema";
+import {
+  pageBuilderBlocksSchema,
+  pageBuilderPublishBlocksSchema,
+  sanitizePageBuilderHtml,
+} from "./schema";
 
 const id = "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4";
 
@@ -67,6 +71,31 @@ describe("Branch Page Builder schema", () => {
     ).toBe(false);
   });
 
+  it("keeps unfinished image and embed blocks in a draft but not in a published layout", () => {
+    const unfinished = [
+      {
+        id,
+        type: "image",
+        url: "",
+        alt: "",
+        width: "full",
+        isVisible: true,
+      },
+      {
+        id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        type: "embed",
+        url: "",
+        width: "full",
+        isVisible: true,
+      },
+    ];
+
+    expect(pageBuilderBlocksSchema.safeParse(unfinished).success).toBe(true);
+    expect(pageBuilderPublishBlocksSchema.safeParse(unfinished).success).toBe(
+      false,
+    );
+  });
+
   it("removes executable HTML on every sanitization pass", () => {
     expect(
       sanitizePageBuilderHtml(
@@ -116,6 +145,64 @@ describe("Branch Page Builder schema", () => {
         { ...form, fields: [{ ...form.fields[0] }, { ...form.fields[0] }] },
       ]).success,
     ).toBe(false);
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        {
+          ...form,
+          fields: [
+            form.fields[0],
+            { ...form.fields[1], options: ["Classic", "classic"] },
+          ],
+        },
+      ]).success,
+    ).toBe(false);
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        {
+          ...form,
+          fields: [
+            form.fields[0],
+            {
+              ...form.fields[1],
+              type: "text",
+              options: ["Classic", "classic"],
+            },
+          ],
+        },
+      ]).success,
+    ).toBe(true);
+  });
+
+  it("accepts controlled thank-you copy without changing form field schema", () => {
+    const parsed = pageBuilderBlocksSchema.safeParse([
+      {
+        id,
+        type: "form",
+        title: "Konsultasi",
+        description: "",
+        submitLabel: "Kirim",
+        privacyNotice: "Data disimpan oleh KGJ.",
+        thankYouTitle: "Terima kasih sudah menghubungi KGJ",
+        thankYouMessage: "Pilih tombol berikut untuk lanjut ke cabang.",
+        continueLabel: "Buka WhatsApp KGJ",
+        assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        width: "full",
+        isVisible: true,
+        fields: [
+          {
+            id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            name: "nama",
+            label: "Nama",
+            type: "text",
+            placeholder: "",
+            help: "",
+            required: true,
+            options: [],
+          },
+        ],
+      },
+    ]);
+    expect(parsed.success).toBe(true);
   });
 
   it("keeps legacy spacer sizes and accepts a precise divider spacing", () => {

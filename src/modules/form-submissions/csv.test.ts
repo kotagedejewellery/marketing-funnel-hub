@@ -28,6 +28,7 @@ describe("form submission CSV", () => {
       {
         id: "1",
         submittedAt: new Date("2026-01-01T00:00:00Z"),
+        whatsappContinuedAt: null,
         branchName: "Pusat",
         formTitle: "A",
         productName: "Cincin",
@@ -37,6 +38,7 @@ describe("form submission CSV", () => {
       {
         id: "2",
         submittedAt: new Date("2026-01-02T00:00:00Z"),
+        whatsappContinuedAt: null,
         branchName: "Pusat",
         formTitle: "B",
         productName: "Cincin",
@@ -55,6 +57,7 @@ describe("form submission CSV", () => {
       {
         id: "1",
         submittedAt: new Date("2026-01-01T00:00:00Z"),
+        whatsappContinuedAt: null,
         branchName: "Pusat",
         formTitle: "A",
         productName: "Cincin",
@@ -64,6 +67,7 @@ describe("form submission CSV", () => {
       {
         id: "2",
         submittedAt: new Date("2026-01-02T00:00:00Z"),
+        whatsappContinuedAt: null,
         branchName: "Pusat",
         formTitle: "A",
         productName: "Cincin",
@@ -74,5 +78,22 @@ describe("form submission CSV", () => {
     expect(csv).toContain('"Email","Email pelanggan"');
     expect(csv).toContain('"lama@kgj.test",""');
     expect(csv).toContain('"","baru@kgj.test"');
+  });
+
+  it("exports the non-sensitive WhatsApp continuation time", () => {
+    const csv = formSubmissionCsv([
+      {
+        id: "1",
+        submittedAt: new Date("2026-01-01T00:00:00Z"),
+        whatsappContinuedAt: new Date("2026-01-01T00:01:00Z"),
+        branchName: "Pusat",
+        formTitle: "A",
+        productName: "Cincin",
+        fields: [],
+        values: {},
+      },
+    ]);
+    expect(csv).toContain('"Waktu klik lanjut WhatsApp (UTC)"');
+    expect(csv).toContain('"2026-01-01T00:01:00.000Z"');
   });
 });

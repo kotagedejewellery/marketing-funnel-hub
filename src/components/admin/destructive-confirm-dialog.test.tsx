@@ -79,4 +79,60 @@ describe("DestructiveConfirmDialog", () => {
       screen.getByRole("button", { name: "Hapus konfigurasi khusus" }),
     ).toBeVisible();
   });
+
+  it("requires the supplied page slug before confirming a page deletion", () => {
+    const onConfirm = vi.fn();
+    render(
+      <DestructiveConfirmDialog
+        open
+        count={1}
+        pending={false}
+        title="Hapus halaman uji Surabaya?"
+        description="Konten uji akan dihapus permanen."
+        confirmLabel="Hapus halaman uji"
+        confirmationValue="surabaya"
+        confirmationInputName="confirmationSlug"
+        confirmationFormId="delete-branch"
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const confirm = screen.getByRole("button", {
+      name: "Hapus halaman uji",
+    });
+    expect(confirm).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/ketik surabaya/i), {
+      target: { value: "surabaya" },
+    });
+    expect(confirm).toBeEnabled();
+  });
+
+  it("clears the confirmation after the native dialog closes", () => {
+    const onClose = vi.fn();
+    render(
+      <DestructiveConfirmDialog
+        open
+        count={1}
+        pending={false}
+        confirmationValue="surabaya"
+        confirmationInputName="confirmationSlug"
+        confirmationFormId="delete-branch"
+        onClose={onClose}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    const confirm = screen.getByRole("button", { name: "Hapus 1 ulasan" });
+    fireEvent.change(screen.getByLabelText(/ketik surabaya/i), {
+      target: { value: "surabaya" },
+    });
+    expect(confirm).toBeEnabled();
+
+    fireEvent(screen.getByRole("dialog"), new Event("close"));
+
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(confirm).toBeDisabled();
+  });
 });

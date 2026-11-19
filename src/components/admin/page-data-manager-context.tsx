@@ -19,9 +19,15 @@ export type PageDataSelection = {
   target?: { kind: "assignment" | "link"; id: string };
 };
 
+export type PageDataCanvasBlock =
+  | { type: "product_cta"; assignmentId: string }
+  | { type: "link"; linkId: string };
+
 type PageDataManagerContextValue = {
   selection: PageDataSelection | null;
   select?: (selection: PageDataSelection) => void;
+  addToCanvas?: (block: PageDataCanvasBlock) => void;
+  isOnCanvas?: (block: PageDataCanvasBlock) => boolean;
 };
 
 const PageDataManagerContext =
@@ -30,14 +36,25 @@ const PageDataManagerContext =
 export function PageDataManagerProvider({
   selection,
   onSelect,
+  onAddToCanvas,
+  isOnCanvas,
   children,
 }: {
   selection: PageDataSelection | null;
   onSelect?: (selection: PageDataSelection) => void;
+  onAddToCanvas?: (block: PageDataCanvasBlock) => void;
+  isOnCanvas?: (block: PageDataCanvasBlock) => boolean;
   children: ReactNode;
 }) {
   return (
-    <PageDataManagerContext.Provider value={{ selection, select: onSelect }}>
+    <PageDataManagerContext.Provider
+      value={{
+        selection,
+        select: onSelect,
+        addToCanvas: onAddToCanvas,
+        isOnCanvas,
+      }}
+    >
       {children}
     </PageDataManagerContext.Provider>
   );
@@ -49,4 +66,12 @@ export function usePageDataManager() {
 
 export function useSelectPageDataManager() {
   return useContext(PageDataManagerContext)?.select;
+}
+
+export function useAddPageDataToCanvas() {
+  return useContext(PageDataManagerContext)?.addToCanvas;
+}
+
+export function useIsPageDataOnCanvas() {
+  return useContext(PageDataManagerContext)?.isOnCanvas;
 }
