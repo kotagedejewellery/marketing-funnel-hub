@@ -47,7 +47,9 @@ silently redefine a documented requirement in code.
 
 ## Mandatory Working Rules
 
-1. Read this complete `AGENTS.md` before project work.
+1. Before every project task, including a new, resumed, or context-reset
+   session, read this complete current `AGENTS.md` before taking any project
+   action.
 2. Before every software-engineering task, select the narrowest relevant Matt
    Pocock skill, read its complete `SKILL.md`, and follow its workflow. Add
    another skill only for a distinct scope.
@@ -60,10 +62,54 @@ silently redefine a documented requirement in code.
 5. For UI/UX work, run `impeccable context` once per session and use
    Impeccable.
 
+## Additional Workflows and Tools
+
+- When the relevant capability is installed, use Superpowers to plan a
+  non-trivial change, trace a root cause, or verify the result. Combine its
+  overlapping steps with the selected Matt Pocock skill and Ponytail so each
+  analysis and validation is performed once.
+- Apply Karpathy-style coding discipline to code work: state material
+  assumptions, choose the simplest solution, keep the change within scope,
+  and verify concrete acceptance criteria.
+- When validating a web UI or user flow directly, use Agent Browser when it is
+  available. After each navigation or DOM-changing action, take a fresh
+  snapshot and use only references from that snapshot.
+- Use Agent Desktop only when a test or E2E flow requires desktop interaction,
+  an OS dialog, or a cross-application flow. Before using it, check its status
+  and read its `get desktop` and `get platform` guidance. Run
+  snapshot → action → fresh snapshot, then report the tested scenario, actual
+  result, expected result, and any blocker.
+- Read the complete `SKILL.md` for every relevant installed skill before using
+  it. If a required skill or tool is unavailable, report that constraint and
+  follow the failure rules below; do not invent a substitute or install one
+  without approval.
+
+## UI/UX Workflow
+
+For UI/UX work, follow this sequence in addition to the mandatory rules:
+
+1. Read `DESIGN.md`, the user requirement, and the affected existing UI
+   patterns; run `impeccable context` once per session.
+2. For a new interface, redesign, or unclear visual direction, use Inspo via
+   MCP when it is available. Select references that fit the product and page
+   goal, examine desktop and mobile layout, typography, colour, and spacing,
+   then briefly cite the source and why it was adapted.
+3. Use Impeccable for UI/UX quality and implementation consistency. Use
+   Hallmark when it is available to establish visual character or audit generic
+   patterns; merge overlapping checks with Impeccable.
+4. Adapt references to the KGJ brand, `DESIGN.md`, existing components, and
+   project stack. Small changes follow the established design; redesign only
+   the requested page or component.
+5. Validate the affected render, responsive layout, contrast, keyboard focus,
+   and interactions. Use Agent Browser for web flows and Agent Desktop only for
+   desktop or OS-dialog flows. Stop when the acceptance criteria are met.
+
 ## Change Discipline
 
 - Make the smallest coherent change that fully satisfies the approved
   acceptance criteria. Stop when the criteria are met.
+- State any assumption that materially affects the result; resolve all other
+  safe details from the existing project.
 - Preserve unrelated API contracts, URLs, schemas, permissions, UX flows,
   defaults, and existing behaviour.
 - Reuse established architecture, conventions, components, utilities, and
@@ -135,8 +181,9 @@ Keep schema, migration, and deployment documentation aligned for database
 changes. Put UI/UX documentation in `DESIGN.md` only when that document is
 introduced or changed; do not create documentation merely to duplicate code.
 
-If Graphify, Impeccable, a test, build, or a required tool fails, report the
-command and relevant error. Do not claim success, fabricate a replacement, or
+If Graphify, Impeccable, Inspo, Hallmark, Agent Browser, Agent Desktop, a test,
+build, or another required tool fails or is unavailable, report the command or
+attempt and relevant error. Do not claim success, fabricate a replacement, or
 install another tool without need and approval.
 
 When rules conflict, use this order:
