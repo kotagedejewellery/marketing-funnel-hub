@@ -162,6 +162,15 @@ export function BuilderForm({
   const showDescription = block.showDescription !== false;
   const hasIntroduction = showTitle || (showDescription && block.description);
   const titleId = `form-title-${block.id}`;
+  const submitButtonAlign = block.submitButtonAlign ?? "left";
+  const submitButtonWidth = block.submitButtonWidth ?? "auto";
+  const submitButtonStyle = block.submitButtonStyle ?? "primary";
+  const submitButtonStyleClass =
+    submitButtonStyle === "outline"
+      ? "border border-foreground bg-background text-foreground hover:bg-secondary"
+      : submitButtonStyle === "soft"
+        ? "bg-[var(--kgj-accent-soft)] text-foreground hover:bg-[var(--kgj-accent)]"
+        : "bg-primary text-primary-foreground hover:opacity-85";
 
   return (
     <form
@@ -264,13 +273,25 @@ export function BuilderForm({
       <p aria-live="polite" className="sr-only">
         {pending ? "Menyimpan form" : ""}
       </p>
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-5 min-h-12 rounded-full bg-primary px-5 font-bold text-primary-foreground disabled:opacity-50"
+      <div
+        className={`mt-5 flex ${
+          submitButtonAlign === "center"
+            ? "justify-center"
+            : submitButtonAlign === "right"
+              ? "justify-end"
+              : "justify-start"
+        }`}
       >
-        {pending ? "Menyimpan..." : block.submitLabel}
-      </button>
+        <button
+          type="submit"
+          disabled={pending}
+          className={`min-h-12 rounded-full px-5 font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 ${
+            submitButtonWidth === "full" ? "w-full" : ""
+          } ${submitButtonStyleClass}`}
+        >
+          {pending ? "Menyimpan..." : block.submitLabel}
+        </button>
+      </div>
     </form>
   );
 }

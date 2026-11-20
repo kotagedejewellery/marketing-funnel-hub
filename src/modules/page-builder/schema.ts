@@ -111,13 +111,13 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
   }),
   blockBase.extend({
     type: z.literal("image"),
-    url: z
+    path: z
       .string()
       .trim()
       .max(2048)
       .refine(
-        (value) => value === "" || isHttpsUrl(value),
-        "Gambar harus memakai URL HTTPS.",
+        (value) => value === "" || isPageBuilderImagePath(value),
+        "Gambar harus berasal dari unggahan builder.",
       ),
     alt: z.string().trim().max(250),
   }),
@@ -138,23 +138,15 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
       }
     }),
   blockBase.extend({
-    type: z.literal("embed"),
-    url: z
-      .string()
-      .trim()
-      .max(2048)
-      .refine(
-        (value) => value === "" || embedUrl(value) !== null,
-        "Embed harus berupa URL YouTube /embed yang aman.",
-      ),
-  }),
-  blockBase.extend({
     type: z.literal("form"),
     title: z.string().trim().min(1).max(160),
     showTitle: z.boolean().optional(),
     description: z.string().trim().max(1000).default(""),
     showDescription: z.boolean().optional(),
     submitLabel: z.string().trim().min(1).max(80).default("Simpan data"),
+    submitButtonAlign: z.enum(["left", "center", "right"]).optional(),
+    submitButtonWidth: z.enum(["auto", "full"]).optional(),
+    submitButtonStyle: z.enum(["primary", "soft", "outline"]).optional(),
     privacyNotice: z
       .string()
       .trim()
@@ -212,18 +204,18 @@ export const pageBuilderPublishBlocksSchema =
         }
         publishedSections.add(block.sectionKey);
       }
-      if (block.type === "image" && !block.url) {
+      if (block.type === "image" && !block.path) {
         context.addIssue({
           code: "custom",
-          path: [index, "url"],
-          message: "Masukkan URL gambar HTTPS sebelum menerbitkan.",
+          path: [index, "path"],
+          message: "Unggah gambar sebelum menerbitkan.",
         });
       }
-      if (block.type === "embed" && !block.url) {
+      if (block.type === "image" && !block.alt) {
         context.addIssue({
           code: "custom",
-          path: [index, "url"],
-          message: "Masukkan URL embed YouTube sebelum menerbitkan.",
+          path: [index, "alt"],
+          message: "Isi teks alternatif gambar sebelum menerbitkan.",
         });
       }
     });
@@ -263,33 +255,8 @@ export function sanitizePageBuilderHtml(value: string) {
   });
 }
 
-export function embedUrl(value: string) {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:") return null;
-  if (
-    url.hostname === "www.youtube.com" &&
-    /^\/embed\/[^/]+/.test(url.pathname)
-  ) {
-    return url.toString();
-  }
-  if (
-    url.hostname === "www.youtube-nocookie.com" &&
-    /^\/embed\/[^/]+/.test(url.pathname)
-  ) {
-    return url.toString();
-  }
-  return null;
-}
-
-function isHttpsUrl(value: string) {
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
-  }
+function isPageBuilderImagePath(value: string) {
+  return /^builder\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\.(?:jpg|png|webp)$/i.test(
+    value,
+  );
 }

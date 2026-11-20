@@ -1,4 +1,5 @@
 import type { PublicContent } from "@/modules/public-content/data";
+import { publicAssetUrl } from "@/modules/public-content/links";
 import {
   pageBuilderBlocksSchema,
   sanitizePageBuilderHtml,
@@ -555,7 +556,13 @@ export function BuilderSection({
   }
 }
 
-export function BuilderFreeBlock({ block }: { block: PageBuilderBlock }) {
+export function BuilderFreeBlock({
+  block,
+  imageUrl,
+}: {
+  block: PageBuilderBlock;
+  imageUrl?: string | null;
+}) {
   if (block.type === "rich_text")
     return (
       <p
@@ -611,14 +618,15 @@ export function BuilderFreeBlock({ block }: { block: PageBuilderBlock }) {
         }}
       />
     );
-  if (block.type === "image")
+  if (block.type === "image" && imageUrl)
     return (
       <img
-        src={block.url}
+        src={imageUrl ?? ""}
         alt={block.alt}
         className="w-full rounded-2xl object-cover"
       />
     );
+  if (block.type === "image") return null;
   if (block.type === "spacer")
     return (
       <div
@@ -633,16 +641,6 @@ export function BuilderFreeBlock({ block }: { block: PageBuilderBlock }) {
           <hr className="m-0 w-full border-0 border-t border-border" />
         )}
       </div>
-    );
-  if (block.type === "embed")
-    return (
-      <iframe
-        src={block.url}
-        title="Embed YouTube"
-        className="aspect-video w-full rounded-2xl border-0"
-        sandbox="allow-scripts allow-presentation"
-        referrerPolicy="strict-origin-when-cross-origin"
-      />
     );
   return null;
 }
@@ -760,7 +758,14 @@ export function BuilderLinkBio({
             }
             return (
               <div key={block.id} className={`${wrapperClass} mb-6 sm:mb-8`}>
-                <BuilderFreeBlock block={block} />
+                <BuilderFreeBlock
+                  block={block}
+                  imageUrl={
+                    block.type === "image"
+                      ? publicAssetUrl(content.mediaPublicBaseUrl, block.path)
+                      : null
+                  }
+                />
               </div>
             );
           })}

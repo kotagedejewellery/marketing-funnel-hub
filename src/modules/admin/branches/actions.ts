@@ -24,8 +24,9 @@ import {
   siteSettings,
 } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
-import { deletePublicAsset } from "@/lib/media/server";
+import { deletePublicAsset, deletePublicAssetTree } from "@/lib/media/server";
 import { requireAdmin } from "@/modules/admin/access";
+import { pageBuilderBlocksSchema } from "@/modules/page-builder/schema";
 
 import { branchDeletionBlockReason } from "./deletion";
 import { branchDeleteSchema, branchIdSchema, branchSchema } from "./validation";
@@ -302,6 +303,25 @@ export async function deleteBranch(
         .select({ id: campaigns.id, bannerPath: campaigns.bannerPath })
         .from(campaigns)
         .where(eq(campaigns.branchId, branch.id));
+      const builderLayouts = await tx
+        .select({
+          draftBlocks: branchPageBuilderLayouts.draftBlocks,
+          publishedBlocks: branchPageBuilderLayouts.publishedBlocks,
+        })
+        .from(branchPageBuilderLayouts)
+        .where(eq(branchPageBuilderLayouts.branchId, branch.id));
+      const builderMediaPaths = builderLayouts.flatMap((layout) =>
+        [layout.draftBlocks, layout.publishedBlocks].flatMap((blocks) => {
+          const parsed = pageBuilderBlocksSchema.safeParse(blocks);
+          return parsed.success
+            ? parsed.data.flatMap((block) =>
+                block.type === "image"
+                  ? [ownedMediaPath(block.path, `builder/${branch.id}/`)]
+                  : [],
+              )
+            : [];
+        }),
+      );
 
       await tx.delete(pageBlocks).where(eq(pageBlocks.branchId, branch.id));
       await tx
@@ -347,14 +367,21 @@ export async function deleteBranch(
         ...branchCampaigns.map((campaign) =>
           ownedMediaPath(campaign.bannerPath, `campaigns/${campaign.id}/`),
         ),
+        ...builderMediaPaths,
       ].filter((path): path is string => path !== null);
-      return { ok: true as const, slug: branch.slug, mediaPaths };
+      return {
+        ok: true as const,
+        slug: branch.slug,
+        mediaPaths: [...new Set(mediaPaths)],
+        mediaDirectories: [`builder/${branch.id}`],
+      };
     });
     if (!deleted.ok) return { message: deleted.message, errors: {} };
 
-    const cleanup = await Promise.allSettled(
-      deleted.mediaPaths.map((path) => deletePublicAsset(path)),
-    );
+    const cleanup = await Promise.allSettled([
+      ...deleted.mediaPaths.map((path) => deletePublicAsset(path)),
+      ...deleted.mediaDirectories.map((path) => deletePublicAssetTree(path)),
+    ]);
     revalidatePath("/");
     revalidatePath(`/${deleted.slug}`);
     revalidatePath("/admin/link-bio");

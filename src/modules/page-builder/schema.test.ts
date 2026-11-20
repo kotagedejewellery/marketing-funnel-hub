@@ -9,13 +9,14 @@ import {
 const id = "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4";
 
 describe("Branch Page Builder schema", () => {
-  it("only accepts a YouTube embed URL", () => {
+  it("accepts only internally uploaded image paths", () => {
     expect(
       pageBuilderBlocksSchema.safeParse([
         {
           id,
-          type: "embed",
-          url: "https://www.youtube-nocookie.com/embed/abc",
+          type: "image",
+          path: "builder/3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4/4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4.webp",
+          alt: "Cincin emas",
           width: "full",
           isVisible: true,
         },
@@ -25,19 +26,9 @@ describe("Branch Page Builder schema", () => {
       pageBuilderBlocksSchema.safeParse([
         {
           id,
-          type: "embed",
-          url: "https://example.com/embed/abc",
-          width: "full",
-          isVisible: true,
-        },
-      ]).success,
-    ).toBe(false);
-    expect(
-      pageBuilderBlocksSchema.safeParse([
-        {
-          id,
-          type: "embed",
-          url: "https://www.youtube-nocookie.com/embed/",
+          type: "image",
+          path: "https://example.com/image.jpg",
+          alt: "Cincin emas",
           width: "full",
           isVisible: true,
         },
@@ -45,13 +36,13 @@ describe("Branch Page Builder schema", () => {
     ).toBe(false);
   });
 
-  it("requires HTTPS images and known domain sections", () => {
+  it("rejects external images and unknown domain sections", () => {
     expect(
       pageBuilderBlocksSchema.safeParse([
         {
           id,
           type: "image",
-          url: "http://example.com/image.jpg",
+          path: "http://example.com/image.jpg",
           alt: "",
           width: "full",
           isVisible: true,
@@ -71,20 +62,13 @@ describe("Branch Page Builder schema", () => {
     ).toBe(false);
   });
 
-  it("keeps unfinished image and embed blocks in a draft but not in a published layout", () => {
+  it("keeps an unfinished uploaded image in a draft but not in a published layout", () => {
     const unfinished = [
       {
         id,
         type: "image",
-        url: "",
+        path: "",
         alt: "",
-        width: "full",
-        isVisible: true,
-      },
-      {
-        id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
-        type: "embed",
-        url: "",
         width: "full",
         isVisible: true,
       },
@@ -306,6 +290,50 @@ describe("Branch Page Builder schema", () => {
         { ...form, showTitle: false, showDescription: false },
       ]).success,
     ).toBe(true);
+  });
+
+  it("accepts controlled form submit button layout without changing legacy forms", () => {
+    const form = {
+      id,
+      type: "form",
+      title: "Konsultasi",
+      description: "",
+      submitLabel: "Kirim",
+      privacyNotice: "Data disimpan oleh KGJ.",
+      submitButtonAlign: "center",
+      submitButtonWidth: "full",
+      submitButtonStyle: "soft",
+      assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+      width: "full",
+      isVisible: true,
+      fields: [
+        {
+          id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+          name: "nama",
+          label: "Nama",
+          type: "text",
+          placeholder: "",
+          help: "",
+          required: true,
+          options: [],
+        },
+      ],
+    };
+
+    const parsed = pageBuilderBlocksSchema.safeParse([form]);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data[0]).toMatchObject({
+        submitButtonAlign: "center",
+        submitButtonWidth: "full",
+        submitButtonStyle: "soft",
+      });
+    }
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        { ...form, submitButtonAlign: "bottom" },
+      ]).success,
+    ).toBe(false);
   });
 
   it("accepts controlled thank-you copy without changing form field schema", () => {

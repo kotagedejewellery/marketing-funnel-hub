@@ -1,5 +1,7 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -14,20 +16,80 @@ import {
   products as productCatalog,
 } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
+import { deletePublicAsset, uploadPublicAsset } from "@/lib/media/server";
+import {
+  imageExtension,
+  maxImageBytes,
+} from "@/modules/admin/media/validation";
 
 import {
   pageBuilderBlocksSchema,
   pageBuilderPublishBlocksSchema,
   sanitizePageBuilderHtml,
 } from "./schema";
+import { isOwnedBuilderImagePath, releasedBuilderImagePaths } from "./media";
 
 type ActionResult =
   | { ok: true; message: string; revision: number }
   | { ok: false; message: string; conflict?: true };
+export type PageBuilderImageUploadState =
+  { ok: false; message: string } | { ok: true; message: string; path: string };
 type BuilderInput = {
   branch: { id: string; slug: string };
   blocks: ReturnType<typeof pageBuilderBlocksSchema.parse>;
 };
+
+export async function uploadPageBuilderImage(
+  _previous: PageBuilderImageUploadState,
+  formData: FormData,
+): Promise<PageBuilderImageUploadState> {
+  const profile = await requireAdmin();
+  const branchId = formData.get("branchId");
+  const file = formData.get("file");
+  if (typeof branchId !== "string" || !/^[0-9a-f-]{36}$/i.test(branchId)) {
+    return { ok: false, message: "Tujuan gambar tidak valid." };
+  }
+  if (!(file instanceof File) || file.size === 0 || file.size > maxImageBytes) {
+    return { ok: false, message: "Pilih gambar maksimal 5 MB." };
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const extension = imageExtension(file.type, bytes);
+  if (!extension) {
+    return {
+      ok: false,
+      message: "Gunakan gambar JPEG, PNG, atau WebP yang valid.",
+    };
+  }
+  const [branch] = await getDatabase()
+    .select({ id: branches.id })
+    .from(branches)
+    .where(eq(branches.id, branchId))
+    .limit(1);
+  if (!branch) return { ok: false, message: "Cabang halaman tidak ditemukan." };
+
+  const path = `builder/${branchId}/${randomUUID()}.${extension}`;
+  try {
+    await uploadPublicAsset(path, bytes);
+  } catch {
+    return { ok: false, message: "Unggah gambar gagal. Coba lagi." };
+  }
+  try {
+    await getDatabase()
+      .insert(auditLogs)
+      .values({
+        adminId: profile.id,
+        action: "update",
+        entityType: "branch_page_builder",
+        entityId: branchId,
+        changes: { field: "image", mode: "upload" },
+      });
+  } catch {
+    await deletePublicAsset(path).catch(() => undefined);
+    return { ok: false, message: "Unggah gambar gagal. Coba lagi." };
+  }
+  return { ok: true, message: "Gambar berhasil diunggah.", path };
+}
 
 async function readInput(
   branchId: string,
@@ -47,6 +109,16 @@ async function readInput(
     .where(eq(branches.id, branchId))
     .limit(1);
   if (!branch) return { message: "Cabang halaman tidak ditemukan." };
+  if (
+    parsed.data.some(
+      (block) =>
+        block.type === "image" &&
+        block.path &&
+        !isOwnedBuilderImagePath(block.path, branchId),
+    )
+  ) {
+    return { message: "Gambar tidak dimiliki cabang ini." };
+  }
 
   const productIds = [
     ...new Set(
@@ -147,6 +219,30 @@ async function readInput(
   };
 }
 
+async function savedBuilderBlocks(branchId: string) {
+  const [layout] = await getDatabase()
+    .select({
+      draftBlocks: branchPageBuilderLayouts.draftBlocks,
+      publishedBlocks: branchPageBuilderLayouts.publishedBlocks,
+    })
+    .from(branchPageBuilderLayouts)
+    .where(eq(branchPageBuilderLayouts.branchId, branchId))
+    .limit(1);
+  return {
+    draft: pageBuilderBlocksSchema.safeParse(layout?.draftBlocks).data ?? [],
+    published:
+      pageBuilderBlocksSchema.safeParse(layout?.publishedBlocks).data ?? [],
+  };
+}
+
+async function deleteReleasedBuilderImages(
+  input: Parameters<typeof releasedBuilderImagePaths>[0],
+) {
+  await Promise.allSettled(
+    releasedBuilderImagePaths(input).map((path) => deletePublicAsset(path)),
+  );
+}
+
 export async function savePageBuilderDraft(
   branchId: string,
   blocks: unknown,
@@ -231,6 +327,7 @@ export async function publishPageBuilder(
     };
   }
 
+  const previous = await savedBuilderBlocks(branchId);
   const db = getDatabase();
   const layout = await db.transaction(async (tx) => {
     const now = new Date();
@@ -282,6 +379,13 @@ export async function publishPageBuilder(
       conflict: true,
       message: "Halaman telah diubah oleh editor lain. Muat versi terbaru.",
     };
+  await deleteReleasedBuilderImages({
+    branchId,
+    previousDraft: previous.draft,
+    previousPublished: previous.published,
+    nextDraft: result.input.blocks,
+    nextPublished: result.input.blocks,
+  });
   revalidatePath(`/${result.input.branch.slug}`);
   revalidatePath(`/admin/branches/${branchId}/link-bio`);
   return {

@@ -105,6 +105,25 @@ describe("BuilderForm", () => {
     );
   });
 
+  it("renders the configured submit button layout", () => {
+    render(
+      <BuilderForm
+        block={{
+          ...block,
+          submitButtonAlign: "center",
+          submitButtonWidth: "full",
+          submitButtonStyle: "soft",
+        }}
+        branchSlug="pusat"
+        product={product}
+      />,
+    );
+
+    const submit = screen.getByRole("button", { name: "Kirim data" });
+    expect(submit).toHaveClass("w-full", "bg-[var(--kgj-accent-soft)]");
+    expect(submit.parentElement).toHaveClass("justify-center");
+  });
+
   it.each([
     ["judul dan deskripsi tampil", {}, true, true],
     ["hanya judul tersembunyi", { showTitle: false }, false, true],

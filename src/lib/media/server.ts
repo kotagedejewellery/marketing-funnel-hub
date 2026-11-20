@@ -38,3 +38,7 @@ export async function readPublicAsset(path: string) {
 export async function deletePublicAsset(path: string) {
   await rm(resolveMediaPath(path), { force: true });
 }
+
+export async function deletePublicAssetTree(path: string) {
+  await rm(resolveMediaPath(path), { force: true, recursive: true });
+}

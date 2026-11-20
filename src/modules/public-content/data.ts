@@ -476,6 +476,7 @@ async function loadScopedContent(
   });
 
   return {
+    mediaPublicBaseUrl: serverEnv.MEDIA_PUBLIC_BASE_URL,
     site: {
       siteName:
         branch.profileName || branchPageTitle(site.siteName, branch.name),

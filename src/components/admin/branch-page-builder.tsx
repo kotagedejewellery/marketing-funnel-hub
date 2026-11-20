@@ -2,6 +2,7 @@
 
 import {
   startTransition,
+  useActionState,
   useEffect,
   useRef,
   useState,
@@ -10,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -22,6 +24,7 @@ import {
 import {
   publishPageBuilder,
   savePageBuilderDraft,
+  uploadPageBuilderImage,
 } from "@/modules/page-builder/actions";
 import { sectionSupportsPublicTitle } from "@/modules/admin/branches/page-validation";
 import {
@@ -31,6 +34,7 @@ import {
   type PageBuilderBlockInput,
   type PageBuilderFormField,
 } from "@/modules/page-builder/schema";
+import { maxImageBytes } from "@/modules/admin/media/validation";
 
 type Catalog = {
   sections: {
@@ -756,7 +760,7 @@ export function BranchPageBuilder({
               onClick={() =>
                 add({
                   type: "image",
-                  url: "",
+                  path: "",
                   alt: "",
                   width: "full",
                   isVisible: true,
@@ -770,17 +774,6 @@ export function BranchPageBuilder({
                   type: "spacer",
                   spacingPx: 32,
                   showDivider: false,
-                  width: "full",
-                  isVisible: true,
-                })
-              }
-            />
-            <BuilderButton
-              label="Embed YouTube"
-              onClick={() =>
-                add({
-                  type: "embed",
-                  url: "",
                   width: "full",
                   isVisible: true,
                 })
@@ -1171,18 +1164,16 @@ export function BranchPageBuilder({
                     Blok lama ini dipertahankan agar konten yang sudah terbit
                     tidak berubah dan tidak dapat diedit. Blok baru menggunakan
                     Teks atau Judul. Script, iframe, dan kode yang tidak
-                    didukung tidak akan ditampilkan. Untuk video, gunakan blok
-                    Embed YouTube.
+                    didukung tidak akan ditampilkan.
                   </p>
                 </>
               )}
               {selected.type === "image" && (
                 <>
-                  <Editor
-                    label="URL gambar HTTPS"
-                    value={selected.url}
-                    onChange={(url) => update({ url }, "image-url")}
-                    onBlur={endHistoryGroup}
+                  <ImageBlockEditor
+                    branchId={branchId}
+                    path={selected.path}
+                    onUploaded={(path) => update({ path }, "image-upload")}
                   />
                   <Editor
                     label="Teks alternatif"
@@ -1191,22 +1182,8 @@ export function BranchPageBuilder({
                     onBlur={endHistoryGroup}
                   />
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Belum dikonfigurasi. Masukkan URL gambar HTTPS sebelum
-                    menerbitkan halaman.
-                  </p>
-                </>
-              )}
-              {selected.type === "embed" && (
-                <>
-                  <Editor
-                    label="URL embed YouTube"
-                    value={selected.url}
-                    onChange={(url) => update({ url }, "embed-url")}
-                    onBlur={endHistoryGroup}
-                  />
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    Belum dikonfigurasi. Gunakan URL YouTube berformat
-                    /embed/ID-VIDEO sebelum menerbitkan halaman.
+                    Unggah gambar sebelum menerbitkan halaman. Teks alternatif
+                    diperlukan agar gambar tetap dapat dipahami pembaca layar.
                   </p>
                 </>
               )}
@@ -1717,6 +1694,83 @@ function FormEditor({
         }
         onBlur={onEditEnd}
       />
+      <fieldset className="space-y-3 border-y border-border py-4">
+        <legend className="font-semibold">Tombol form</legend>
+        <div>
+          <span className="text-sm font-semibold">Posisi</span>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {(
+              [
+                ["left", "Kiri"],
+                ["center", "Tengah"],
+                ["right", "Kanan"],
+              ] as const
+            ).map(([value, label]) => (
+              <ToggleButton
+                key={value}
+                pressed={(form.submitButtonAlign ?? "left") === value}
+                onClick={() =>
+                  onChange(
+                    { submitButtonAlign: value },
+                    "form-submit-button-align",
+                  )
+                }
+              >
+                {label}
+              </ToggleButton>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="text-sm font-semibold">Lebar</span>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {(
+              [
+                ["auto", "Menyesuaikan isi"],
+                ["full", "Penuh"],
+              ] as const
+            ).map(([value, label]) => (
+              <ToggleButton
+                key={value}
+                pressed={(form.submitButtonWidth ?? "auto") === value}
+                onClick={() =>
+                  onChange(
+                    { submitButtonWidth: value },
+                    "form-submit-button-width",
+                  )
+                }
+              >
+                {label}
+              </ToggleButton>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="text-sm font-semibold">Gaya</span>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {(
+              [
+                ["primary", "Utama gelap"],
+                ["soft", "Lembut"],
+                ["outline", "Outline"],
+              ] as const
+            ).map(([value, label]) => (
+              <ToggleButton
+                key={value}
+                pressed={(form.submitButtonStyle ?? "primary") === value}
+                onClick={() =>
+                  onChange(
+                    { submitButtonStyle: value },
+                    "form-submit-button-style",
+                  )
+                }
+              >
+                {label}
+              </ToggleButton>
+            ))}
+          </div>
+        </div>
+      </fieldset>
       <Editor
         label="Pemberitahuan privasi"
         value={form.privacyNotice}
@@ -2306,6 +2360,182 @@ function DragHandleIcon() {
   );
 }
 
+function ImageBlockEditor({
+  branchId,
+  path,
+  onUploaded,
+}: {
+  branchId: string;
+  path: string;
+  onUploaded: (path: string) => void;
+}) {
+  const [state, action, pending] = useActionState(uploadPageBuilderImage, {
+    ok: false,
+    message: "",
+  });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const uploadedPathRef = useRef<string | null>(null);
+  const [selected, setSelected] = useState<{
+    name: string;
+    size: number;
+    url: string;
+    width?: number;
+    height?: number;
+  } | null>(null);
+  const [fileError, setFileError] = useState("");
+
+  useEffect(() => {
+    if (!selected?.url) return;
+    return () => URL.revokeObjectURL(selected.url);
+  }, [selected?.url]);
+
+  useEffect(() => {
+    if (!state.ok || state.path === uploadedPathRef.current) return;
+    uploadedPathRef.current = state.path;
+    onUploaded(state.path);
+  }, [onUploaded, state]);
+
+  function selectFile(file: File) {
+    if (
+      !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+      file.size === 0 ||
+      file.size > maxImageBytes
+    ) {
+      if (inputRef.current) inputRef.current.value = "";
+      setSelected(null);
+      setFileError("Gunakan JPEG, PNG, atau WebP maksimal 5 MB.");
+      return;
+    }
+    setFileError("");
+    setSelected({
+      name: file.name,
+      size: file.size,
+      url: URL.createObjectURL(file),
+    });
+  }
+
+  const selectedWidth = selected?.width ?? 0;
+  const selectedHeight = selected?.height ?? 0;
+  const hasDimensions = Boolean(selectedWidth && selectedHeight);
+  const ratioDiffers =
+    hasDimensions && Math.abs(selectedWidth / selectedHeight - 4 / 5) > 0.03;
+  const isSmall =
+    hasDimensions && (selectedWidth < 1080 || selectedHeight < 1350);
+
+  return (
+    <form action={action} className="space-y-3" aria-busy={pending}>
+      <input type="hidden" name="branchId" value={branchId} />
+      <label className="block">
+        Unggah gambar
+        <input
+          ref={inputRef}
+          name="file"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          required
+          disabled={pending}
+          className="mt-1 block w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-background file:px-3 file:py-1.5 file:font-medium"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file) selectFile(file);
+          }}
+        />
+      </label>
+      <p className="text-xs leading-5 text-muted-foreground">
+        Disarankan 1080 Ã— 1350 px (4:5). JPEG, PNG, atau WebP; maksimal 5 MB.
+      </p>
+      {selected ? (
+        <div className="rounded-xl border border-border bg-background p-3">
+          <Image
+            src={selected.url}
+            alt="Pratinjau gambar yang dipilih"
+            width={1080}
+            height={1350}
+            unoptimized
+            className="aspect-[4/5] w-full rounded-lg bg-secondary object-cover"
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              setSelected((current) =>
+                current?.url === selected.url
+                  ? { ...current, width: naturalWidth, height: naturalHeight }
+                  : current,
+              );
+            }}
+            onError={() => {
+              if (inputRef.current) inputRef.current.value = "";
+              setSelected(null);
+              setFileError("Gambar tidak dapat dibuka. Pilih file lain.");
+            }}
+          />
+          <p
+            className="mt-2 truncate text-sm font-medium"
+            title={selected.name}
+          >
+            {selected.name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {selected.width && selected.height
+              ? `${selected.width} Ã— ${selected.height} px`
+              : "Membaca dimensi..."}
+          </p>
+          {ratioDiffers ? (
+            <p role="status" className="mt-2 text-xs text-[var(--kgj-accent)]">
+              Rasio berbeda dari 4:5; gambar dapat terpotong pada halaman.
+            </p>
+          ) : null}
+          {isSmall ? (
+            <p role="status" className="mt-2 text-xs text-[var(--kgj-accent)]">
+              Resolusi di bawah ukuran yang disarankan; gambar mungkin kurang
+              tajam.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {fileError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {fileError}
+        </p>
+      ) : null}
+      {path ? (
+        <p className="text-sm text-muted-foreground">Gambar telah diunggah.</p>
+      ) : null}
+      {state.message ? (
+        <p
+          role={state.ok ? "status" : "alert"}
+          className={`text-sm ${state.ok ? "text-muted-foreground" : "text-destructive"}`}
+        >
+          {state.message}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending || Boolean(fileError)}
+        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50"
+      >
+        {pending ? (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="size-4 animate-spin motion-reduce:animate-none"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="9"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeDasharray="42"
+              strokeDashoffset="12"
+            />
+          </svg>
+        ) : null}
+        {pending ? "Mengunggah..." : path ? "Ganti gambar" : "Unggah gambar"}
+      </button>
+    </form>
+  );
+}
+
 function Editor({
   label,
   value,
@@ -2734,7 +2964,6 @@ function label(block: PageBuilderBlock, catalog: Catalog) {
   if (block.type === "html") return "HTML lama";
   if (block.type === "image") return "Gambar";
   if (block.type === "spacer") return "Pemisah & jarak";
-  if (block.type === "embed") return "Embed YouTube";
   if (block.type === "section") {
     return (
       catalog.sections.find((item) => item.sectionKey === block.sectionKey)
@@ -2755,7 +2984,8 @@ function label(block: PageBuilderBlock, catalog: Catalog) {
 }
 
 function blockConfigurationIssue(block: PageBuilderBlock) {
-  if (block.type === "image" && !block.url) return "Gambar belum diisi";
-  if (block.type === "embed" && !block.url) return "Video belum diisi";
+  if (block.type === "image" && !block.path) return "Gambar belum diunggah";
+  if (block.type === "image" && !block.alt)
+    return "Teks alternatif gambar belum diisi";
   return null;
 }

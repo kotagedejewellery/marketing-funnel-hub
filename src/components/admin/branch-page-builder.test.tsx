@@ -15,6 +15,7 @@ import { useAddPageDataToCanvas } from "./page-data-manager-context";
 const actions = vi.hoisted(() => ({
   publishPageBuilder: vi.fn(),
   savePageBuilderDraft: vi.fn(),
+  uploadPageBuilderImage: vi.fn(),
 }));
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 
@@ -51,6 +52,14 @@ function AddCincinFromSource() {
 describe("BranchPageBuilder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn(() => "blob:builder-preview"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: vi.fn(),
+    });
   });
 
   it("keeps connected data controls inside the builder workspace", async () => {
@@ -140,6 +149,39 @@ describe("BranchPageBuilder", () => {
       screen.queryByRole("button", { name: "Simpan draft" }),
     ).not.toBeInTheDocument();
     expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("offers uploaded images without a YouTube or external URL block", () => {
+    render(
+      <BranchPageBuilder
+        branchId="3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4"
+        branchName="KGJ Pusat"
+        initialBlocks={[]}
+        catalog={{ sections: [], products: [], links: [], sourceSummary: [] }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "+ Embed YouTube" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "+ Gambar" }));
+    expect(screen.getByLabelText("Unggah gambar")).toHaveAttribute(
+      "type",
+      "file",
+    );
+    expect(screen.getByText(/Disarankan 1080/)).toBeVisible();
+    expect(screen.queryByLabelText("URL gambar HTTPS")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Unggah gambar"), {
+      target: {
+        files: [new File(["preview"], "cincin.webp", { type: "image/webp" })],
+      },
+    });
+    expect(
+      screen.getByAltText("Pratinjau gambar yang dipilih"),
+    ).toHaveAttribute("src", "blob:builder-preview");
   });
 
   it("saves a changed canvas automatically without a draft button", async () => {
@@ -665,6 +707,19 @@ describe("BranchPageBuilder", () => {
     expect(screen.getByLabelText("Tampilkan judul form")).toBeChecked();
     expect(screen.getByLabelText("Tampilkan deskripsi")).toBeChecked();
 
+    const buttonSettings = screen.getByRole("group", {
+      name: "Tombol form",
+    });
+    fireEvent.click(
+      within(buttonSettings).getByRole("button", { name: "Tengah" }),
+    );
+    fireEvent.click(
+      within(buttonSettings).getByRole("button", { name: "Penuh" }),
+    );
+    fireEvent.click(
+      within(buttonSettings).getByRole("button", { name: "Lembut" }),
+    );
+
     fireEvent.click(screen.getByLabelText("Tampilkan judul form"));
     fireEvent.click(screen.getByLabelText("Tampilkan deskripsi"));
 
@@ -685,6 +740,9 @@ describe("BranchPageBuilder", () => {
               type: "form",
               showTitle: false,
               showDescription: false,
+              submitButtonAlign: "center",
+              submitButtonWidth: "full",
+              submitButtonStyle: "soft",
             }),
           ],
           null,

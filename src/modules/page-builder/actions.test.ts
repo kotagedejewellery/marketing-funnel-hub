@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   getDatabase: vi.fn(),
   requireAdmin: vi.fn(),
   revalidatePath: vi.fn(),
+  deletePublicAsset: vi.fn(),
+  uploadPublicAsset: vi.fn(),
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -16,9 +18,17 @@ vi.mock("drizzle-orm", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/db/client", () => ({ getDatabase: mocks.getDatabase }));
+vi.mock("@/lib/media/server", () => ({
+  deletePublicAsset: mocks.deletePublicAsset,
+  uploadPublicAsset: mocks.uploadPublicAsset,
+}));
 vi.mock("@/modules/admin/access", () => ({ requireAdmin: mocks.requireAdmin }));
 
-import { publishPageBuilder, savePageBuilderDraft } from "./actions";
+import {
+  publishPageBuilder,
+  savePageBuilderDraft,
+  uploadPageBuilderImage,
+} from "./actions";
 
 const branchId = "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4";
 const assignmentId = "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4";
@@ -105,6 +115,26 @@ describe("page builder actions", () => {
     });
   });
 
+  it("rejects an image path owned by another branch", async () => {
+    mocks.getDatabase.mockReturnValue(databaseFor([]));
+
+    await expect(
+      savePageBuilderDraft(branchId, [
+        {
+          id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+          type: "image",
+          path: "builder/6f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4/7f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4.webp",
+          alt: "Cincin emas",
+          width: "full",
+          isVisible: true,
+        },
+      ]),
+    ).resolves.toEqual({
+      ok: false,
+      message: "Gambar tidak dimiliki cabang ini.",
+    });
+  });
+
   it("allows publishing a form-only page", async () => {
     mocks.getDatabase.mockReturnValue(databaseFor([{ id: assignmentId }]));
 
@@ -147,6 +177,47 @@ describe("page builder actions", () => {
     });
   });
 
+  it("uploads a validated image under the selected branch", async () => {
+    const branchQuery = {
+      from: () => branchQuery,
+      where: () => branchQuery,
+      limit: () => Promise.resolve([{ id: branchId }]),
+    };
+    const insert = vi.fn(() => ({
+      values: vi.fn().mockResolvedValue(undefined),
+    }));
+    mocks.getDatabase.mockReturnValue({
+      select: vi.fn(() => branchQuery),
+      insert,
+    });
+    mocks.uploadPublicAsset.mockResolvedValue(undefined);
+    const formData = new FormData();
+    formData.set("branchId", branchId);
+    formData.set(
+      "file",
+      new File(
+        [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        "cincin.png",
+        { type: "image/png" },
+      ),
+    );
+
+    const result = await uploadPageBuilderImage(
+      { ok: false, message: "" },
+      formData,
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      path: expect.stringMatching(new RegExp(`^builder/${branchId}/.+\\.png$`)),
+    });
+    expect(mocks.uploadPublicAsset).toHaveBeenCalledWith(
+      expect.stringMatching(new RegExp(`^builder/${branchId}/.+\\.png$`)),
+      expect.any(Uint8Array),
+    );
+    expect(insert).toHaveBeenCalled();
+  });
+
   it("saves an unfinished free block as a draft but rejects it at publication", async () => {
     mocks.getDatabase
       .mockReturnValueOnce(databaseFor([]))
@@ -157,7 +228,7 @@ describe("page builder actions", () => {
       {
         id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
         type: "image" as const,
-        url: "",
+        path: "",
         alt: "",
         width: "full" as const,
         isVisible: true,
@@ -171,7 +242,7 @@ describe("page builder actions", () => {
     );
     await expect(publishPageBuilder(branchId, blocks)).resolves.toEqual({
       ok: false,
-      message: "Masukkan URL gambar HTTPS sebelum menerbitkan.",
+      message: "Unggah gambar sebelum menerbitkan.",
     });
   });
 });

@@ -6,6 +6,7 @@ import { LinkBio } from "@/components/public/link-bio";
 import type { PublicContent } from "@/modules/public-content/data";
 
 const emptyContent: PublicContent = {
+  mediaPublicBaseUrl: "https://example.com/media",
   site: {
     siteName: "KGJ",
     headline: null,
