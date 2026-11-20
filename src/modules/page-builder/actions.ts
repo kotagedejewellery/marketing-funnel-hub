@@ -224,15 +224,10 @@ export async function publishPageBuilder(
         "Halaman belum siap diterbitkan.",
     };
   }
-  if (
-    result.input.blocks.length === 0 ||
-    !result.input.blocks.some(
-      (block) => block.type === "product_cta" && block.isVisible,
-    )
-  ) {
+  if (result.input.blocks.length === 0) {
     return {
       ok: false,
-      message: "Terbitkan minimal satu CTA WhatsApp produk yang tampil.",
+      message: "Tambahkan minimal satu blok sebelum menerbitkan.",
     };
   }
 

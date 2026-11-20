@@ -179,15 +179,17 @@ export function BranchPageBuilder({
     (!draftReadiness.success
       ? "Lengkapi pengaturan blok yang masih belum valid."
       : null);
-  const publishIssue = !blocks.some(
+  const hasVisibleProductCta = blocks.some(
     (block) => block.type === "product_cta" && block.isVisible,
-  )
-    ? "Tambahkan minimal satu CTA WhatsApp produk yang tampil."
-    : (referenceIssue ??
-      (!publishReadiness.success
-        ? (publishReadiness.error.issues[0]?.message ??
-          "Lengkapi pengaturan blok yang masih belum valid.")
-        : null));
+  );
+  const hasVisibleBlock = blocks.some((block) => block.isVisible);
+  const publishIssue =
+    blocks.length === 0
+      ? "Tambahkan minimal satu blok sebelum menerbitkan."
+      : (referenceIssue ??
+        (!publishReadiness.success
+          ? "Lengkapi pengaturan blok yang masih belum valid."
+          : null));
   const hasActiveProductCta = catalog.products.some(
     (product) => product.assignment,
   );
@@ -661,7 +663,11 @@ export function BranchPageBuilder({
               {publishIssue ? "Belum siap diterbitkan" : "Siap diterbitkan"}
             </span>{" "}
             {publishIssue ??
-              "CTA WhatsApp tampil dan pengaturan blok telah diperiksa."}
+              (!hasVisibleBlock
+                ? "Tidak ada blok yang tampil di halaman publik."
+                : hasVisibleProductCta
+                  ? "CTA WhatsApp tampil dan pengaturan blok telah diperiksa."
+                  : "Halaman tetap dapat diterbitkan tanpa CTA WhatsApp produk yang tampil.")}
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:justify-end">

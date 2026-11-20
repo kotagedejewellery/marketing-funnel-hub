@@ -105,29 +105,52 @@ describe("page builder actions", () => {
     });
   });
 
-  it("requires a visible product CTA before publishing", async () => {
-    mocks.getDatabase.mockReturnValue(
-      databaseFor([{ sectionKey: "products" }]),
-    );
+  it("allows publishing a form-only page", async () => {
+    mocks.getDatabase.mockReturnValue(databaseFor([{ id: assignmentId }]));
 
     const result = await publishPageBuilder(branchId, [
       {
         id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
-        type: "rich_text",
-        text: "Halo",
+        type: "form",
+        title: "Konsultasi",
+        description: "",
+        submitLabel: "Kirim",
+        privacyNotice: "Data disimpan KGJ.",
+        assignmentId,
+        fields: [
+          {
+            id: "6f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            name: "nama",
+            label: "Nama lengkap",
+            type: "text",
+            placeholder: "",
+            help: "",
+            required: true,
+            options: [],
+          },
+        ],
         width: "full",
         isVisible: true,
       },
     ]);
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({ ok: true, revision: 0 });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/pusat");
+  });
+
+  it("requires at least one block before publishing", async () => {
+    mocks.getDatabase.mockReturnValue(databaseFor([]));
+
+    await expect(publishPageBuilder(branchId, [])).resolves.toEqual({
       ok: false,
-      message: "Terbitkan minimal satu CTA WhatsApp produk yang tampil.",
+      message: "Tambahkan minimal satu blok sebelum menerbitkan.",
     });
   });
 
   it("saves an unfinished free block as a draft but rejects it at publication", async () => {
     mocks.getDatabase
+      .mockReturnValueOnce(databaseFor([]))
+      .mockReturnValueOnce(databaseFor([]))
       .mockReturnValueOnce(databaseFor([]))
       .mockReturnValueOnce(databaseFor([]));
     const blocks = [

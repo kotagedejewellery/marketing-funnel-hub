@@ -1192,18 +1192,76 @@ describe("BranchPageBuilder", () => {
     expect(navigation.defaultPrevented).toBe(true);
   });
 
-  it("shows publication readiness before Marketing tries to publish", () => {
+  it("allows publishing a valid form-only page", () => {
     render(
       <BranchPageBuilder
         branchId="branch-1"
         branchName="KGJ Pusat"
         initialBlocks={[
           {
-            id: "block-1",
+            id: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            type: "form",
+            title: "Konsultasi",
+            description: "",
+            submitLabel: "Kirim",
+            privacyNotice: "Data disimpan KGJ.",
+            assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            fields: [
+              {
+                id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+                name: "nama",
+                label: "Nama lengkap",
+                type: "text",
+                placeholder: "",
+                help: "",
+                required: true,
+                options: [],
+              },
+            ],
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: { id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4" },
+            },
+          ],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    expect(screen.getByText("Siap diterbitkan")).toBeVisible();
+    expect(
+      screen.getByText(
+        /Halaman tetap dapat diterbitkan tanpa CTA WhatsApp produk yang tampil/i,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Terbitkan perubahan" }),
+    ).toBeEnabled();
+  });
+
+  it("warns when a publishable page has no visible blocks", () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[
+          {
+            id: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
             type: "rich_text",
             text: "Halo",
             width: "full",
-            isVisible: true,
+            isVisible: false,
           },
         ]}
         catalog={{ sections: [], products: [], links: [], sourceSummary: [] }}
@@ -1212,12 +1270,13 @@ describe("BranchPageBuilder", () => {
       />,
     );
 
-    expect(screen.getByText("Belum siap diterbitkan")).toBeVisible();
+    expect(screen.getByText("Siap diterbitkan")).toBeVisible();
     expect(
-      screen.getByText(
-        /Tambahkan minimal satu CTA WhatsApp produk yang tampil/i,
-      ),
+      screen.getByText("Tidak ada blok yang tampil di halaman publik."),
     ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Terbitkan perubahan" }),
+    ).toBeEnabled();
   });
 
   it("blocks saving when a block refers to data that is no longer active", () => {
