@@ -87,4 +87,27 @@ describe("Google Sheets form delivery", () => {
       expect.anything(),
     );
   });
+
+  it("accepts the canonical Spreadsheet ID without a Google URL", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      appendGoogleSheetsResponse({
+        spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+        sheetName: "Respons Form",
+        fieldMappings: [{ fieldName: "nama", column: "A" }],
+        values: { nama: "Nadia" },
+      }),
+    ).resolves.toEqual({ ok: true });
+
+    expect(fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining(
+        "/spreadsheets/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/values/",
+      ),
+      expect.anything(),
+    );
+  });
 });

@@ -26,12 +26,31 @@ const headingTypographyFields = {
 };
 
 const googleSheetsUrlSchema = z.url().refine((value) => {
-  const url = new URL(value);
-  return (
-    url.hostname === "docs.google.com" &&
-    /^\/spreadsheets\/d\/[A-Za-z0-9_-]{20,}(?:\/|$)/.test(url.pathname)
-  );
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname === "docs.google.com" &&
+      /^\/spreadsheets\/d\/[A-Za-z0-9_-]{20,}(?:\/|$)/.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
 }, "Gunakan URL Google Sheets yang valid.");
+
+const googleSheetsIdSchema = z
+  .string()
+  .trim()
+  .regex(
+    /^[A-Za-z0-9_-]{20,}$/,
+    "Gunakan ID Spreadsheet Google Sheets yang valid.",
+  );
+
+const optionalGoogleSheetsIdSchema = z
+  .union([googleSheetsIdSchema, z.literal("")])
+  .optional();
+const optionalGoogleSheetsUrlSchema = z
+  .union([googleSheetsUrlSchema, z.literal("")])
+  .optional();
 
 const googleSheetsFieldMappingSchema = z.object({
   fieldName: z.string().trim().min(1).max(40),
@@ -42,13 +61,26 @@ const googleSheetsFieldMappingSchema = z.object({
     .regex(/^[A-Z]{1,3}$/, "Gunakan kolom seperti A, B, atau AA."),
 });
 
-export const googleSheetsDestinationSchema = z.object({
-  spreadsheetUrl: googleSheetsUrlSchema,
-  sheetName: z.string().trim().min(1).max(100),
-  fieldMappings: z.array(googleSheetsFieldMappingSchema).min(1).max(20),
-});
+export const googleSheetsDestinationSchema = z
+  .object({
+    // spreadsheetUrl is retained solely for saved Form configurations created
+    // before the editor moved to a canonical Spreadsheet ID.
+    spreadsheetId: optionalGoogleSheetsIdSchema,
+    spreadsheetUrl: optionalGoogleSheetsUrlSchema,
+    sheetName: z.string().trim().min(1).max(100),
+    fieldMappings: z.array(googleSheetsFieldMappingSchema).min(1).max(20),
+  })
+  .superRefine((destination, context) => {
+    if (destination.spreadsheetId || destination.spreadsheetUrl) return;
+    context.addIssue({
+      code: "custom",
+      path: ["spreadsheetId"],
+      message: "Isi ID Spreadsheet Google Sheets.",
+    });
+  });
 
 const googleSheetsDraftDestinationSchema = z.object({
+  spreadsheetId: z.string().trim().max(128).default(""),
   spreadsheetUrl: z.string().trim().max(2048).default(""),
   sheetName: z.string().trim().max(100).default(""),
   fieldMappings: z

@@ -86,8 +86,7 @@ describe("POST /api/forms/[slug]/[formId]", () => {
               assignmentId,
               submissionDestination: "google_sheets",
               googleSheets: {
-                spreadsheetUrl:
-                  "https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit",
+                spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
                 sheetName: "Respons",
                 fieldMappings: [{ fieldName: "nama", column: "A" }],
               },
@@ -162,6 +161,14 @@ describe("POST /api/forms/[slug]/[formId]", () => {
     );
     expect(mocks.deliverGoogleSheetsFormSubmission).toHaveBeenCalledWith(
       deliveryId,
+    );
+    expect(deliveryValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "google_sheets",
+        destination: expect.objectContaining({
+          spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+        }),
+      }),
     );
   });
 });

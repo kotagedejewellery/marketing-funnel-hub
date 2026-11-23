@@ -3,11 +3,14 @@ import { FaqManager } from "@/components/admin/faq-manager";
 import { SectionList } from "@/components/admin/section-list";
 import { SiteSettingsForm } from "@/components/admin/site-settings-form";
 import { MediaUploadField } from "@/components/admin/media-upload-field";
+import { GoogleSheetsIntegrationCard } from "@/components/admin/google-sheets-integration-card";
 import { serverEnv } from "@/lib/env/server";
 import { getContentSettings } from "@/modules/admin/content/data";
+import { requireAdmin } from "@/modules/admin/access";
 import { publicAssetUrl } from "@/modules/public-content/links";
 
 export default async function SettingsPage() {
+  const profile = await requireAdmin();
   const { settings, sections, faqs, activeBranches } =
     await getContentSettings();
   const defaultBranch = activeBranches.find(
@@ -86,6 +89,17 @@ export default async function SettingsPage() {
             settings.logoPath,
           )}
         />
+        {profile.role === "technical_admin" && (
+          <GoogleSheetsIntegrationCard
+            serviceAccountEmail={
+              serverEnv.GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL ?? null
+            }
+            isConfigured={Boolean(
+              serverEnv.GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL &&
+              serverEnv.GOOGLE_SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY,
+            )}
+          />
+        )}
       </div>
       <div className="mt-6 [&>section]:mt-0">
         <SectionList sections={sections} />

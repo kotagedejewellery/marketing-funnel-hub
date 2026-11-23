@@ -96,6 +96,10 @@ export default async function BranchLinkBioPage({
         isPublished={builderLayout.isPublished}
         publishedAt={builderLayout.publishedAt}
         privacyUrl={builderLayout.privacyUrl}
+        googleSheetsConfigured={Boolean(
+          serverEnv.GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL &&
+          serverEnv.GOOGLE_SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY,
+        )}
         catalog={{
           sections: sections
             .filter((section) => section.isActive)

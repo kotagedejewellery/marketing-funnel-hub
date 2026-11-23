@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  googleSheetsDestinationSchema,
   pageBuilderBlocksSchema,
   pageBuilderPublishBlocksSchema,
   stripPageBuilderPrivateConfig,
@@ -412,6 +413,54 @@ describe("Branch Page Builder schema", () => {
         metaEventName: "Lead",
         googleSheets: { sheetName: "Respons" },
       });
+  });
+
+  it("accepts a Spreadsheet ID for a mapped Google Sheets destination", () => {
+    const parsed = pageBuilderBlocksSchema.safeParse([
+      {
+        id,
+        type: "form",
+        title: "Konsultasi",
+        description: "",
+        submitLabel: "Kirim",
+        privacyNotice: "Data disimpan oleh KGJ.",
+        assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        submissionDestination: "google_sheets",
+        googleSheets: {
+          spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+          sheetName: "Respons Jakarta",
+          fieldMappings: [{ fieldName: "nama", column: "A" }],
+        },
+        width: "full",
+        isVisible: true,
+        fields: [
+          {
+            id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            name: "nama",
+            label: "Nama",
+            type: "text",
+            placeholder: "",
+            help: "",
+            required: true,
+            options: [],
+          },
+        ],
+      },
+    ]);
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("keeps a legacy Spreadsheet URL valid when the new ID is blank", () => {
+    expect(
+      googleSheetsDestinationSchema.safeParse({
+        spreadsheetId: "",
+        spreadsheetUrl:
+          "https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit",
+        sheetName: "Respons Jakarta",
+        fieldMappings: [{ fieldName: "nama", column: "A" }],
+      }).success,
+    ).toBe(true);
   });
 
   it("accepts explicit fields for the respondent summary and rejects unknown fields", () => {

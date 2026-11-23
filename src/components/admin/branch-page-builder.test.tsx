@@ -751,6 +751,47 @@ describe("BranchPageBuilder", () => {
     );
   });
 
+  it("opens dedicated Spreadsheet settings when a form uses Google Sheets", () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: { id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4" },
+            },
+          ],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "+ Form" }));
+    fireEvent.change(screen.getByLabelText("Tujuan data"), {
+      target: { value: "google_sheets" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Atur spreadsheet" }));
+
+    expect(
+      screen.getByRole("region", { name: "Pengaturan spreadsheet Form" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("ID Spreadsheet")).toBeVisible();
+    expect(screen.getByLabelText("Nama tab")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Tutup" }));
+    expect(
+      screen.queryByRole("region", { name: "Pengaturan spreadsheet Form" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("explains how to repair an existing form whose CTA is no longer active", () => {
     render(
       <BranchPageBuilder

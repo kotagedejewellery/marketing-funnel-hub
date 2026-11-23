@@ -8,7 +8,8 @@ type FieldMapping = { fieldName: string; column: string };
 type FormValues = Record<string, string | boolean>;
 
 export type GoogleSheetsDestination = {
-  spreadsheetUrl: string;
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
   sheetName: string;
   fieldMappings: FieldMapping[];
 };
@@ -25,10 +26,19 @@ type AccessToken = { value: string; expiresAt: number };
 
 let accessToken: AccessToken | null = null;
 
-function spreadsheetId(urlValue: string) {
-  const url = new URL(urlValue);
-  const match = url.pathname.match(/^\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/);
-  return match?.[1] ?? null;
+function spreadsheetId(destination: GoogleSheetsDestination) {
+  if (/^[A-Za-z0-9_-]{20,}$/.test(destination.spreadsheetId ?? ""))
+    return destination.spreadsheetId ?? null;
+  if (!destination.spreadsheetUrl) return null;
+  try {
+    const url = new URL(destination.spreadsheetUrl);
+    const match = url.pathname.match(
+      /^\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/,
+    );
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function columnIndex(column: string) {
@@ -108,7 +118,7 @@ async function googleAccessToken(): Promise<AccessToken | null> {
 export async function appendGoogleSheetsResponse(
   input: DeliveryInput,
 ): Promise<DeliveryResult> {
-  const id = spreadsheetId(input.spreadsheetUrl);
+  const id = spreadsheetId(input);
   if (!id) return { ok: false, code: "configuration" };
   const token = await googleAccessToken();
   if (!token) return { ok: false, code: "authentication" };

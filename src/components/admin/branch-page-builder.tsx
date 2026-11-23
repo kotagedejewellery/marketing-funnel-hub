@@ -30,6 +30,7 @@ import { sectionSupportsPublicTitle } from "@/modules/admin/branches/page-valida
 import {
   pageBuilderBlocksSchema,
   pageBuilderPublishBlocksSchema,
+  googleSheetsDestinationSchema,
   type PageBuilderBlock,
   type PageBuilderBlockInput,
   type PageBuilderFormField,
@@ -113,6 +114,7 @@ export function BranchPageBuilder({
   isPublished: initialIsPublished = false,
   publishedAt: initialPublishedAt = null,
   privacyUrl = null,
+  googleSheetsConfigured = false,
   catalog,
   dataTools,
   preview,
@@ -125,6 +127,7 @@ export function BranchPageBuilder({
   isPublished?: boolean;
   publishedAt?: string | null;
   privacyUrl?: string | null;
+  googleSheetsConfigured?: boolean;
   catalog: Catalog;
   dataTools: Record<PageDataToolKey, ReactNode>;
   preview: ReactNode;
@@ -1221,6 +1224,7 @@ export function BranchPageBuilder({
                   <FormEditor
                     form={selected}
                     products={catalog.products}
+                    googleSheetsConfigured={googleSheetsConfigured}
                     onChange={(form, historyGroup) =>
                       update(form, historyGroup)
                     }
@@ -1578,6 +1582,22 @@ function sheetMappings(
   }));
 }
 
+function spreadsheetIdForInput(input: {
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+}) {
+  if (input.spreadsheetId) return input.spreadsheetId;
+  if (!input.spreadsheetUrl) return "";
+  try {
+    const url = new URL(input.spreadsheetUrl);
+    return (
+      url.pathname.match(/^\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/)?.[1] ?? ""
+    );
+  } catch {
+    return "";
+  }
+}
+
 const formMetaEventOptions = metaCtaEventNames.filter(
   (eventName) => eventName !== "Contact",
 );
@@ -1585,12 +1605,14 @@ const formMetaEventOptions = metaCtaEventNames.filter(
 function FormEditor({
   form,
   products,
+  googleSheetsConfigured,
   onChange,
   onEditEnd,
   onManageCta,
 }: {
   form: Extract<PageBuilderBlock, { type: "form" }>;
   products: Catalog["products"];
+  googleSheetsConfigured: boolean;
   onChange: (form: Partial<PageBuilderBlock>, historyGroup?: string) => void;
   onEditEnd: () => void;
   onManageCta: (event: MouseEvent<HTMLButtonElement>) => void;
@@ -1606,6 +1628,7 @@ function FormEditor({
     null,
   );
   const [touchDragFieldId, setTouchDragFieldId] = useState<string | null>(null);
+  const [spreadsheetSettingsOpen, setSpreadsheetSettingsOpen] = useState(false);
   const touchDragFieldIdRef = useRef<string | null>(null);
   const hasSelectedCta = ctaProducts.some(
     (product) => product.assignment?.id === form.assignmentId,
@@ -1626,6 +1649,7 @@ function FormEditor({
             fields,
             googleSheets: {
               ...(form.googleSheets ?? {
+                spreadsheetId: "",
                 spreadsheetUrl: "",
                 sheetName: "",
               }),
@@ -1696,6 +1720,7 @@ function FormEditor({
   const showTitle = form.showTitle !== false;
   const showDescription = form.showDescription !== false;
   const googleSheets = form.googleSheets ?? {
+    spreadsheetId: "",
     spreadsheetUrl: "",
     sheetName: "",
     fieldMappings: sheetMappings(form.fields),
@@ -1704,6 +1729,9 @@ function FormEditor({
     form.metaEventName as (typeof formMetaEventOptions)[number],
   );
   const responseIdentity = form.responseIdentity ?? {};
+  const googleSheetsDestinationReady =
+    googleSheetsDestinationSchema.safeParse(googleSheets).success;
+  const spreadsheetId = spreadsheetIdForInput(googleSheets);
   const nameFields = form.fields.filter((field) => field.type === "text");
   const contactFields = form.fields.filter((field) =>
     ["text", "tel", "email"].includes(field.type),
@@ -1962,76 +1990,140 @@ function FormEditor({
         </p>
         {form.submissionDestination === "google_sheets" && (
           <div className="space-y-3 border-t border-border pt-3">
-            <Editor
-              label="URL Google Sheets"
-              value={googleSheets.spreadsheetUrl}
-              onChange={(spreadsheetUrl) =>
-                onChange(
-                  { googleSheets: { ...googleSheets, spreadsheetUrl } },
-                  "form-google-sheets-url",
-                )
-              }
-              onBlur={onEditEnd}
-            />
-            <Editor
-              label="Nama tab"
-              value={googleSheets.sheetName}
-              onChange={(sheetName) =>
-                onChange(
-                  { googleSheets: { ...googleSheets, sheetName } },
-                  "form-google-sheets-tab",
-                )
-              }
-              onBlur={onEditEnd}
-            />
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-semibold">
-                Kolom Google Sheets
-              </legend>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Tentukan huruf kolom untuk setiap pertanyaan, misalnya A atau
-                AB. Bagikan akses Editor pada sheet kepada akun layanan Google
-                yang dikonfigurasi technical admin.
+            <div className="rounded-xl bg-secondary p-4">
+              <p className="font-semibold">
+                {googleSheetsDestinationReady && googleSheetsConfigured
+                  ? "Spreadsheet siap digunakan"
+                  : googleSheetsDestinationReady
+                    ? "Akun layanan belum tersedia"
+                    : "Spreadsheet belum lengkap"}
               </p>
-              {form.fields.map((field) => {
-                const mapping = googleSheets.fieldMappings.find(
-                  (item) => item.fieldName === field.name,
-                ) ?? { fieldName: field.name, column: "" };
-                return (
-                  <label key={field.id} className="flex items-center gap-3">
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                      {field.label}
-                    </span>
-                    <input
-                      aria-label={`Kolom Google Sheets untuk ${field.label}`}
-                      value={mapping.column}
-                      onChange={(event) =>
-                        onChange(
-                          {
-                            googleSheets: {
-                              ...googleSheets,
-                              fieldMappings: googleSheets.fieldMappings.map(
-                                (item) =>
-                                  item.fieldName === field.name
-                                    ? {
-                                        ...item,
-                                        column:
-                                          event.target.value.toUpperCase(),
-                                      }
-                                    : item,
-                              ),
-                            },
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {googleSheetsConfigured
+                  ? "Atur tujuan dan pemetaan kolom khusus Form ini."
+                  : "Akun layanan belum dikonfigurasi. Minta technical admin melengkapinya di Pengaturan Situs."}
+              </p>
+              <button
+                type="button"
+                onClick={() => setSpreadsheetSettingsOpen((open) => !open)}
+                className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-card px-4 text-sm font-bold hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2"
+                aria-expanded={spreadsheetSettingsOpen}
+              >
+                Atur spreadsheet
+              </button>
+            </div>
+            {spreadsheetSettingsOpen && (
+              <section
+                role="region"
+                aria-labelledby="form-spreadsheet-settings-title"
+                className="space-y-4 rounded-xl border border-border bg-card p-4"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3
+                      id="form-spreadsheet-settings-title"
+                      className="font-semibold"
+                    >
+                      Pengaturan spreadsheet Form
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Konfigurasi ini hanya berlaku untuk Form ini.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSpreadsheetSettingsOpen(false)}
+                    className="min-h-10 text-sm font-bold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
+                  >
+                    Tutup
+                  </button>
+                </div>
+                <label className="block">
+                  ID Spreadsheet
+                  <input
+                    aria-label="ID Spreadsheet"
+                    value={spreadsheetId}
+                    onChange={(event) =>
+                      onChange(
+                        {
+                          googleSheets: {
+                            ...googleSheets,
+                            spreadsheetId: event.target.value.trim(),
+                            spreadsheetUrl: "",
                           },
-                          `form-google-sheets-column-${field.id}`,
-                        )
-                      }
-                      onBlur={onEditEnd}
-                      className="min-h-10 w-20 rounded-lg border border-border bg-background px-3 text-center font-mono"
-                    />
-                  </label>
-                );
-              })}
-            </fieldset>
+                        },
+                        "form-google-sheets-id",
+                      )
+                    }
+                    onBlur={onEditEnd}
+                    placeholder="Contoh: 1AbCdEf..."
+                    className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                  />
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                    Salin bagian URL yang berada setelah `/d/` pada Google
+                    Sheets.
+                  </span>
+                </label>
+                <Editor
+                  label="Nama tab"
+                  value={googleSheets.sheetName}
+                  onChange={(sheetName) =>
+                    onChange(
+                      { googleSheets: { ...googleSheets, sheetName } },
+                      "form-google-sheets-tab",
+                    )
+                  }
+                  onBlur={onEditEnd}
+                />
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-semibold">
+                    Pemetaan kolom
+                  </legend>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Tentukan huruf kolom untuk setiap pertanyaan, misalnya A
+                    atau AB. Setiap kolom harus berbeda.
+                  </p>
+                  {form.fields.map((field) => {
+                    const mapping = googleSheets.fieldMappings.find(
+                      (item) => item.fieldName === field.name,
+                    ) ?? { fieldName: field.name, column: "" };
+                    return (
+                      <label key={field.id} className="flex items-center gap-3">
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                          {field.label}
+                        </span>
+                        <input
+                          aria-label={`Kolom Google Sheets untuk ${field.label}`}
+                          value={mapping.column}
+                          onChange={(event) =>
+                            onChange(
+                              {
+                                googleSheets: {
+                                  ...googleSheets,
+                                  fieldMappings: googleSheets.fieldMappings.map(
+                                    (item) =>
+                                      item.fieldName === field.name
+                                        ? {
+                                            ...item,
+                                            column:
+                                              event.target.value.toUpperCase(),
+                                          }
+                                        : item,
+                                  ),
+                                },
+                              },
+                              `form-google-sheets-column-${field.id}`,
+                            )
+                          }
+                          onBlur={onEditEnd}
+                          className="min-h-10 w-20 rounded-lg border border-border bg-background px-3 text-center font-mono"
+                        />
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              </section>
+            )}
           </div>
         )}
       </fieldset>
