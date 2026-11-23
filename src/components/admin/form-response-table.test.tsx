@@ -147,6 +147,7 @@ describe("FormResponseTable", () => {
             formTitle: "Konsultasi",
             branchName: "KGJ Pusat",
             productName: "Cincin",
+            identityConfiguration: "ready",
             googleSheetsStatus: null,
           },
         ]}
@@ -158,14 +159,11 @@ describe("FormResponseTable", () => {
     );
 
     expect(
-      screen.getAllByRole("link", { name: "Atur identitas Form" })[0],
-    ).toHaveAttribute(
-      "href",
-      "/admin/branches/3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4/link-bio?form=5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
-    );
+      screen.queryByRole("link", { name: "Atur identitas Form" }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getAllByText("Tidak menggunakan Google Sheets"),
-    ).not.toHaveLength(0);
+      screen.queryByRole("columnheader", { name: "Google Sheets" }),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(
       screen.getAllByRole("button", { name: "Tampilkan pengisi di daftar" })[0],
@@ -205,6 +203,103 @@ describe("FormResponseTable", () => {
         }),
       ),
     );
+  });
+
+  it("guides identity setup before offering a backfill", () => {
+    render(
+      <FormResponseTable
+        filters={{
+          branchId: null,
+          formId: null,
+          productBranchId: null,
+          start: null,
+          end: null,
+          whatsappStatus: null,
+          page: 1,
+        }}
+        total={1}
+        summary={{ submitted: 1, continued: 0 }}
+        pageCount={1}
+        rows={[
+          {
+            id: "0c6b5a8d-c36b-43d6-a183-876aaea89eb1",
+            branchId: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            formBlockId: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            submittedAt: new Date("2026-11-17T00:00:00Z"),
+            whatsappContinuedAt: null,
+            formTitle: "Konsultasi",
+            branchName: "KGJ Pusat",
+            productName: "Cincin",
+            identityConfiguration: "needs_setup",
+            googleSheetsStatus: null,
+          },
+        ]}
+        branches={[]}
+        forms={[]}
+        products={[]}
+        filterError={false}
+      />,
+    );
+
+    expect(
+      screen.getAllByRole("link", { name: "Atur identitas Form" })[0],
+    ).toHaveAttribute(
+      "href",
+      "/admin/branches/3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4/link-bio?form=5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Tampilkan pengisi di daftar" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Nama customer belum tampil di daftar."),
+    ).toBeVisible();
+  });
+
+  it("asks an admin to publish configured identity before offering a backfill", () => {
+    render(
+      <FormResponseTable
+        filters={{
+          branchId: null,
+          formId: null,
+          productBranchId: null,
+          start: null,
+          end: null,
+          whatsappStatus: null,
+          page: 1,
+        }}
+        total={1}
+        summary={{ submitted: 1, continued: 0 }}
+        pageCount={1}
+        rows={[
+          {
+            id: "0c6b5a8d-c36b-43d6-a183-876aaea89eb1",
+            branchId: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            formBlockId: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            submittedAt: new Date("2026-11-17T00:00:00Z"),
+            whatsappContinuedAt: null,
+            formTitle: "Konsultasi",
+            branchName: "KGJ Pusat",
+            productName: "Cincin",
+            identityConfiguration: "needs_publish",
+            googleSheetsStatus: null,
+          },
+        ]}
+        branches={[]}
+        forms={[]}
+        products={[]}
+        filterError={false}
+      />,
+    );
+
+    expect(
+      screen.getAllByRole("link", { name: "Terbitkan identitas Form" })[0],
+    ).toHaveAttribute(
+      "href",
+      "/admin/branches/3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4/link-bio?form=5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Tampilkan pengisi di daftar" }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers recovery for a pending Sheets delivery but not an uncertain one", () => {

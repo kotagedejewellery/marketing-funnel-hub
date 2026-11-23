@@ -7,6 +7,7 @@ import {
   desc,
   eq,
   gte,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -252,6 +253,7 @@ async function responseRows(
 
 function responseRowWithIdentity(
   row: Awaited<ReturnType<typeof responseRows>>[number],
+  identityConfiguration?: "needs_setup" | "needs_publish" | "ready",
 ) {
   const { identitySummaryEncrypted, googleSheetsLastAttemptAt, ...metadata } =
     row;
@@ -259,11 +261,24 @@ function responseRowWithIdentity(
     ...metadata,
     hasIdentitySummary: identitySummaryEncrypted !== null,
     identity: identitySummary(identitySummaryEncrypted),
+    identityConfiguration,
     googleSheetsRetryable: isGoogleSheetsDeliveryRetryable(
       metadata.googleSheetsStatus,
       googleSheetsLastAttemptAt,
     ),
   };
+}
+
+function hasConfiguredResponseIdentity(blocks: unknown, formBlockId: string) {
+  const parsed = pageBuilderBlocksSchema.safeParse(blocks);
+  if (!parsed.success) return false;
+  const form = parsed.data.find(
+    (block): block is Extract<(typeof parsed.data)[number], { type: "form" }> =>
+      block.type === "form" && block.id === formBlockId,
+  );
+  return Boolean(
+    form?.responseIdentity?.nameField || form?.responseIdentity?.contactField,
+  );
 }
 
 export async function searchFormResponsesByContact(contact: string) {
@@ -276,7 +291,7 @@ export async function searchFormResponsesByContact(contact: string) {
       pageSize,
       contactSearchHash,
     )
-  ).map(responseRowWithIdentity);
+  ).map((row) => responseRowWithIdentity(row));
 }
 
 export async function getFormResponseManagement(filters: FormResponseFilters) {
@@ -326,7 +341,33 @@ export async function getFormResponseManagement(filters: FormResponseFilters) {
   ]);
   const total = totalRow[0]?.value ?? 0;
   const rawRows = await responseRows(filters, pageSize);
-  const rows = rawRows.slice(0, pageSize).map(responseRowWithIdentity);
+  const pageRows = rawRows.slice(0, pageSize);
+  const branchIds = [...new Set(pageRows.map((row) => row.branchId))];
+  const layoutRows = branchIds.length
+    ? await db
+        .select({
+          branchId: branchPageBuilderLayouts.branchId,
+          draftBlocks: branchPageBuilderLayouts.draftBlocks,
+          publishedBlocks: branchPageBuilderLayouts.publishedBlocks,
+        })
+        .from(branchPageBuilderLayouts)
+        .where(inArray(branchPageBuilderLayouts.branchId, branchIds))
+    : [];
+  const layoutsByBranch = new Map(
+    layoutRows.map((layout) => [layout.branchId, layout]),
+  );
+  const rows = pageRows.map((row) => {
+    const layout = layoutsByBranch.get(row.branchId);
+    const identityConfiguration = hasConfiguredResponseIdentity(
+      layout?.publishedBlocks,
+      row.formBlockId,
+    )
+      ? "ready"
+      : hasConfiguredResponseIdentity(layout?.draftBlocks, row.formBlockId)
+        ? "needs_publish"
+        : "needs_setup";
+    return responseRowWithIdentity(row, identityConfiguration);
+  });
   return {
     filters,
     total,

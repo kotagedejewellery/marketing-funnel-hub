@@ -26,6 +26,7 @@ type Row = {
   productName: string;
   hasIdentitySummary?: boolean;
   identity?: { name: string | null; contact: string | null } | null;
+  identityConfiguration?: "needs_setup" | "needs_publish" | "ready";
   googleSheetsStatus: string | null;
   googleSheetsRetryable?: boolean;
 };
@@ -72,6 +73,54 @@ function canRetryGoogleSheets(row: Row) {
 function formIdentityBuilderHref(row: Row) {
   if (!row.branchId || !row.formBlockId) return null;
   return `/admin/branches/${row.branchId}/link-bio?form=${row.formBlockId}`;
+}
+
+function identityActionState(row: Row) {
+  if (row.identity || row.hasIdentitySummary || !formIdentityBuilderHref(row))
+    return null;
+  return row.identityConfiguration ?? "needs_setup";
+}
+
+function IdentityAction({
+  row,
+  onBackfill,
+  backfilling,
+  unavailable,
+  className = "",
+}: {
+  row: Row;
+  onBackfill: (row: Row) => void;
+  backfilling: boolean;
+  unavailable: boolean;
+  className?: string;
+}) {
+  const state = identityActionState(row);
+  const href = formIdentityBuilderHref(row);
+  if (!state || !href) return null;
+
+  if (state === "ready") {
+    return (
+      <button
+        type="button"
+        onClick={() => onBackfill(row)}
+        disabled={backfilling || unavailable}
+        className={`min-h-11 whitespace-nowrap rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50 ${className}`}
+      >
+        {backfilling ? "Memperbarui..." : "Tampilkan pengisi di daftar"}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className={`inline-flex min-h-11 whitespace-nowrap items-center rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 ${className}`}
+    >
+      {state === "needs_publish"
+        ? "Terbitkan identitas Form"
+        : "Atur identitas Form"}
+    </Link>
+  );
 }
 
 export function FormResponseTable({
@@ -230,11 +279,12 @@ export function FormResponseTable({
   }
 
   const visibleRows = contactRows ?? rows;
-  const hasMissingIdentity = rows.some(
-    (row) =>
-      !row.identity &&
-      !row.hasIdentitySummary &&
-      Boolean(formIdentityBuilderHref(row)),
+  const hasIdentityGuidance = visibleRows.some((row) => {
+    const state = identityActionState(row);
+    return state === "needs_setup" || state === "needs_publish";
+  });
+  const hasGoogleSheetsDelivery = visibleRows.some(
+    (row) => row.googleSheetsStatus !== null,
   );
 
   return (
@@ -263,18 +313,14 @@ export function FormResponseTable({
           </p>
         </div>
       </div>
-      {hasMissingIdentity && (
-        <aside
-          aria-label="Cara menampilkan pengisi di daftar"
-          className="mt-5 rounded-xl bg-secondary px-4 py-3 text-sm"
-        >
-          <p className="font-semibold">Nama customer belum muncul di daftar?</p>
-          <p className="mt-1 leading-6 text-muted-foreground">
-            Pilih <strong>Atur identitas Form</strong> pada respons terkait,
-            pilih field nama dan kontak, lalu terbitkan Form. Setelah itu pilih
-            <strong> Tampilkan pengisi di daftar</strong> untuk respons lama.
-          </p>
-        </aside>
+      {hasIdentityGuidance && (
+        <p className="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+          <strong className="text-foreground">
+            Nama customer belum tampil di daftar.
+          </strong>{" "}
+          Gunakan aksi identitas Form pada respons terkait. Setelah pengaturan
+          diterbitkan, tampilkan pengisi untuk respons lama bila diperlukan.
+        </p>
       )}
       {identityMessage && (
         <p className="mt-4 text-sm" role="status">
@@ -488,36 +534,17 @@ export function FormResponseTable({
                   type="button"
                   onClick={() => openDetail(row.id)}
                   disabled={loadingId === row.id}
-                  className="mt-4 min-h-11 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] disabled:opacity-50"
+                  className="mt-4 min-h-11 whitespace-nowrap rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] disabled:opacity-50"
                 >
                   {loadingId === row.id ? "Memuat..." : "Lihat data pengisi"}
                 </button>
-                {!row.identity &&
-                  !row.hasIdentitySummary &&
-                  row.branchId &&
-                  row.formBlockId && (
-                    <>
-                      <Link
-                        href={formIdentityBuilderHref(row)!}
-                        className="ml-2 mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
-                      >
-                        Atur identitas Form
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => backfillIdentity(row)}
-                        disabled={
-                          backfillingFormId === row.formBlockId ||
-                          backfillCursors[row.formBlockId] === null
-                        }
-                        className="ml-2 mt-4 min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
-                      >
-                        {backfillingFormId === row.formBlockId
-                          ? "Memperbarui..."
-                          : "Tampilkan pengisi di daftar"}
-                      </button>
-                    </>
-                  )}
+                <IdentityAction
+                  row={row}
+                  onBackfill={backfillIdentity}
+                  backfilling={backfillingFormId === row.formBlockId}
+                  unavailable={backfillCursors[row.formBlockId ?? ""] === null}
+                  className="ml-2 mt-4"
+                />
                 {canRetryGoogleSheets(row) && (
                   <button
                     type="button"
@@ -539,14 +566,14 @@ export function FormResponseTable({
                 <tr>
                   <th className="px-5 py-3">Waktu</th>
                   <th className="px-5 py-3">Pengisi</th>
-                  <th className="px-5 py-3">Google Sheets</th>
+                  {hasGoogleSheetsDelivery && (
+                    <th className="px-5 py-3">Google Sheets</th>
+                  )}
                   <th className="px-5 py-3">Cabang</th>
                   <th className="px-5 py-3">Form</th>
                   <th className="px-5 py-3">CTA WhatsApp</th>
                   <th className="px-5 py-3">Status WhatsApp</th>
-                  <th className="px-5 py-3">
-                    <span className="sr-only">Aksi</span>
-                  </th>
+                  <th className="px-5 py-3 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -570,10 +597,12 @@ export function FormResponseTable({
                         </p>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4">
-                      {googleSheetsStatus(row.googleSheetsStatus) ??
-                        "Tidak menggunakan Google Sheets"}
-                    </td>
+                    {hasGoogleSheetsDelivery && (
+                      <td className="whitespace-nowrap px-5 py-4">
+                        {googleSheetsStatus(row.googleSheetsStatus) ??
+                          "Tidak digunakan"}
+                      </td>
+                    )}
                     <td className="px-5 py-4 font-medium">{row.branchName}</td>
                     <td className="px-5 py-4">{row.formTitle}</td>
                     <td className="px-5 py-4">{row.productName}</td>
@@ -582,14 +611,14 @@ export function FormResponseTable({
                         ? `Lanjut diklik ${formatDate(row.whatsappContinuedAt)}`
                         : "Belum dilanjutkan"}
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="whitespace-nowrap px-5 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         {canRetryGoogleSheets(row) && (
                           <button
                             type="button"
                             onClick={() => retryGoogleSheets(row.id)}
                             disabled={retryingId === row.id}
-                            className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                            className="min-h-11 whitespace-nowrap rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
                           >
                             {retryingId === row.id
                               ? "Mengirim ulang..."
@@ -600,38 +629,20 @@ export function FormResponseTable({
                           type="button"
                           onClick={() => openDetail(row.id)}
                           disabled={loadingId === row.id}
-                          className="min-h-11 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] disabled:opacity-50"
+                          className="min-h-11 whitespace-nowrap rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] disabled:opacity-50"
                         >
                           {loadingId === row.id
                             ? "Memuat..."
                             : "Lihat data pengisi"}
                         </button>
-                        {!row.identity &&
-                          !row.hasIdentitySummary &&
-                          row.branchId &&
-                          row.formBlockId && (
-                            <>
-                              <Link
-                                href={formIdentityBuilderHref(row)!}
-                                className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
-                              >
-                                Atur identitas Form
-                              </Link>
-                              <button
-                                type="button"
-                                onClick={() => backfillIdentity(row)}
-                                disabled={
-                                  backfillingFormId === row.formBlockId ||
-                                  backfillCursors[row.formBlockId] === null
-                                }
-                                className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
-                              >
-                                {backfillingFormId === row.formBlockId
-                                  ? "Memperbarui..."
-                                  : "Tampilkan pengisi di daftar"}
-                              </button>
-                            </>
-                          )}
+                        <IdentityAction
+                          row={row}
+                          onBackfill={backfillIdentity}
+                          backfilling={backfillingFormId === row.formBlockId}
+                          unavailable={
+                            backfillCursors[row.formBlockId ?? ""] === null
+                          }
+                        />
                       </div>
                     </td>
                   </tr>
