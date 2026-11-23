@@ -69,6 +69,11 @@ function canRetryGoogleSheets(row: Row) {
   );
 }
 
+function formIdentityBuilderHref(row: Row) {
+  if (!row.branchId || !row.formBlockId) return null;
+  return `/admin/branches/${row.branchId}/link-bio?form=${row.formBlockId}`;
+}
+
 export function FormResponseTable({
   filters,
   total,
@@ -225,6 +230,12 @@ export function FormResponseTable({
   }
 
   const visibleRows = contactRows ?? rows;
+  const hasMissingIdentity = rows.some(
+    (row) =>
+      !row.identity &&
+      !row.hasIdentitySummary &&
+      Boolean(formIdentityBuilderHref(row)),
+  );
 
   return (
     <section
@@ -241,7 +252,8 @@ export function FormResponseTable({
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Tinjau respons terenkripsi. Daftar hanya menampilkan nama dan kontak
-            yang disamarkan; buka detail untuk jawaban lengkap.
+            yang disamarkan; pilih <strong>Lihat data pengisi</strong> untuk
+            jawaban lengkap.
           </p>
         </div>
         <div className="text-right text-sm tabular-nums">
@@ -251,6 +263,19 @@ export function FormResponseTable({
           </p>
         </div>
       </div>
+      {hasMissingIdentity && (
+        <aside
+          aria-label="Cara menampilkan pengisi di daftar"
+          className="mt-5 rounded-xl bg-secondary px-4 py-3 text-sm"
+        >
+          <p className="font-semibold">Nama customer belum muncul di daftar?</p>
+          <p className="mt-1 leading-6 text-muted-foreground">
+            Pilih <strong>Atur identitas Form</strong> pada respons terkait,
+            pilih field nama dan kontak, lalu terbitkan Form. Setelah itu pilih
+            <strong> Tampilkan pengisi di daftar</strong> untuk respons lama.
+          </p>
+        </aside>
+      )}
       {identityMessage && (
         <p className="mt-4 text-sm" role="status">
           {identityMessage}
@@ -463,27 +488,35 @@ export function FormResponseTable({
                   type="button"
                   onClick={() => openDetail(row.id)}
                   disabled={loadingId === row.id}
-                  className="mt-4 min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                  className="mt-4 min-h-11 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] disabled:opacity-50"
                 >
-                  {loadingId === row.id ? "Memuat..." : "Lihat respons"}
+                  {loadingId === row.id ? "Memuat..." : "Lihat data pengisi"}
                 </button>
                 {!row.identity &&
                   !row.hasIdentitySummary &&
                   row.branchId &&
                   row.formBlockId && (
-                    <button
-                      type="button"
-                      onClick={() => backfillIdentity(row)}
-                      disabled={
-                        backfillingFormId === row.formBlockId ||
-                        backfillCursors[row.formBlockId] === null
-                      }
-                      className="ml-2 mt-4 min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
-                    >
-                      {backfillingFormId === row.formBlockId
-                        ? "Memperbarui..."
-                        : "Terapkan identitas"}
-                    </button>
+                    <>
+                      <Link
+                        href={formIdentityBuilderHref(row)!}
+                        className="ml-2 mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
+                      >
+                        Atur identitas Form
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => backfillIdentity(row)}
+                        disabled={
+                          backfillingFormId === row.formBlockId ||
+                          backfillCursors[row.formBlockId] === null
+                        }
+                        className="ml-2 mt-4 min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                      >
+                        {backfillingFormId === row.formBlockId
+                          ? "Memperbarui..."
+                          : "Tampilkan pengisi di daftar"}
+                      </button>
+                    </>
                   )}
                 {canRetryGoogleSheets(row) && (
                   <button
@@ -538,7 +571,8 @@ export function FormResponseTable({
                       )}
                     </td>
                     <td className="whitespace-nowrap px-5 py-4">
-                      {googleSheetsStatus(row.googleSheetsStatus) ?? "â€”"}
+                      {googleSheetsStatus(row.googleSheetsStatus) ??
+                        "Tidak menggunakan Google Sheets"}
                     </td>
                     <td className="px-5 py-4 font-medium">{row.branchName}</td>
                     <td className="px-5 py-4">{row.formTitle}</td>
@@ -566,27 +600,37 @@ export function FormResponseTable({
                           type="button"
                           onClick={() => openDetail(row.id)}
                           disabled={loadingId === row.id}
-                          className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                          className="min-h-11 rounded-full bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[var(--kgj-accent)] disabled:opacity-50"
                         >
-                          {loadingId === row.id ? "Memuat..." : "Lihat respons"}
+                          {loadingId === row.id
+                            ? "Memuat..."
+                            : "Lihat data pengisi"}
                         </button>
                         {!row.identity &&
                           !row.hasIdentitySummary &&
                           row.branchId &&
                           row.formBlockId && (
-                            <button
-                              type="button"
-                              onClick={() => backfillIdentity(row)}
-                              disabled={
-                                backfillingFormId === row.formBlockId ||
-                                backfillCursors[row.formBlockId] === null
-                              }
-                              className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
-                            >
-                              {backfillingFormId === row.formBlockId
-                                ? "Memperbarui..."
-                                : "Terapkan identitas"}
-                            </button>
+                            <>
+                              <Link
+                                href={formIdentityBuilderHref(row)!}
+                                className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
+                              >
+                                Atur identitas Form
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => backfillIdentity(row)}
+                                disabled={
+                                  backfillingFormId === row.formBlockId ||
+                                  backfillCursors[row.formBlockId] === null
+                                }
+                                className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                              >
+                                {backfillingFormId === row.formBlockId
+                                  ? "Memperbarui..."
+                                  : "Tampilkan pengisi di daftar"}
+                              </button>
+                            </>
                           )}
                       </div>
                     </td>

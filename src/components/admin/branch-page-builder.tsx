@@ -110,6 +110,7 @@ export function BranchPageBuilder({
   branchName,
   initialBlocks,
   initialRevision = null,
+  initialSelectedBlockId = null,
   publishedBlocks: initialPublishedBlocks = initialBlocks,
   isPublished: initialIsPublished = false,
   publishedAt: initialPublishedAt = null,
@@ -123,6 +124,7 @@ export function BranchPageBuilder({
   branchName: string;
   initialBlocks: PageBuilderBlock[];
   initialRevision?: number | null;
+  initialSelectedBlockId?: string | null;
   publishedBlocks?: PageBuilderBlock[];
   isPublished?: boolean;
   publishedAt?: string | null;
@@ -149,8 +151,14 @@ export function BranchPageBuilder({
     past: [],
     future: [],
   });
+  const selectedInitialBlockId =
+    initialBlocks.find(
+      (block) => block.id === initialSelectedBlockId && block.type === "form",
+    )?.id ??
+    initialBlocks[0]?.id ??
+    null;
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialBlocks[0]?.id ?? null,
+    selectedInitialBlockId,
   );
   const [message, setMessage] = useState("");
   const [pendingKind, setPendingKind] = useState<"autosave" | "publish" | null>(
@@ -159,7 +167,9 @@ export function BranchPageBuilder({
   const [sourceDataOpen, setSourceDataOpen] = useState(false);
   const [activeDataSelection, setActiveDataSelection] =
     useState<PageDataSelection | null>(null);
-  const [canvasFocusId, setCanvasFocusId] = useState<string | null>(null);
+  const [canvasFocusId, setCanvasFocusId] = useState<string | null>(
+    selectedInitialBlockId,
+  );
   const [touchDragId, setTouchDragId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [removedBlock, setRemovedBlock] = useState<{

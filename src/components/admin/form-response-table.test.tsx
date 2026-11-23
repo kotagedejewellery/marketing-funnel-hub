@@ -61,7 +61,7 @@ describe("FormResponseTable", () => {
     expect(screen.queryByText("Nadia")).not.toBeInTheDocument();
     expect(screen.getAllByText("Google Sheets gagal")).not.toHaveLength(0);
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Lihat respons" })[0],
+      screen.getAllByRole("button", { name: "Lihat data pengisi" })[0],
     );
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1));
@@ -157,8 +157,18 @@ describe("FormResponseTable", () => {
       />,
     );
 
+    expect(
+      screen.getAllByRole("link", { name: "Atur identitas Form" })[0],
+    ).toHaveAttribute(
+      "href",
+      "/admin/branches/3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4/link-bio?form=5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+    );
+    expect(
+      screen.getAllByText("Tidak menggunakan Google Sheets"),
+    ).not.toHaveLength(0);
+
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Terapkan identitas" })[0],
+      screen.getAllByRole("button", { name: "Tampilkan pengisi di daftar" })[0],
     );
 
     await waitFor(() =>
@@ -181,7 +191,7 @@ describe("FormResponseTable", () => {
     expect(router.refresh).toHaveBeenCalled();
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Terapkan identitas" })[0],
+      screen.getAllByRole("button", { name: "Tampilkan pengisi di daftar" })[0],
     );
     await waitFor(() =>
       expect(global.fetch).toHaveBeenLastCalledWith(

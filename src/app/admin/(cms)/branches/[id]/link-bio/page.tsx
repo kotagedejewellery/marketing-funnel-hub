@@ -22,11 +22,15 @@ import { getBranchMetaTrackingSecretsForTechnicalAdmin } from "@/modules/admin/t
 import { publicAssetUrl } from "@/modules/public-content/links";
 export default async function BranchLinkBioPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ form?: string | string[] }>;
 }) {
   const profile = await requireAdmin();
   const { id } = await params;
+  const { form } = await searchParams;
+  const initialSelectedBlockId = typeof form === "string" ? form : null;
   const isTechnicalAdmin = profile.role === "technical_admin";
   const {
     branch,
@@ -88,9 +92,11 @@ export default async function BranchLinkBioPage({
         </div>{" "}
       </header>{" "}
       <BranchPageBuilder
+        key={initialSelectedBlockId ?? "default"}
         branchId={branch.id}
         branchName={branch.name}
         initialBlocks={builderLayout.initialBlocks}
+        initialSelectedBlockId={initialSelectedBlockId}
         initialRevision={builderLayout.revision}
         publishedBlocks={builderLayout.publishedBlocks}
         isPublished={builderLayout.isPublished}

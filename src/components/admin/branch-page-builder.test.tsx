@@ -62,6 +62,68 @@ describe("BranchPageBuilder", () => {
     });
   });
 
+  it("opens the Form selected from a response-management link", () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialSelectedBlockId="form-1"
+        initialBlocks={[
+          {
+            id: "text-1",
+            type: "rich_text",
+            text: "Halo",
+            width: "full",
+            isVisible: true,
+          },
+          {
+            id: "form-1",
+            type: "form",
+            title: "Konsultasi",
+            description: "",
+            submitLabel: "Kirim",
+            privacyNotice: "Data disimpan KGJ.",
+            assignmentId: "assignment-1",
+            fields: [
+              {
+                id: "field-1",
+                name: "nama",
+                label: "Nama lengkap",
+                type: "text",
+                placeholder: "",
+                help: "",
+                required: true,
+                options: [],
+              },
+            ],
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: {
+                id: "assignment-1",
+              },
+            },
+          ],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    expect(
+      screen.getByRole("group", { name: "Identitas pada daftar respons" }),
+    ).toBeVisible();
+  });
+
   it("keeps connected data controls inside the builder workspace", async () => {
     actions.savePageBuilderDraft.mockResolvedValue({
       ok: true,
