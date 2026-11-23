@@ -52,6 +52,13 @@ function AddCincinFromSource() {
 describe("BranchPageBuilder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.setAttribute("open", "");
+    };
+    HTMLDialogElement.prototype.close = function close() {
+      this.removeAttribute("open");
+      this.dispatchEvent(new Event("close"));
+    };
     Object.defineProperty(URL, "createObjectURL", {
       configurable: true,
       value: vi.fn(() => "blob:builder-preview"),
@@ -120,7 +127,7 @@ describe("BranchPageBuilder", () => {
     );
 
     expect(
-      screen.getByRole("group", { name: "Identitas pada daftar respons" }),
+      screen.getByRole("region", { name: "Ringkasan konfigurasi Form" }),
     ).toBeVisible();
   });
 
@@ -813,7 +820,13 @@ describe("BranchPageBuilder", () => {
     );
   });
 
-  it("opens dedicated Spreadsheet settings when a form uses Google Sheets", () => {
+  it("keeps advanced Form settings in one configuration dialog", async () => {
+    actions.savePageBuilderDraft.mockResolvedValue({
+      ok: true,
+      message: "Perubahan tersimpan otomatis.",
+      revision: 1,
+    });
+
     render(
       <BranchPageBuilder
         branchId="branch-1"
@@ -837,21 +850,60 @@ describe("BranchPageBuilder", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "+ Form" }));
-    fireEvent.change(screen.getByLabelText("Tujuan data"), {
+    expect(screen.queryByLabelText("Tujuan data")).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Atur konfigurasi Form" }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Konfigurasi Form" });
+    expect(
+      within(dialog).getByRole("group", {
+        name: "Identitas pada daftar respons",
+      }),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByRole("group", { name: "Tracking submit form" }),
+    ).toBeVisible();
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Tutup dialog" }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Atur konfigurasi Form" }),
+    );
+    const reopenedDialog = screen.getByRole("dialog", {
+      name: "Konfigurasi Form",
+    });
+    fireEvent.change(within(reopenedDialog).getByLabelText("Tujuan data"), {
       target: { value: "google_sheets" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Atur spreadsheet" }));
-
     expect(
-      screen.getByRole("region", { name: "Pengaturan spreadsheet Form" }),
+      within(reopenedDialog).getByLabelText("ID Spreadsheet"),
     ).toBeVisible();
-    expect(screen.getByLabelText("ID Spreadsheet")).toBeVisible();
-    expect(screen.getByLabelText("Nama tab")).toBeVisible();
+    expect(within(reopenedDialog).getByLabelText("Nama tab")).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "Tutup" }));
+    await waitFor(
+      () =>
+        expect(actions.savePageBuilderDraft).toHaveBeenLastCalledWith(
+          "branch-1",
+          [
+            expect.objectContaining({
+              type: "form",
+              submissionDestination: "google_sheets",
+            }),
+          ],
+          null,
+        ),
+      { timeout: 1_500 },
+    );
     expect(
-      screen.queryByRole("region", { name: "Pengaturan spreadsheet Form" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("dialog", { name: "Konfigurasi Form" }),
+    ).toBeVisible();
+    expect(
+      within(reopenedDialog).getByLabelText("ID Spreadsheet"),
+    ).toBeVisible();
   });
 
   it("explains how to repair an existing form whose CTA is no longer active", () => {

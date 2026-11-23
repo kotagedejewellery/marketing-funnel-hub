@@ -21,6 +21,7 @@ import {
   type PageDataSelection,
   type PageDataToolKey,
 } from "@/components/admin/page-data-manager-context";
+import { FormDialog } from "@/components/admin/form-dialog";
 import {
   publishPageBuilder,
   savePageBuilderDraft,
@@ -1638,7 +1639,6 @@ function FormEditor({
     null,
   );
   const [touchDragFieldId, setTouchDragFieldId] = useState<string | null>(null);
-  const [spreadsheetSettingsOpen, setSpreadsheetSettingsOpen] = useState(false);
   const touchDragFieldIdRef = useRef<string | null>(null);
   const hasSelectedCta = ctaProducts.some(
     (product) => product.assignment?.id === form.assignmentId,
@@ -1901,332 +1901,361 @@ function FormEditor({
         }
         onBlur={onEditEnd}
       />
-      <fieldset className="space-y-3 border-y border-border py-4">
-        <legend className="font-semibold">Identitas pada daftar respons</legend>
-        <p className="text-xs leading-5 text-muted-foreground">
-          Pilih field yang akan membantu Marketing mengenali pengisi. Nama
-          tampil penuh, kontak disamarkan di daftar, dan jawaban lengkap tetap
-          hanya ada di detail respons.
-        </p>
-        <label className="block">
-          Nama pengisi
-          <select
-            value={responseIdentity.nameField ?? ""}
-            onChange={(event) =>
-              onChange(
-                {
-                  responseIdentity: {
-                    ...responseIdentity,
-                    nameField: event.target.value || undefined,
-                  },
-                },
-                "form-response-identity-name",
-              )
-            }
-            className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
-          >
-            <option value="">Tidak ditampilkan</option>
-            {nameFields.map((field) => (
-              <option key={field.id} value={field.name}>
-                {field.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          Kontak pengisi
-          <select
-            value={responseIdentity.contactField ?? ""}
-            onChange={(event) =>
-              onChange(
-                {
-                  responseIdentity: {
-                    ...responseIdentity,
-                    contactField: event.target.value || undefined,
-                  },
-                },
-                "form-response-identity-contact",
-              )
-            }
-            className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
-          >
-            <option value="">Tidak ditampilkan</option>
-            {contactFields.map((field) => (
-              <option
-                key={field.id}
-                value={field.name}
-                disabled={field.name === responseIdentity.nameField}
-              >
-                {field.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </fieldset>
-      <fieldset className="space-y-3 border-y border-border py-4">
-        <legend className="font-semibold">Penyimpanan respons</legend>
-        <label className="block">
-          Tujuan data
-          <select
-            value={form.submissionDestination ?? "database"}
-            onChange={(event) => {
-              const submissionDestination = event.target.value as
-                "database" | "google_sheets";
-              onChange(
-                submissionDestination === "google_sheets"
-                  ? {
-                      submissionDestination,
-                      googleSheets: {
-                        ...googleSheets,
-                        fieldMappings: sheetMappings(
-                          form.fields,
-                          googleSheets.fieldMappings,
-                        ),
-                      },
-                    }
-                  : { submissionDestination },
-                "form-submission-destination",
-              );
-            }}
-            className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
-          >
-            <option value="database">Sistem KGJ (terenkripsi)</option>
-            <option value="google_sheets">Sistem KGJ + Google Sheets</option>
-          </select>
-        </label>
-        <p className="text-xs leading-5 text-muted-foreground">
-          Respons selalu tersimpan terenkripsi di Sistem KGJ. Google Sheets
-          menerima salinan append-only setelahnya.
-        </p>
-        {form.submissionDestination === "google_sheets" && (
-          <div className="space-y-3 border-t border-border pt-3">
-            <div className="rounded-xl bg-secondary p-4">
-              <p className="font-semibold">
-                {googleSheetsDestinationReady && googleSheetsConfigured
-                  ? "Spreadsheet siap digunakan"
-                  : googleSheetsDestinationReady
-                    ? "Akun layanan belum tersedia"
-                    : "Spreadsheet belum lengkap"}
+      <section
+        aria-label="Ringkasan konfigurasi Form"
+        className="space-y-3 border-y border-border py-4"
+      >
+        <div>
+          <h3 className="font-semibold">Konfigurasi Form</h3>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Kelola penyimpanan respons, identitas pengisi, tracking Meta, dan
+            pesan setelah Form dikirim dalam satu tempat.
+          </p>
+        </div>
+        <ul className="space-y-1 text-sm leading-6">
+          <li>
+            <span className="font-semibold">Data: </span>
+            {form.submissionDestination === "google_sheets"
+              ? googleSheetsDestinationReady
+                ? `Sistem KGJ + Google Sheets · ${googleSheets.sheetName}`
+                : "Sistem KGJ + Google Sheets belum lengkap"
+              : "Sistem KGJ (terenkripsi)"}
+          </li>
+          <li>
+            <span className="font-semibold">Identitas: </span>
+            {responseIdentity.nameField || responseIdentity.contactField
+              ? [
+                  nameFields.find(
+                    (field) => field.name === responseIdentity.nameField,
+                  )?.label,
+                  contactFields.find(
+                    (field) => field.name === responseIdentity.contactField,
+                  )?.label,
+                ]
+                  .filter(Boolean)
+                  .join(" + ")
+              : "Belum ditampilkan di daftar"}
+          </li>
+          <li>
+            <span className="font-semibold">Tracking: </span>
+            {form.metaEventName
+              ? `${form.metaEventName} setelah respons tersimpan`
+              : "Tidak mengirim event Meta"}
+          </li>
+          <li>
+            <span className="font-semibold">Setelah dikirim: </span>
+            Terima kasih lalu pilihan WhatsApp
+          </li>
+        </ul>
+        <FormDialog
+          title="Konfigurasi Form"
+          triggerLabel="Atur konfigurasi Form"
+          closeOnSave={false}
+        >
+          <div className="space-y-6">
+            <p className="text-sm leading-6 text-muted-foreground">
+              Perubahan disimpan otomatis ke draft. Terbitkan perubahan dari
+              Builder saat Form sudah siap ditampilkan publik.
+            </p>
+            <fieldset className="space-y-3 border-y border-border py-4">
+              <legend className="font-semibold">
+                Identitas pada daftar respons
+              </legend>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Pilih field yang akan membantu Marketing mengenali pengisi. Nama
+                tampil penuh, kontak disamarkan di daftar, dan jawaban lengkap
+                tetap hanya ada di detail respons.
               </p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {googleSheetsConfigured
-                  ? "Atur tujuan dan pemetaan kolom khusus Form ini."
-                  : "Akun layanan belum dikonfigurasi. Minta technical admin melengkapinya di Pengaturan Situs."}
-              </p>
-              <button
-                type="button"
-                onClick={() => setSpreadsheetSettingsOpen((open) => !open)}
-                className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full border border-border bg-card px-4 text-sm font-bold hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2"
-                aria-expanded={spreadsheetSettingsOpen}
-              >
-                Atur spreadsheet
-              </button>
-            </div>
-            {spreadsheetSettingsOpen && (
-              <section
-                role="region"
-                aria-labelledby="form-spreadsheet-settings-title"
-                className="space-y-4 rounded-xl border border-border bg-card p-4"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3
-                      id="form-spreadsheet-settings-title"
-                      className="font-semibold"
-                    >
-                      Pengaturan spreadsheet Form
-                    </h3>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      Konfigurasi ini hanya berlaku untuk Form ini.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSpreadsheetSettingsOpen(false)}
-                    className="min-h-10 text-sm font-bold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
-                  >
-                    Tutup
-                  </button>
-                </div>
-                <label className="block">
-                  ID Spreadsheet
-                  <input
-                    aria-label="ID Spreadsheet"
-                    value={spreadsheetId}
-                    onChange={(event) =>
-                      onChange(
-                        {
-                          googleSheets: {
-                            ...googleSheets,
-                            spreadsheetId: event.target.value.trim(),
-                            spreadsheetUrl: "",
-                          },
+              <label className="block">
+                Nama pengisi
+                <select
+                  value={responseIdentity.nameField ?? ""}
+                  onChange={(event) =>
+                    onChange(
+                      {
+                        responseIdentity: {
+                          ...responseIdentity,
+                          nameField: event.target.value || undefined,
                         },
-                        "form-google-sheets-id",
+                      },
+                      "form-response-identity-name",
+                    )
+                  }
+                  className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                >
+                  <option value="">Tidak ditampilkan</option>
+                  {nameFields.map((field) => (
+                    <option key={field.id} value={field.name}>
+                      {field.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                Kontak pengisi
+                <select
+                  value={responseIdentity.contactField ?? ""}
+                  onChange={(event) =>
+                    onChange(
+                      {
+                        responseIdentity: {
+                          ...responseIdentity,
+                          contactField: event.target.value || undefined,
+                        },
+                      },
+                      "form-response-identity-contact",
+                    )
+                  }
+                  className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                >
+                  <option value="">Tidak ditampilkan</option>
+                  {contactFields.map((field) => (
+                    <option
+                      key={field.id}
+                      value={field.name}
+                      disabled={field.name === responseIdentity.nameField}
+                    >
+                      {field.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </fieldset>
+            <fieldset className="space-y-3 border-y border-border py-4">
+              <legend className="font-semibold">Penyimpanan respons</legend>
+              <label className="block">
+                Tujuan data
+                <select
+                  value={form.submissionDestination ?? "database"}
+                  onChange={(event) => {
+                    const submissionDestination = event.target.value as
+                      "database" | "google_sheets";
+                    onChange(
+                      submissionDestination === "google_sheets"
+                        ? {
+                            submissionDestination,
+                            googleSheets: {
+                              ...googleSheets,
+                              fieldMappings: sheetMappings(
+                                form.fields,
+                                googleSheets.fieldMappings,
+                              ),
+                            },
+                          }
+                        : { submissionDestination },
+                      "form-submission-destination",
+                    );
+                  }}
+                  className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                >
+                  <option value="database">Sistem KGJ (terenkripsi)</option>
+                  <option value="google_sheets">
+                    Sistem KGJ + Google Sheets
+                  </option>
+                </select>
+              </label>
+              <p className="text-xs leading-5 text-muted-foreground">
+                Respons selalu tersimpan terenkripsi di Sistem KGJ. Google
+                Sheets menerima salinan append-only setelahnya.
+              </p>
+              {form.submissionDestination === "google_sheets" && (
+                <div className="space-y-4 border-t border-border pt-4">
+                  <p className="text-sm font-semibold">
+                    {googleSheetsDestinationReady && googleSheetsConfigured
+                      ? "Spreadsheet siap digunakan"
+                      : googleSheetsDestinationReady
+                        ? "Akun layanan belum tersedia"
+                        : "Spreadsheet belum lengkap"}
+                  </p>
+                  <p className="-mt-3 text-xs leading-5 text-muted-foreground">
+                    {googleSheetsConfigured
+                      ? "Konfigurasi ini hanya berlaku untuk Form ini."
+                      : "Akun layanan belum dikonfigurasi. Minta technical admin melengkapinya di Pengaturan Situs."}
+                  </p>
+                  <label className="block">
+                    ID Spreadsheet
+                    <input
+                      aria-label="ID Spreadsheet"
+                      value={spreadsheetId}
+                      onChange={(event) =>
+                        onChange(
+                          {
+                            googleSheets: {
+                              ...googleSheets,
+                              spreadsheetId: event.target.value.trim(),
+                              spreadsheetUrl: "",
+                            },
+                          },
+                          "form-google-sheets-id",
+                        )
+                      }
+                      onBlur={onEditEnd}
+                      placeholder="Contoh: 1AbCdEf..."
+                      className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                    />
+                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                      Salin bagian URL yang berada setelah `/d/` pada Google
+                      Sheets.
+                    </span>
+                  </label>
+                  <Editor
+                    label="Nama tab"
+                    value={googleSheets.sheetName}
+                    onChange={(sheetName) =>
+                      onChange(
+                        { googleSheets: { ...googleSheets, sheetName } },
+                        "form-google-sheets-tab",
                       )
                     }
                     onBlur={onEditEnd}
-                    placeholder="Contoh: 1AbCdEf..."
-                    className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
                   />
-                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    Salin bagian URL yang berada setelah `/d/` pada Google
-                    Sheets.
-                  </span>
-                </label>
-                <Editor
-                  label="Nama tab"
-                  value={googleSheets.sheetName}
-                  onChange={(sheetName) =>
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-semibold">
+                      Pemetaan kolom
+                    </legend>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Tentukan huruf kolom untuk setiap pertanyaan, misalnya A
+                      atau AB. Setiap kolom harus berbeda.
+                    </p>
+                    {form.fields.map((field) => {
+                      const mapping = googleSheets.fieldMappings.find(
+                        (item) => item.fieldName === field.name,
+                      ) ?? { fieldName: field.name, column: "" };
+                      return (
+                        <label
+                          key={field.id}
+                          className="flex items-center gap-3"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                            {field.label}
+                          </span>
+                          <input
+                            aria-label={`Kolom Google Sheets untuk ${field.label}`}
+                            value={mapping.column}
+                            onChange={(event) =>
+                              onChange(
+                                {
+                                  googleSheets: {
+                                    ...googleSheets,
+                                    fieldMappings:
+                                      googleSheets.fieldMappings.map((item) =>
+                                        item.fieldName === field.name
+                                          ? {
+                                              ...item,
+                                              column:
+                                                event.target.value.toUpperCase(),
+                                            }
+                                          : item,
+                                      ),
+                                  },
+                                },
+                                `form-google-sheets-column-${field.id}`,
+                              )
+                            }
+                            onBlur={onEditEnd}
+                            className="min-h-10 w-20 rounded-lg border border-border bg-background px-3 text-center font-mono"
+                          />
+                        </label>
+                      );
+                    })}
+                  </fieldset>
+                </div>
+              )}
+            </fieldset>
+            <fieldset className="space-y-3 border-b border-border pb-4">
+              <legend className="font-semibold">Tracking submit form</legend>
+              <label className="block">
+                Event Meta setelah respons tersimpan
+                <select
+                  value={
+                    !form.metaEventName
+                      ? ""
+                      : standardFormMetaEvent
+                        ? form.metaEventName
+                        : "custom"
+                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
                     onChange(
-                      { googleSheets: { ...googleSheets, sheetName } },
-                      "form-google-sheets-tab",
-                    )
+                      {
+                        metaEventName:
+                          value === ""
+                            ? null
+                            : value === "custom"
+                              ? "FormSubmitted"
+                              : value,
+                      },
+                      "form-meta-event",
+                    );
+                  }}
+                  className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                >
+                  <option value="">Jangan kirim event Meta</option>
+                  {formMetaEventOptions.map((eventName) => (
+                    <option key={eventName} value={eventName}>
+                      {eventName}
+                    </option>
+                  ))}
+                  <option value="custom">Event custom</option>
+                </select>
+              </label>
+              {!standardFormMetaEvent && form.metaEventName && (
+                <Editor
+                  label="Nama event custom"
+                  value={form.metaEventName}
+                  onChange={(metaEventName) =>
+                    onChange({ metaEventName }, "form-meta-event-custom")
                   }
                   onBlur={onEditEnd}
                 />
-                <fieldset className="space-y-2">
-                  <legend className="text-sm font-semibold">
-                    Pemetaan kolom
-                  </legend>
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    Tentukan huruf kolom untuk setiap pertanyaan, misalnya A
-                    atau AB. Setiap kolom harus berbeda.
-                  </p>
-                  {form.fields.map((field) => {
-                    const mapping = googleSheets.fieldMappings.find(
-                      (item) => item.fieldName === field.name,
-                    ) ?? { fieldName: field.name, column: "" };
-                    return (
-                      <label key={field.id} className="flex items-center gap-3">
-                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                          {field.label}
-                        </span>
-                        <input
-                          aria-label={`Kolom Google Sheets untuk ${field.label}`}
-                          value={mapping.column}
-                          onChange={(event) =>
-                            onChange(
-                              {
-                                googleSheets: {
-                                  ...googleSheets,
-                                  fieldMappings: googleSheets.fieldMappings.map(
-                                    (item) =>
-                                      item.fieldName === field.name
-                                        ? {
-                                            ...item,
-                                            column:
-                                              event.target.value.toUpperCase(),
-                                          }
-                                        : item,
-                                  ),
-                                },
-                              },
-                              `form-google-sheets-column-${field.id}`,
-                            )
-                          }
-                          onBlur={onEditEnd}
-                          className="min-h-10 w-20 rounded-lg border border-border bg-background px-3 text-center font-mono"
-                        />
-                      </label>
-                    );
-                  })}
-                </fieldset>
-              </section>
-            )}
+              )}
+              <p className="text-xs leading-5 text-muted-foreground">
+                Event hanya dikirim setelah respons tersimpan dan tidak memuat
+                jawaban form. Contact tetap hanya dikirim saat pengunjung
+                menekan WhatsApp.
+              </p>
+            </fieldset>
+            <details className="border-t border-border pt-4" open>
+              <summary className="cursor-pointer text-sm font-semibold">
+                Pesan setelah form dikirim
+              </summary>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Ditampilkan saat data berhasil tersimpan, sebelum pengunjung
+                memilih untuk membuka WhatsApp.
+              </p>
+              <div className="mt-3 space-y-3">
+                <Editor
+                  label="Judul terima kasih"
+                  value={form.thankYouTitle ?? "Terima kasih"}
+                  onChange={(thankYouTitle) =>
+                    onChange({ thankYouTitle }, "form-thank-you-title")
+                  }
+                  onBlur={onEditEnd}
+                />
+                <Editor
+                  label="Pesan terima kasih"
+                  value={
+                    form.thankYouMessage ??
+                    "Data Anda sudah kami terima. Lanjutkan ke WhatsApp untuk menghubungi cabang."
+                  }
+                  onChange={(thankYouMessage) =>
+                    onChange({ thankYouMessage }, "form-thank-you-message")
+                  }
+                  onBlur={onEditEnd}
+                />
+                <Editor
+                  label="Label tombol lanjut"
+                  value={form.continueLabel ?? "Lanjut ke WhatsApp"}
+                  onChange={(continueLabel) =>
+                    onChange({ continueLabel }, "form-continue-label")
+                  }
+                  onBlur={onEditEnd}
+                />
+              </div>
+            </details>
           </div>
-        )}
-      </fieldset>
-      <fieldset className="space-y-3 border-b border-border pb-4">
-        <legend className="font-semibold">Tracking submit form</legend>
-        <label className="block">
-          Event Meta setelah respons tersimpan
-          <select
-            value={
-              !form.metaEventName
-                ? ""
-                : standardFormMetaEvent
-                  ? form.metaEventName
-                  : "custom"
-            }
-            onChange={(event) => {
-              const value = event.target.value;
-              onChange(
-                {
-                  metaEventName:
-                    value === ""
-                      ? null
-                      : value === "custom"
-                        ? "FormSubmitted"
-                        : value,
-                },
-                "form-meta-event",
-              );
-            }}
-            className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
-          >
-            <option value="">Jangan kirim event Meta</option>
-            {formMetaEventOptions.map((eventName) => (
-              <option key={eventName} value={eventName}>
-                {eventName}
-              </option>
-            ))}
-            <option value="custom">Event custom</option>
-          </select>
-        </label>
-        {!standardFormMetaEvent && form.metaEventName && (
-          <Editor
-            label="Nama event custom"
-            value={form.metaEventName}
-            onChange={(metaEventName) =>
-              onChange({ metaEventName }, "form-meta-event-custom")
-            }
-            onBlur={onEditEnd}
-          />
-        )}
-        <p className="text-xs leading-5 text-muted-foreground">
-          Event hanya dikirim setelah respons tersimpan dan tidak memuat jawaban
-          form. Contact tetap hanya dikirim saat pengunjung menekan WhatsApp.
-        </p>
-      </fieldset>
-      <details className="border-t border-border pt-4">
-        <summary className="cursor-pointer text-sm font-semibold">
-          Pesan setelah form dikirim
-        </summary>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Ditampilkan saat data berhasil tersimpan, sebelum pengunjung memilih
-          untuk membuka WhatsApp.
-        </p>
-        <div className="mt-3 space-y-3">
-          <Editor
-            label="Judul terima kasih"
-            value={form.thankYouTitle ?? "Terima kasih"}
-            onChange={(thankYouTitle) =>
-              onChange({ thankYouTitle }, "form-thank-you-title")
-            }
-            onBlur={onEditEnd}
-          />
-          <Editor
-            label="Pesan terima kasih"
-            value={
-              form.thankYouMessage ??
-              "Data Anda sudah kami terima. Lanjutkan ke WhatsApp untuk menghubungi cabang."
-            }
-            onChange={(thankYouMessage) =>
-              onChange({ thankYouMessage }, "form-thank-you-message")
-            }
-            onBlur={onEditEnd}
-          />
-          <Editor
-            label="Label tombol lanjut"
-            value={form.continueLabel ?? "Lanjut ke WhatsApp"}
-            onChange={(continueLabel) =>
-              onChange({ continueLabel }, "form-continue-label")
-            }
-            onBlur={onEditEnd}
-          />
-        </div>
-      </details>
+        </FormDialog>
+      </section>
       {ctaProducts.length ? (
         <div>
           <label className="block">

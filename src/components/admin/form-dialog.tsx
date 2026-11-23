@@ -31,6 +31,7 @@ export function FormDialog({
   primary = false,
   initiallyOpen = false,
   refreshBuilderData = false,
+  closeOnSave = true,
   dataTool,
 }: {
   title: string;
@@ -39,6 +40,7 @@ export function FormDialog({
   primary?: boolean;
   initiallyOpen?: boolean;
   refreshBuilderData?: boolean;
+  closeOnSave?: boolean;
   dataTool?: PageDataToolKey;
 }) {
   const pageDataSelection = usePageDataManager();
@@ -65,13 +67,13 @@ export function FormDialog({
   useEffect(() => {
     if (!isOpen) return;
     const handleSave = () => {
-      if (!isInlineManager) closeDialog();
+      if (!isInlineManager && closeOnSave) closeDialog();
       if (refreshBuilderData)
         window.dispatchEvent(new Event("kgj:branch-source-saved"));
     };
     window.addEventListener("kgj:admin-saved", handleSave);
     return () => window.removeEventListener("kgj:admin-saved", handleSave);
-  }, [closeDialog, isInlineManager, isOpen, refreshBuilderData]);
+  }, [closeDialog, closeOnSave, isInlineManager, isOpen, refreshBuilderData]);
 
   if (isInlineManager) {
     return (

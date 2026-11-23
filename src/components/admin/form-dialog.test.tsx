@@ -38,6 +38,43 @@ describe("FormDialog", () => {
     window.removeEventListener("kgj:branch-source-saved", sourceSaved);
   });
 
+  it("closes an ordinary dialog when a save succeeds", () => {
+    render(
+      <FormDialog title="Galeri produk" triggerLabel="Galeri produk">
+        <p>Isi galeri</p>
+      </FormDialog>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Galeri produk" }));
+    expect(screen.getByRole("dialog", { name: "Galeri produk" })).toBeVisible();
+
+    window.dispatchEvent(new Event("kgj:admin-saved"));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("keeps a dialog open when its configuration uses autosave", () => {
+    render(
+      <FormDialog
+        title="Konfigurasi Form"
+        triggerLabel="Atur konfigurasi Form"
+        closeOnSave={false}
+      >
+        <p>Pengaturan Form</p>
+      </FormDialog>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Atur konfigurasi Form" }),
+    );
+    window.dispatchEvent(new Event("kgj:admin-saved"));
+
+    expect(
+      screen.getByRole("dialog", { name: "Konfigurasi Form" }),
+    ).toBeVisible();
+    expect(screen.getByText("Pengaturan Form")).toBeVisible();
+  });
+
   it("renders the relevant manager inline when selected from the builder drawer", () => {
     const sourceSaved = vi.fn();
     window.addEventListener("kgj:branch-source-saved", sourceSaved);
