@@ -2,6 +2,7 @@
 
 import { type FormEvent, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Filters = {
   branchId: string | null;
@@ -16,11 +17,14 @@ type Filters = {
 
 type Row = {
   id: string;
+  branchId?: string;
+  formBlockId?: string;
   submittedAt: Date;
   whatsappContinuedAt: Date | null;
   formTitle: string;
   branchName: string;
   productName: string;
+  hasIdentitySummary?: boolean;
   identity?: { name: string | null; contact: string | null } | null;
   googleSheetsStatus: string | null;
   googleSheetsRetryable?: boolean;
@@ -87,12 +91,20 @@ export function FormResponseTable({
   products: { id: string; productName: string; branchName: string }[];
   filterError: boolean;
 }) {
+  const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [detailError, setDetailError] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [deliveryMessage, setDeliveryMessage] = useState("");
+  const [backfillingFormId, setBackfillingFormId] = useState<string | null>(
+    null,
+  );
+  const [backfillCursors, setBackfillCursors] = useState<
+    Record<string, string | null | undefined>
+  >({});
+  const [identityMessage, setIdentityMessage] = useState("");
   const [contactQuery, setContactQuery] = useState("");
   const [contactRows, setContactRows] = useState<Row[] | null>(null);
   const [contactMessage, setContactMessage] = useState("");
@@ -136,6 +148,60 @@ export function FormResponseTable({
       setDeliveryMessage("Google Sheets belum dapat dikirim ulang. Coba lagi.");
     } finally {
       setRetryingId(null);
+    }
+  }
+
+  async function backfillIdentity(row: Row) {
+    const { branchId, formBlockId } = row;
+    if (!branchId || !formBlockId) return;
+    const cursor = backfillCursors[formBlockId];
+    if (cursor === null) return;
+    setBackfillingFormId(formBlockId);
+    setIdentityMessage("");
+    try {
+      const response = await fetch(
+        "/api/admin/form-responses/identity-backfill",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            branchId,
+            formId: formBlockId,
+            ...(cursor ? { cursor } : {}),
+          }),
+        },
+      );
+      const result = (await response.json()) as {
+        ok?: boolean;
+        code?: string;
+        updated?: number;
+        skipped?: number;
+        nextCursor?: string | null;
+      };
+      if (
+        response.status === 422 &&
+        result.code === "identity_not_configured"
+      ) {
+        setIdentityMessage(
+          "Atur Nama pengisi dan Kontak pengisi pada Builder, lalu terbitkan Form terlebih dahulu.",
+        );
+        return;
+      }
+      if (!response.ok || !result.ok) throw new Error();
+      setBackfillCursors((current) => ({
+        ...current,
+        [formBlockId]: result.nextCursor ?? null,
+      }));
+      setIdentityMessage(
+        result.nextCursor
+          ? `Identitas diperbarui untuk ${result.updated ?? 0} respons. Jalankan lagi untuk batch berikutnya.`
+          : `Identitas diperbarui untuk ${result.updated ?? 0} respons${result.skipped ? `; ${result.skipped} respons dilewati.` : "."}`,
+      );
+      router.refresh();
+    } catch {
+      setIdentityMessage("Identitas belum dapat diperbarui. Coba lagi.");
+    } finally {
+      setBackfillingFormId(null);
     }
   }
 
@@ -185,6 +251,11 @@ export function FormResponseTable({
           </p>
         </div>
       </div>
+      {identityMessage && (
+        <p className="mt-4 text-sm" role="status">
+          {identityMessage}
+        </p>
+      )}
 
       <form onSubmit={searchContact} className="mt-5 flex flex-wrap gap-3">
         <label className="min-w-[16rem] flex-1 text-sm font-semibold">
@@ -396,6 +467,24 @@ export function FormResponseTable({
                 >
                   {loadingId === row.id ? "Memuat..." : "Lihat respons"}
                 </button>
+                {!row.identity &&
+                  !row.hasIdentitySummary &&
+                  row.branchId &&
+                  row.formBlockId && (
+                    <button
+                      type="button"
+                      onClick={() => backfillIdentity(row)}
+                      disabled={
+                        backfillingFormId === row.formBlockId ||
+                        backfillCursors[row.formBlockId] === null
+                      }
+                      className="ml-2 mt-4 min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                    >
+                      {backfillingFormId === row.formBlockId
+                        ? "Memperbarui..."
+                        : "Terapkan identitas"}
+                    </button>
+                  )}
                 {canRetryGoogleSheets(row) && (
                   <button
                     type="button"
@@ -481,6 +570,24 @@ export function FormResponseTable({
                         >
                           {loadingId === row.id ? "Memuat..." : "Lihat respons"}
                         </button>
+                        {!row.identity &&
+                          !row.hasIdentitySummary &&
+                          row.branchId &&
+                          row.formBlockId && (
+                            <button
+                              type="button"
+                              onClick={() => backfillIdentity(row)}
+                              disabled={
+                                backfillingFormId === row.formBlockId ||
+                                backfillCursors[row.formBlockId] === null
+                              }
+                              className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                            >
+                              {backfillingFormId === row.formBlockId
+                                ? "Memperbarui..."
+                                : "Terapkan identitas"}
+                            </button>
+                          )}
                       </div>
                     </td>
                   </tr>

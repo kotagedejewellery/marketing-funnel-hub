@@ -17,19 +17,29 @@ import * as z from "zod";
 
 import { getDatabase } from "@/lib/db/client";
 import {
+  auditLogs,
   branches,
+  branchPageBuilderLayouts,
   formSubmissionDeliveries,
   formSubmissions,
   productBranches,
   products,
 } from "@/lib/db/schema";
 import { requireAdmin } from "@/modules/admin/access";
-import { pageBuilderFormFieldSchema } from "@/modules/page-builder/schema";
+import {
+  pageBuilderBlocksSchema,
+  pageBuilderFormFieldSchema,
+} from "@/modules/page-builder/schema";
 
-import { decryptFormValues, hashFormContactForSearch } from "./crypto";
+import {
+  decryptFormValues,
+  encryptFormValues,
+  hashFormContactForSearch,
+} from "./crypto";
 import { isGoogleSheetsDeliveryRetryable } from "./delivery-state";
 
 const pageSize = 50;
+const identityBackfillBatchSize = 100;
 const dateSchema = z.string().refine((value) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
@@ -212,6 +222,7 @@ async function responseRows(
       submittedAt: formSubmissions.submittedAt,
       whatsappContinuedAt: formSubmissions.whatsappContinuedAt,
       formTitle: formSubmissions.formTitle,
+      formBlockId: formSubmissions.formBlockId,
       identitySummaryEncrypted: formSubmissions.identitySummaryEncrypted,
       googleSheetsStatus: formSubmissionDeliveries.status,
       googleSheetsLastAttemptAt: formSubmissionDeliveries.lastAttemptAt,
@@ -246,6 +257,7 @@ function responseRowWithIdentity(
     row;
   return {
     ...metadata,
+    hasIdentitySummary: identitySummaryEncrypted !== null,
     identity: identitySummary(identitySummaryEncrypted),
     googleSheetsRetryable: isGoogleSheetsDeliveryRetryable(
       metadata.googleSheetsStatus,
@@ -390,4 +402,167 @@ export async function getFormResponseDetail(id: string) {
   } catch {
     return { id: row.id, title: row.formTitle, decryptable: false, values: [] };
   }
+}
+
+const identityBackfillSchema = z.object({
+  branchId: z.uuid(),
+  formId: z.uuid(),
+  cursor: z.string().min(1).max(256).optional(),
+});
+
+function readableIdentityValue(
+  values: Record<string, unknown>,
+  fieldName: string | undefined,
+) {
+  if (!fieldName) return "";
+  const value = values[fieldName];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+export async function backfillFormResponseIdentity(input: unknown) {
+  const parsedInput = identityBackfillSchema.safeParse(input);
+  if (!parsedInput.success)
+    return { ok: false as const, code: "invalid_input" };
+
+  const profile = await requireAdmin();
+  const { branchId, formId, cursor: cursorValue } = parsedInput.data;
+  const cursor = cursorValue ? parseCursor(cursorValue) : null;
+  if (cursorValue && !cursor)
+    return { ok: false as const, code: "invalid_cursor" };
+  const db = getDatabase();
+  const [layout] = await db
+    .select({ publishedBlocks: branchPageBuilderLayouts.publishedBlocks })
+    .from(branchPageBuilderLayouts)
+    .where(eq(branchPageBuilderLayouts.branchId, branchId))
+    .limit(1);
+  const publishedBlocks = pageBuilderBlocksSchema.safeParse(
+    layout?.publishedBlocks,
+  );
+  const form = publishedBlocks.success
+    ? publishedBlocks.data.find(
+        (
+          block,
+        ): block is Extract<
+          (typeof publishedBlocks.data)[number],
+          { type: "form" }
+        > => block.type === "form" && block.id === formId,
+      )
+    : null;
+  const identity = form?.responseIdentity;
+  if (!identity?.nameField && !identity?.contactField)
+    return { ok: false as const, code: "identity_not_configured" };
+
+  const candidates = await db
+    .select({
+      id: formSubmissions.id,
+      submittedAt: formSubmissions.submittedAt,
+      formSchema: formSubmissions.formSchema,
+      valuesEncrypted: formSubmissions.valuesEncrypted,
+    })
+    .from(formSubmissions)
+    .where(
+      and(
+        eq(formSubmissions.branchId, branchId),
+        eq(formSubmissions.formBlockId, formId),
+        isNull(formSubmissions.identitySummaryEncrypted),
+        ...(cursor
+          ? [
+              or(
+                lt(formSubmissions.submittedAt, cursor.submittedAt),
+                and(
+                  eq(formSubmissions.submittedAt, cursor.submittedAt),
+                  lt(formSubmissions.id, cursor.id),
+                ),
+              ),
+            ]
+          : []),
+      ),
+    )
+    .orderBy(desc(formSubmissions.submittedAt), desc(formSubmissions.id))
+    .limit(identityBackfillBatchSize + 1);
+  const rows = candidates.slice(0, identityBackfillBatchSize);
+  const nextCursor =
+    candidates.length > identityBackfillBatchSize
+      ? responseCursor(rows[rows.length - 1])
+      : null;
+
+  let updated = 0;
+  let skipped = 0;
+  for (const row of rows) {
+    const fields = pageBuilderFormFieldSchema
+      .array()
+      .safeParse((row.formSchema as { fields?: unknown }).fields);
+    if (!fields.success) {
+      skipped += 1;
+      continue;
+    }
+    const nameField = fields.data.find(
+      (field) => field.name === identity?.nameField && field.type === "text",
+    );
+    const contactField = fields.data.find(
+      (field) =>
+        field.name === identity?.contactField &&
+        ["text", "tel", "email"].includes(field.type),
+    );
+    if (
+      (identity?.nameField && !nameField) ||
+      (identity?.contactField && !contactField)
+    ) {
+      skipped += 1;
+      continue;
+    }
+
+    let name: string;
+    let contact: string;
+    let encryptedSummary: string;
+    let contactSearchHash: string | null;
+    try {
+      const values = decryptFormValues(row.valuesEncrypted);
+      name = readableIdentityValue(values, identity?.nameField);
+      contact = readableIdentityValue(values, identity?.contactField);
+      if (!name && !contact) {
+        skipped += 1;
+        continue;
+      }
+      encryptedSummary = encryptFormValues({ name, contact });
+      contactSearchHash = hashFormContactForSearch(contact);
+    } catch {
+      // Historical encryption failures must not block the rest of the batch.
+      skipped += 1;
+      continue;
+    }
+    const changed = await db
+      .update(formSubmissions)
+      .set({
+        identitySummaryEncrypted: encryptedSummary,
+        contactSearchHash,
+      })
+      .where(
+        and(
+          eq(formSubmissions.id, row.id),
+          isNull(formSubmissions.identitySummaryEncrypted),
+        ),
+      )
+      .returning({ id: formSubmissions.id });
+    updated += changed.length;
+  }
+
+  await db.insert(auditLogs).values({
+    adminId: profile.id,
+    action: "backfill",
+    entityType: "form_submission_identity",
+    entityId: formId,
+    changes: {
+      branchId,
+      updated,
+      skipped,
+      batchSize: identityBackfillBatchSize,
+    },
+  });
+  return {
+    ok: true as const,
+    updated,
+    skipped,
+    nextCursor,
+  };
 }
