@@ -9,7 +9,7 @@ vi.mock("@/lib/env/server", () => ({
   },
 }));
 
-import { metaPayload, sendMetaCapi } from "./meta-capi";
+import { formMetaPayload, metaPayload, sendMetaCapi } from "./meta-capi";
 
 const event = {
   eventId: "a7cb942c-0e0d-465e-8d6a-04569990228b",
@@ -83,6 +83,33 @@ describe("Meta CAPI adapter", () => {
       "Contact",
     );
     expect(payload?.data[0].user_data).not.toHaveProperty("external_id");
+  });
+
+  it("builds a form provider payload without form-answer values", () => {
+    const payload = formMetaPayload(
+      {
+        eventId: event.eventId,
+        eventTime: event.eventTime,
+        pageUrl: event.pageUrl,
+        metaEventName: "Lead",
+        productCategory: "wedding-ring",
+        branchName: "Surabaya",
+        attribution: event.attribution,
+      },
+      request,
+      { fbp: "fb.1.test" },
+    );
+
+    expect(payload?.data[0]).toMatchObject({
+      event_name: "Lead",
+      event_id: event.eventId,
+      custom_data: {
+        content_category: "wedding-ring",
+        branch: "Surabaya",
+        cta: "form",
+      },
+    });
+    expect(JSON.stringify(payload)).not.toContain("Nama pelanggan");
   });
 
   it("does not send when there is no approved matching data", async () => {

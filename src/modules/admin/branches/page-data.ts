@@ -17,6 +17,7 @@ import {
   pageBlocks,
   productBranches,
   products,
+  siteSettings,
 } from "@/lib/db/schema";
 import { pageBuilderBlocksSchema } from "@/modules/page-builder/schema";
 
@@ -78,6 +79,7 @@ export async function getBranchPageSettings(id: string) {
     metaTrackingRows,
     pageBlockRows,
     builderLayouts,
+    siteSettingsRows,
   ] = await Promise.all([
     db
       .select()
@@ -161,6 +163,10 @@ export async function getBranchPageSettings(id: string) {
       })
       .from(branchPageBuilderLayouts)
       .where(eq(branchPageBuilderLayouts.branchId, branch.id))
+      .limit(1),
+    db
+      .select({ privacyUrl: siteSettings.privacyUrl })
+      .from(siteSettings)
       .limit(1),
   ]);
   const assignmentByProductId = new Map(
@@ -324,6 +330,7 @@ export async function getBranchPageSettings(id: string) {
       isPublished: builderLayouts[0]?.isPublished ?? false,
       revision: builderLayouts[0]?.revision ?? null,
       publishedAt: builderLayouts[0]?.publishedAt?.toISOString() ?? null,
+      privacyUrl: siteSettingsRows[0]?.privacyUrl ?? null,
     },
     metaTracking: {
       mode: metaTrackingMode,

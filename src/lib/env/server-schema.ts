@@ -36,6 +36,10 @@ const serverEnvironmentSchema = z
     GA4_SERVICE_ACCOUNT_PRIVATE_KEY: optionalEnvironmentString(
       z.string().min(32),
     ),
+    GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL: optionalEnvironmentString(z.email()),
+    GOOGLE_SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY: optionalEnvironmentString(
+      z.string().min(32),
+    ),
     FIRECRAWL_API_KEY: optionalEnvironmentString(z.string().trim().min(1)),
     TRACKING_ENABLED: z.enum(["true", "false"]).default("false"),
     CRON_SECRET: z.string().min(16),
@@ -75,6 +79,29 @@ const serverEnvironmentSchema = z
             path: [variable],
             message:
               "Configure all global Meta values together, or configure Meta per branch.",
+          });
+        }
+      }
+    }
+
+    const googleSheetsVariables = [
+      "GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL",
+      "GOOGLE_SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY",
+    ] as const;
+    const configuredGoogleSheetsVariables = googleSheetsVariables.filter(
+      (variable) => Boolean(environment[variable]),
+    );
+    if (
+      configuredGoogleSheetsVariables.length > 0 &&
+      configuredGoogleSheetsVariables.length !== googleSheetsVariables.length
+    ) {
+      for (const variable of googleSheetsVariables) {
+        if (!environment[variable]) {
+          context.addIssue({
+            code: "custom",
+            path: [variable],
+            message:
+              "Configure both Google Sheets service-account values together.",
           });
         }
       }

@@ -1,0 +1,2 @@
+ALTER TABLE "form_submission_deliveries" DROP CONSTRAINT "form_submission_deliveries_status_check";--> statement-breakpoint
+ALTER TABLE "form_submission_deliveries" ADD CONSTRAINT "form_submission_deliveries_status_check" CHECK ("form_submission_deliveries"."status" in ('pending', 'delivering', 'delivered', 'failed', 'unknown'));

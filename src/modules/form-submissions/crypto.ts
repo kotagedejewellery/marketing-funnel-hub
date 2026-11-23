@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  createHmac,
   createCipheriv,
   createDecipheriv,
   createHash,
@@ -53,4 +54,12 @@ export function createFormContinuationToken() {
 
 export function hashFormContinuationToken(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+export function hashFormContactForSearch(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  return createHmac("sha256", encryptionKey())
+    .update(`form-contact-search:v1:${normalized}`)
+    .digest("hex");
 }

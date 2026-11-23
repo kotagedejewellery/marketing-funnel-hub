@@ -26,6 +26,7 @@ import { publicAssetUrl, publicHref, resolveWhatsappCta } from "./links";
 import { resolvePageBlocks } from "./page-blocks";
 import { resolveProfileVisibility } from "./profile-visibility";
 import { browserMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
+import { stripPageBuilderPrivateConfig } from "@/modules/page-builder/schema";
 
 const assetUrl = (path: string | null) =>
   publicAssetUrl(serverEnv.MEDIA_PUBLIC_BASE_URL, path);
@@ -534,7 +535,7 @@ async function loadScopedContent(
       builderLayouts[0]?.isPublished || useBuilderDraft
         ? useBuilderDraft
           ? builderLayouts[0]?.draftBlocks
-          : builderLayouts[0]?.publishedBlocks
+          : stripPageBuilderPrivateConfig(builderLayouts[0]?.publishedBlocks)
         : null,
   };
 }

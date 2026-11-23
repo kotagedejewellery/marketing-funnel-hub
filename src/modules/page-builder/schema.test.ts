@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   pageBuilderBlocksSchema,
   pageBuilderPublishBlocksSchema,
+  stripPageBuilderPrivateConfig,
   sanitizePageBuilderHtml,
 } from "./schema";
 
@@ -366,6 +367,146 @@ describe("Branch Page Builder schema", () => {
       },
     ]);
     expect(parsed.success).toBe(true);
+  });
+
+  it("accepts an explicitly mapped Google Sheets destination for a form", () => {
+    const parsed = pageBuilderBlocksSchema.safeParse([
+      {
+        id,
+        type: "form",
+        title: "Konsultasi",
+        description: "",
+        submitLabel: "Kirim",
+        privacyNotice: "Data disimpan oleh KGJ.",
+        assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        submissionDestination: "google_sheets",
+        responseIdentity: { nameField: "nama" },
+        googleSheets: {
+          spreadsheetUrl:
+            "https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit",
+          sheetName: "Respons",
+          fieldMappings: [{ fieldName: "nama", column: "B" }],
+        },
+        metaEventName: "Lead",
+        width: "full",
+        isVisible: true,
+        fields: [
+          {
+            id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            name: "nama",
+            label: "Nama",
+            type: "text",
+            placeholder: "",
+            help: "",
+            required: true,
+            options: [],
+          },
+        ],
+      },
+    ]);
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success)
+      expect(parsed.data[0]).toMatchObject({
+        submissionDestination: "google_sheets",
+        metaEventName: "Lead",
+        googleSheets: { sheetName: "Respons" },
+      });
+  });
+
+  it("accepts explicit fields for the respondent summary and rejects unknown fields", () => {
+    const form = {
+      id,
+      type: "form" as const,
+      title: "Konsultasi",
+      description: "",
+      submitLabel: "Kirim",
+      privacyNotice: "Data disimpan oleh KGJ.",
+      assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+      width: "full" as const,
+      isVisible: true,
+      fields: [
+        {
+          id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+          name: "nama",
+          label: "Nama lengkap",
+          type: "text" as const,
+          placeholder: "",
+          help: "",
+          required: true,
+          options: [],
+        },
+        {
+          id: "6f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+          name: "whatsapp",
+          label: "Nomor WhatsApp",
+          type: "tel" as const,
+          placeholder: "",
+          help: "",
+          required: true,
+          options: [],
+        },
+      ],
+    };
+
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        {
+          ...form,
+          responseIdentity: { nameField: "nama", contactField: "whatsapp" },
+        },
+      ]).success,
+    ).toBe(true);
+    expect(
+      pageBuilderBlocksSchema.safeParse([
+        {
+          ...form,
+          responseIdentity: { nameField: "tidak_ada" },
+        },
+      ]).success,
+    ).toBe(false);
+  });
+
+  it("never exposes a form Google Sheets destination to the public renderer", () => {
+    const blocks = stripPageBuilderPrivateConfig([
+      {
+        id,
+        type: "form",
+        title: "Konsultasi",
+        description: "",
+        submitLabel: "Kirim",
+        privacyNotice: "Data disimpan oleh KGJ.",
+        assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+        submissionDestination: "google_sheets",
+        googleSheets: {
+          spreadsheetUrl:
+            "https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit",
+          sheetName: "Respons",
+          fieldMappings: [{ fieldName: "nama", column: "B" }],
+        },
+        width: "full",
+        isVisible: true,
+        fields: [
+          {
+            id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            name: "nama",
+            label: "Nama",
+            type: "text",
+            placeholder: "",
+            help: "",
+            required: true,
+            options: [],
+          },
+        ],
+      },
+    ]);
+
+    expect(blocks).toEqual([
+      expect.not.objectContaining({
+        googleSheets: expect.anything(),
+        responseIdentity: expect.anything(),
+      }),
+    ]);
   });
 
   it("keeps legacy spacer sizes and accepts a precise divider spacing", () => {

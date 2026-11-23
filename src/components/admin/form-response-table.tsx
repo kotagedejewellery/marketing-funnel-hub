@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import Link from "next/link";
 
 type Filters = {
@@ -10,7 +10,8 @@ type Filters = {
   start: string | null;
   end: string | null;
   whatsappStatus: "continued" | "pending" | null;
-  page: number;
+  cursor?: string | null;
+  page?: number;
 };
 
 type Row = {
@@ -20,6 +21,9 @@ type Row = {
   formTitle: string;
   branchName: string;
   productName: string;
+  identity?: { name: string | null; contact: string | null } | null;
+  googleSheetsStatus: string | null;
+  googleSheetsRetryable?: boolean;
 };
 
 type Detail = {
@@ -40,17 +44,32 @@ function queryFor(filters: Filters, override: Partial<Filters> = {}) {
   const values = { ...filters, ...override };
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(values)) {
-    if (value && !(key === "page" && value === 1))
-      query.set(key, String(value));
+    if (value) query.set(key, String(value));
   }
   return query.toString() ? `?${query}` : "";
+}
+
+function googleSheetsStatus(status: Row["googleSheetsStatus"]) {
+  if (status === "delivered") return "Google Sheets terkirim";
+  if (status === "failed") return "Google Sheets gagal";
+  if (status === "pending") return "Google Sheets menunggu";
+  if (status === "delivering") return "Google Sheets sedang dikirim";
+  if (status === "unknown") return "Periksa Google Sheets: status tidak pasti";
+  return null;
+}
+
+function canRetryGoogleSheets(row: Row) {
+  return (
+    row.googleSheetsRetryable ??
+    ["pending", "failed"].includes(row.googleSheetsStatus ?? "")
+  );
 }
 
 export function FormResponseTable({
   filters,
   total,
   summary,
-  pageCount,
+  nextCursor,
   rows,
   branches,
   forms,
@@ -60,7 +79,8 @@ export function FormResponseTable({
   filters: Filters;
   total: number;
   summary: { submitted: number; continued: number };
-  pageCount: number;
+  nextCursor?: string | null;
+  pageCount?: number;
   rows: Row[];
   branches: { id: string; name: string }[];
   forms: { id: string; title: string }[];
@@ -71,6 +91,11 @@ export function FormResponseTable({
   const [detail, setDetail] = useState<Detail | null>(null);
   const [detailError, setDetailError] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [deliveryMessage, setDeliveryMessage] = useState("");
+  const [contactQuery, setContactQuery] = useState("");
+  const [contactRows, setContactRows] = useState<Row[] | null>(null);
+  const [contactMessage, setContactMessage] = useState("");
   const activeDetailId = useRef<string | null>(null);
 
   async function openDetail(id: string) {
@@ -96,6 +121,45 @@ export function FormResponseTable({
     }
   }
 
+  async function retryGoogleSheets(id: string) {
+    setRetryingId(id);
+    setDeliveryMessage("");
+    try {
+      const response = await fetch(
+        `/api/admin/form-responses/${id}/google-sheets/retry`,
+        { method: "POST", headers: { "Content-Type": "application/json" } },
+      );
+      if (!response.ok) throw new Error();
+      setDeliveryMessage("Google Sheets berhasil dicoba ulang.");
+      window.location.reload();
+    } catch {
+      setDeliveryMessage("Google Sheets belum dapat dikirim ulang. Coba lagi.");
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
+  async function searchContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setContactMessage("");
+    setContactRows(null);
+    try {
+      const response = await fetch("/api/admin/form-responses/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contact: contactQuery }),
+      });
+      const result = (await response.json()) as { ok?: boolean; rows?: Row[] };
+      if (!response.ok || !result.ok || !result.rows) throw new Error();
+      setContactRows(result.rows);
+      setContactMessage(`${result.rows.length} respons ditemukan.`);
+    } catch {
+      setContactMessage("Kontak belum dapat dicari. Coba lagi.");
+    }
+  }
+
+  const visibleRows = contactRows ?? rows;
+
   return (
     <section
       className="rounded-2xl bg-card p-6 sm:p-8"
@@ -110,8 +174,8 @@ export function FormResponseTable({
             Respons Form
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Tinjau respons terenkripsi dari seluruh Halaman Link Bio dan unduh
-            laporan sesuai filter.
+            Tinjau respons terenkripsi. Daftar hanya menampilkan nama dan kontak
+            yang disamarkan; buka detail untuk jawaban lengkap.
           </p>
         </div>
         <div className="text-right text-sm tabular-nums">
@@ -121,6 +185,41 @@ export function FormResponseTable({
           </p>
         </div>
       </div>
+
+      <form onSubmit={searchContact} className="mt-5 flex flex-wrap gap-3">
+        <label className="min-w-[16rem] flex-1 text-sm font-semibold">
+          Cari nomor atau email pengisi
+          <input
+            value={contactQuery}
+            onChange={(event) => setContactQuery(event.target.value)}
+            className="mt-1 min-h-11 w-full rounded-lg border border-border bg-background px-3 font-normal"
+          />
+        </label>
+        <button
+          type="submit"
+          className="mt-6 min-h-11 rounded-full border border-border px-5 text-sm font-bold hover:bg-secondary"
+        >
+          Cari kontak
+        </button>
+        {contactRows && (
+          <button
+            type="button"
+            onClick={() => {
+              setContactRows(null);
+              setContactMessage("");
+              setContactQuery("");
+            }}
+            className="mt-6 min-h-11 px-3 text-sm font-semibold underline underline-offset-4"
+          >
+            Kembali ke daftar
+          </button>
+        )}
+      </form>
+      {contactMessage && (
+        <p role="status" className="mt-2 text-sm text-muted-foreground">
+          {contactMessage}
+        </p>
+      )}
 
       <form
         method="get"
@@ -194,10 +293,10 @@ export function FormResponseTable({
             </span>
           ) : (
             <a
-              href={`/api/admin/forms/export${queryFor(filters, { page: 1 })}`}
+              href={`/api/admin/forms/export${queryFor(filters, { cursor: null })}`}
               className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-bold hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2"
             >
-              Export CSV (maks. 10.000)
+              Export CSV (maks. 1.000)
             </a>
           )}
           <Link
@@ -214,11 +313,16 @@ export function FormResponseTable({
           rentang tanggal atau tautannya.
         </p>
       )}
+      {deliveryMessage && (
+        <p role="status" className="mt-4 text-sm text-muted-foreground">
+          {deliveryMessage}
+        </p>
+      )}
 
-      {rows.length ? (
+      {visibleRows.length ? (
         <>
           <div className="mt-6 space-y-3 md:hidden">
-            {rows.map((row) => (
+            {visibleRows.map((row) => (
               <article key={row.id} className="border border-border p-4">
                 <dl className="space-y-2 text-sm">
                   <div>
@@ -232,6 +336,21 @@ export function FormResponseTable({
                         timeZone: "Asia/Jakarta",
                       }).format(row.submittedAt)}{" "}
                       WIB
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold text-muted-foreground">
+                      Pengisi
+                    </dt>
+                    <dd className="mt-1">
+                      <span className="font-semibold">
+                        {row.identity?.name ?? "Identitas belum ditetapkan"}
+                      </span>
+                      {row.identity?.contact && (
+                        <span className="block text-muted-foreground">
+                          {row.identity.contact}
+                        </span>
+                      )}
                     </dd>
                   </div>
                   <div>
@@ -258,6 +377,16 @@ export function FormResponseTable({
                         : "Belum dilanjutkan"}
                     </dd>
                   </div>
+                  {googleSheetsStatus(row.googleSheetsStatus) && (
+                    <div>
+                      <dt className="text-xs font-semibold text-muted-foreground">
+                        Google Sheets
+                      </dt>
+                      <dd className="mt-1">
+                        {googleSheetsStatus(row.googleSheetsStatus)}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
                 <button
                   type="button"
@@ -267,6 +396,18 @@ export function FormResponseTable({
                 >
                   {loadingId === row.id ? "Memuat..." : "Lihat respons"}
                 </button>
+                {canRetryGoogleSheets(row) && (
+                  <button
+                    type="button"
+                    onClick={() => retryGoogleSheets(row.id)}
+                    disabled={retryingId === row.id}
+                    className="ml-2 mt-4 min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                  >
+                    {retryingId === row.id
+                      ? "Mengirim ulang..."
+                      : "Kirim ulang Google Sheets"}
+                  </button>
+                )}
               </article>
             ))}
           </div>
@@ -275,6 +416,8 @@ export function FormResponseTable({
               <thead className="bg-secondary text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 <tr>
                   <th className="px-5 py-3">Waktu</th>
+                  <th className="px-5 py-3">Pengisi</th>
+                  <th className="px-5 py-3">Google Sheets</th>
                   <th className="px-5 py-3">Cabang</th>
                   <th className="px-5 py-3">Form</th>
                   <th className="px-5 py-3">CTA WhatsApp</th>
@@ -285,7 +428,7 @@ export function FormResponseTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {rows.map((row) => (
+                {visibleRows.map((row) => (
                   <tr key={row.id}>
                     <td className="whitespace-nowrap px-5 py-4 tabular-nums">
                       {new Intl.DateTimeFormat("id-ID", {
@@ -294,6 +437,19 @@ export function FormResponseTable({
                         timeZone: "Asia/Jakarta",
                       }).format(row.submittedAt)}{" "}
                       WIB
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-4">
+                      <p className="font-semibold">
+                        {row.identity?.name ?? "Identitas belum ditetapkan"}
+                      </p>
+                      {row.identity?.contact && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {row.identity.contact}
+                        </p>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-4">
+                      {googleSheetsStatus(row.googleSheetsStatus) ?? "â€”"}
                     </td>
                     <td className="px-5 py-4 font-medium">{row.branchName}</td>
                     <td className="px-5 py-4">{row.formTitle}</td>
@@ -304,14 +460,28 @@ export function FormResponseTable({
                         : "Belum dilanjutkan"}
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openDetail(row.id)}
-                        disabled={loadingId === row.id}
-                        className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
-                      >
-                        {loadingId === row.id ? "Memuat..." : "Lihat respons"}
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        {canRetryGoogleSheets(row) && (
+                          <button
+                            type="button"
+                            onClick={() => retryGoogleSheets(row.id)}
+                            disabled={retryingId === row.id}
+                            className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                          >
+                            {retryingId === row.id
+                              ? "Mengirim ulang..."
+                              : "Kirim ulang Sheets"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openDetail(row.id)}
+                          disabled={loadingId === row.id}
+                          className="min-h-11 rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary disabled:opacity-50"
+                        >
+                          {loadingId === row.id ? "Memuat..." : "Lihat respons"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -328,35 +498,14 @@ export function FormResponseTable({
         </div>
       )}
 
-      {pageCount > 1 && (
+      {!contactRows && nextCursor && (
         <nav
           aria-label="Halaman respons form"
           className="mt-5 flex items-center justify-between gap-4 text-sm"
         >
           <a
-            href={queryFor(filters, { page: Math.max(1, filters.page - 1) })}
-            aria-disabled={filters.page === 1}
-            className={
-              filters.page === 1
-                ? "pointer-events-none text-muted-foreground"
-                : "font-semibold underline underline-offset-4"
-            }
-          >
-            Sebelumnya
-          </a>
-          <span className="tabular-nums">
-            Halaman {filters.page} dari {pageCount}
-          </span>
-          <a
-            href={queryFor(filters, {
-              page: Math.min(pageCount, filters.page + 1),
-            })}
-            aria-disabled={filters.page === pageCount}
-            className={
-              filters.page === pageCount
-                ? "pointer-events-none text-muted-foreground"
-                : "font-semibold underline underline-offset-4"
-            }
+            href={queryFor(filters, { cursor: nextCursor })}
+            className="ml-auto font-semibold underline underline-offset-4"
           >
             Berikutnya
           </a>

@@ -22,6 +22,7 @@ describe("form response filters", () => {
       start: "2026-11-01",
       end: "2026-11-17",
       whatsappStatus: null,
+      cursor: null,
       page: 1,
     });
   });
@@ -36,6 +37,7 @@ describe("form response filters", () => {
       start: null,
       end: null,
       whatsappStatus: null,
+      cursor: null,
       page: 1,
     });
   });

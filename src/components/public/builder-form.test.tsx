@@ -105,6 +105,59 @@ describe("BuilderForm", () => {
     );
   });
 
+  it("uses the saved form event identity and selected branch for follow-up tracking", async () => {
+    const submitted = vi.fn();
+    window.addEventListener("kgj:form-submitted", submitted);
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          whatsappUrl: "https://wa.me/628111111111",
+          ctaLabel: "Chat Cincin",
+          continuationToken: "opaque-token",
+          metaTracking: {
+            eventId: "6f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            eventName: "Lead",
+            trackingToken: "tracking-token",
+          },
+        }),
+      ),
+    );
+    render(
+      <BuilderForm
+        block={{ ...block, metaEventName: "Lead" }}
+        branchSlug="pusat"
+        product={{
+          ...product,
+          branches: [
+            { ...product.branches[0], id: "other-branch" },
+            product.branches[0],
+          ],
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Nama *"), {
+      target: { value: "Nadia" },
+    });
+    fireEvent.submit(
+      screen.getByRole("button", { name: "Kirim data" }).closest("form")!,
+    );
+
+    await waitFor(() => expect(submitted).toHaveBeenCalledTimes(1));
+    const event = submitted.mock.calls[0]?.[0] as CustomEvent;
+    expect(event.detail).toMatchObject({
+      eventId: "6f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+      eventName: "Lead",
+      trackingToken: "tracking-token",
+      assignmentId: block.assignmentId,
+    });
+    expect(
+      screen.getAllByRole("link", { name: "Lanjut ke WhatsApp" })[0],
+    ).toHaveAttribute("data-track-branch-id", block.assignmentId);
+    window.removeEventListener("kgj:form-submitted", submitted);
+  });
+
   it("renders the configured submit button layout", () => {
     render(
       <BuilderForm

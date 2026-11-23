@@ -95,6 +95,7 @@ export default async function BranchLinkBioPage({
         publishedBlocks={builderLayout.publishedBlocks}
         isPublished={builderLayout.isPublished}
         publishedAt={builderLayout.publishedAt}
+        privacyUrl={builderLayout.privacyUrl}
         catalog={{
           sections: sections
             .filter((section) => section.isActive)

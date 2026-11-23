@@ -56,6 +56,11 @@ export function BuilderForm({
         whatsappUrl?: string;
         ctaLabel?: string;
         continuationToken?: string;
+        metaTracking?: {
+          eventId: string;
+          eventName: string;
+          trackingToken: string;
+        };
         error?: { message?: string };
       };
       if (!result.ok || !result.whatsappUrl || !result.ctaLabel) {
@@ -69,6 +74,21 @@ export function BuilderForm({
         label: result.ctaLabel,
         continuationToken: result.continuationToken ?? null,
       });
+      if (result.metaTracking) {
+        window.dispatchEvent(
+          new CustomEvent("kgj:form-submitted", {
+            detail: {
+              eventId: result.metaTracking.eventId,
+              eventName: result.metaTracking.eventName,
+              trackingToken: result.metaTracking.trackingToken,
+              formId: block.id,
+              branchSlug,
+              assignmentId: block.assignmentId,
+              productId: product.id,
+            },
+          }),
+        );
+      }
       setThankYouOpen(true);
     } catch {
       setMessage("Form belum dapat disimpan. Coba lagi.");
@@ -107,7 +127,7 @@ export function BuilderForm({
             <a
               href={destination.url}
               data-track="whatsapp"
-              data-track-branch-id={product.branches[0]?.id}
+              data-track-branch-id={block.assignmentId}
               onClick={recordWhatsappContinuation}
               className="flex min-h-14 items-center justify-center rounded-full bg-[#0e0d0d] px-5 font-bold text-[var(--primary-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2"
             >
@@ -139,7 +159,7 @@ export function BuilderForm({
               <a
                 href={destination.url}
                 data-track="whatsapp"
-                data-track-branch-id={product.branches[0]?.id}
+                data-track-branch-id={block.assignmentId}
                 onClick={recordWhatsappContinuation}
                 className="flex min-h-14 items-center justify-center rounded-full bg-[#0e0d0d] px-5 font-bold text-[var(--primary-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2"
               >

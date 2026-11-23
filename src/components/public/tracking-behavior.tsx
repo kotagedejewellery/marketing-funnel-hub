@@ -5,7 +5,11 @@ import { useEffect, useRef } from "react";
 import { clientEnv } from "@/lib/env/client";
 import type { BrowserMetaTrackingConfig } from "@/modules/tracking/branch-meta-config";
 import type { CanonicalEvent } from "@/modules/tracking/event";
-import { resolveMetaProviderEvent } from "@/modules/tracking/meta-event";
+import {
+  parseMetaCtaEventOverride,
+  parseMetaStandardEventName,
+  resolveMetaProviderEvent,
+} from "@/modules/tracking/meta-event";
 
 export type TrackingContext = Pick<
   CanonicalEvent,
@@ -36,6 +40,16 @@ type ProviderWindow = Window & {
   fbq?: Pixel;
   _fbq?: Pixel;
   __kgjMetaPixelIds?: Set<string>;
+};
+
+type FormSubmissionEventDetail = {
+  eventId: string;
+  eventName: string;
+  trackingToken: string;
+  formId: string;
+  branchSlug: string;
+  assignmentId: string;
+  productId: string;
 };
 
 function loadProviderScript(id: string, src: string) {
@@ -153,6 +167,22 @@ function sendEvent(
   else sendInternalEvent(event);
 }
 
+function isFormSubmissionEventDetail(
+  value: unknown,
+): value is FormSubmissionEventDetail {
+  if (!value || typeof value !== "object") return false;
+  const detail = value as Record<string, unknown>;
+  return (
+    typeof detail.eventId === "string" &&
+    typeof detail.eventName === "string" &&
+    typeof detail.trackingToken === "string" &&
+    typeof detail.formId === "string" &&
+    typeof detail.branchSlug === "string" &&
+    typeof detail.assignmentId === "string" &&
+    typeof detail.productId === "string"
+  );
+}
+
 export function TrackingBehavior({
   context,
   products,
@@ -245,11 +275,66 @@ export function TrackingBehavior({
       );
     }
 
+    function onFormSubmitted(event: Event) {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail;
+      if (!isFormSubmissionEventDetail(detail)) return;
+      const eventName = parseMetaCtaEventOverride(detail.eventName);
+      if (!eventName || eventName === "Contact") return;
+      const product = byId.get(detail.productId);
+      const productBranch = product?.branches.find(
+        (item) => item.id === detail.assignmentId,
+      );
+      if (!product || !productBranch) return;
+
+      if (activateProviders(metaTracking.pixelId, context.metaExternalId)) {
+        try {
+          const browser = window as ProviderWindow;
+          browser.fbq!(
+            parseMetaStandardEventName(eventName)
+              ? "trackSingle"
+              : "trackSingleCustom",
+            metaTracking.pixelId,
+            eventName,
+            {
+              product_category: product.slug,
+              branch: productBranch.name,
+              cta: "form",
+              source: context.attribution.source,
+              campaign: context.attribution.campaign,
+            },
+            { eventID: detail.eventId },
+          );
+        } catch {
+          // Provider failure must not change form success or WhatsApp navigation.
+        }
+      }
+      try {
+        void fetch(
+          `/api/forms/${detail.branchSlug}/${detail.formId}/tracking`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              eventId: detail.eventId,
+              trackingToken: detail.trackingToken,
+            }),
+            keepalive: true,
+          },
+        ).catch(() => {});
+      } catch {
+        // Provider failure must not change form success or WhatsApp navigation.
+      }
+    }
+
     pageView();
     root.addEventListener("click", onClick);
+    window.addEventListener("kgj:form-submitted", onFormSubmitted);
 
     return () => {
       root.removeEventListener("click", onClick);
+      window.removeEventListener("kgj:form-submitted", onFormSubmitted);
     };
   }, [branch, context, links, metaTracking, products]);
 

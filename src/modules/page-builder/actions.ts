@@ -326,7 +326,6 @@ export async function publishPageBuilder(
       message: "Tambahkan minimal satu blok sebelum menerbitkan.",
     };
   }
-
   const previous = await savedBuilderBlocks(branchId);
   const db = getDatabase();
   const layout = await db.transaction(async (tx) => {

@@ -5,6 +5,7 @@ import {
   branchSectionKeys,
   sectionSupportsPublicTitle,
 } from "@/modules/admin/branches/page-validation";
+import { metaCtaEventOverrideSchema } from "@/modules/tracking/meta-event";
 
 const blockBase = z.object({
   id: z.uuid(),
@@ -23,6 +24,60 @@ const headingTypographyFields = {
   isItalic: z.boolean().default(false),
   textAlign: z.enum(["left", "center", "right"]).default("left"),
 };
+
+const googleSheetsUrlSchema = z.url().refine((value) => {
+  const url = new URL(value);
+  return (
+    url.hostname === "docs.google.com" &&
+    /^\/spreadsheets\/d\/[A-Za-z0-9_-]{20,}(?:\/|$)/.test(url.pathname)
+  );
+}, "Gunakan URL Google Sheets yang valid.");
+
+const googleSheetsFieldMappingSchema = z.object({
+  fieldName: z.string().trim().min(1).max(40),
+  column: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{1,3}$/, "Gunakan kolom seperti A, B, atau AA."),
+});
+
+export const googleSheetsDestinationSchema = z.object({
+  spreadsheetUrl: googleSheetsUrlSchema,
+  sheetName: z.string().trim().min(1).max(100),
+  fieldMappings: z.array(googleSheetsFieldMappingSchema).min(1).max(20),
+});
+
+const googleSheetsDraftDestinationSchema = z.object({
+  spreadsheetUrl: z.string().trim().max(2048).default(""),
+  sheetName: z.string().trim().max(100).default(""),
+  fieldMappings: z
+    .array(
+      z.object({
+        fieldName: z.string().trim().min(1).max(40),
+        column: z
+          .string()
+          .trim()
+          .toUpperCase()
+          .refine(
+            (value) => value === "" || /^[A-Z]{1,3}$/.test(value),
+            "Gunakan kolom seperti A, B, atau AA.",
+          ),
+      }),
+    )
+    .max(20)
+    .default([]),
+});
+
+const responseIdentitySchema = z.object({
+  nameField: z.string().trim().min(1).max(40).optional(),
+  contactField: z.string().trim().min(1).max(40).optional(),
+});
+
+const formMetaEventSchema = metaCtaEventOverrideSchema.refine(
+  (value) => value !== "Contact",
+  "Contact hanya dikirim saat pengunjung membuka WhatsApp.",
+);
 
 const sectionTitleSchema = z
   .object({
@@ -157,6 +212,10 @@ export const pageBuilderBlockSchema = z.discriminatedUnion("type", [
     thankYouMessage: z.string().trim().min(1).max(500).optional(),
     continueLabel: z.string().trim().min(1).max(80).optional(),
     assignmentId: z.uuid(),
+    submissionDestination: z.enum(["database", "google_sheets"]).optional(),
+    googleSheets: googleSheetsDraftDestinationSchema.optional(),
+    responseIdentity: responseIdentitySchema.optional(),
+    metaEventName: formMetaEventSchema.optional(),
     fields: z.array(pageBuilderFormFieldSchema).min(1).max(20),
   }),
   blockBase.extend({ type: z.literal("product_cta"), assignmentId: z.uuid() }),
@@ -185,6 +244,43 @@ export const pageBuilderBlocksSchema = z
           code: "custom",
           message: "Nama field form harus unik.",
         });
+      }
+      if (block.type === "form" && block.responseIdentity) {
+        const fieldsByName = new Map(
+          block.fields.map((field) => [field.name, field]),
+        );
+        const { nameField, contactField } = block.responseIdentity;
+        if (nameField && fieldsByName.get(nameField)?.type !== "text") {
+          context.addIssue({
+            code: "custom",
+            path: ["responseIdentity", "nameField"],
+            message: "Nama pengisi harus memakai field teks.",
+          });
+        }
+        if (
+          contactField &&
+          !["text", "tel", "email"].includes(
+            fieldsByName.get(contactField)?.type ?? "",
+          )
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: ["responseIdentity", "contactField"],
+            message:
+              "Kontak pengisi harus memakai field teks, telepon, atau email.",
+          });
+        }
+        if (
+          (nameField && !fieldsByName.has(nameField)) ||
+          (contactField && !fieldsByName.has(contactField)) ||
+          (nameField && contactField === nameField)
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: ["responseIdentity"],
+            message: "Pilih field nama dan kontak yang berbeda dari form ini.",
+          });
+        }
       }
     }
   });
@@ -218,6 +314,40 @@ export const pageBuilderPublishBlocksSchema =
           message: "Isi teks alternatif gambar sebelum menerbitkan.",
         });
       }
+      if (
+        block.type === "form" &&
+        block.submissionDestination === "google_sheets"
+      ) {
+        const destination = googleSheetsDestinationSchema.safeParse(
+          block.googleSheets,
+        );
+        if (!destination.success) {
+          context.addIssue({
+            code: "custom",
+            path: [index, "googleSheets"],
+            message:
+              "Lengkapi URL, tab, dan kolom Google Sheets sebelum menerbitkan.",
+          });
+          return;
+        }
+        const names = block.fields.map((field) => field.name);
+        const mappings = destination.data.fieldMappings;
+        if (
+          mappings.length !== names.length ||
+          new Set(mappings.map((mapping) => mapping.fieldName)).size !==
+            mappings.length ||
+          mappings.some((mapping) => !names.includes(mapping.fieldName)) ||
+          new Set(mappings.map((mapping) => mapping.column)).size !==
+            mappings.length
+        ) {
+          context.addIssue({
+            code: "custom",
+            path: [index, "googleSheets", "fieldMappings"],
+            message:
+              "Petakan setiap pertanyaan ke kolom Google Sheets yang berbeda.",
+          });
+        }
+      }
     });
   });
 
@@ -228,6 +358,20 @@ export type PageBuilderBlockInput = PageBuilderBlock extends infer T
     ? Omit<T, "id">
     : never
   : never;
+
+export function stripPageBuilderPrivateConfig(blocks: unknown) {
+  const parsed = pageBuilderBlocksSchema.safeParse(blocks);
+  if (!parsed.success) return blocks;
+  return parsed.data.map((block) => {
+    if (block.type !== "form") return block;
+    const {
+      googleSheets: _googleSheets,
+      responseIdentity: _responseIdentity,
+      ...publicBlock
+    } = block;
+    return publicBlock;
+  });
+}
 
 export function sanitizePageBuilderHtml(value: string) {
   return sanitizeHtml(value, {

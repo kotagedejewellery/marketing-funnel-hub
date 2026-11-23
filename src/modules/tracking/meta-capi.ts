@@ -13,21 +13,36 @@ type ResolvedContext = NonNullable<
   Awaited<ReturnType<typeof resolveEventContext>>
 >;
 type MetaCookieValues = { fbp?: string; fbc?: string; externalId?: string };
+type MetaPayload = {
+  test_event_code?: string;
+  data: Array<{
+    event_name: string;
+    event_id: string;
+    event_time: number;
+    action_source: string;
+    event_source_url: string;
+    user_data: Record<string, string>;
+    custom_data: Record<string, string | null>;
+  }>;
+};
 
-export function metaPayload(
-  event: CanonicalEvent,
-  resolved: ResolvedContext,
-  request: Request,
-  cookieValues: MetaCookieValues,
-  metaEventName: string,
-  testEventCode?: string | null,
-) {
+export type FormMetaEvent = {
+  eventId: string;
+  eventTime: string;
+  pageUrl: string;
+  metaEventName: string;
+  productCategory: string;
+  branchName: string;
+  attribution: CanonicalEvent["attribution"];
+};
+
+function metaUserData(request: Request, cookieValues: MetaCookieValues) {
   const forwardedIp = request.headers
     .get("x-forwarded-for")
     ?.split(",")[0]
     ?.trim();
   const userAgent = request.headers.get("user-agent");
-  const userData = {
+  return {
     ...(forwardedIp &&
       isIP(forwardedIp) > 0 && { client_ip_address: forwardedIp }),
     ...(userAgent &&
@@ -40,6 +55,17 @@ export function metaPayload(
       external_id: cookieValues.externalId,
     }),
   };
+}
+
+export function metaPayload(
+  event: CanonicalEvent,
+  resolved: ResolvedContext,
+  request: Request,
+  cookieValues: MetaCookieValues,
+  metaEventName: string,
+  testEventCode?: string | null,
+) {
+  const userData = metaUserData(request, cookieValues);
   if (Object.keys(userData).length === 0) return null;
 
   return {
@@ -74,6 +100,72 @@ export function metaPayload(
   };
 }
 
+export function formMetaPayload(
+  event: FormMetaEvent,
+  request: Request,
+  cookieValues: MetaCookieValues,
+  testEventCode?: string | null,
+) {
+  const userData = metaUserData(request, cookieValues);
+  if (Object.keys(userData).length === 0) return null;
+  return {
+    ...(testEventCode && { test_event_code: testEventCode }),
+    data: [
+      {
+        event_name: event.metaEventName,
+        event_id: event.eventId,
+        event_time: Math.floor(Date.parse(event.eventTime) / 1000),
+        action_source: "website",
+        event_source_url: event.pageUrl,
+        user_data: userData,
+        custom_data: {
+          content_category: event.productCategory,
+          branch: event.branchName,
+          cta: "form",
+          ...(event.attribution.utmSource && {
+            utm_source: event.attribution.utmSource,
+          }),
+          ...(event.attribution.utmCampaign && {
+            utm_campaign: event.attribution.utmCampaign,
+          }),
+        },
+      },
+    ],
+  };
+}
+
+async function deliverMetaPayload(
+  payload: MetaPayload,
+  dataSourceId: string,
+  accessToken: string,
+  eventId: string,
+) {
+  const endpoint = `https://graph.facebook.com/v26.0/${dataSourceId}/events`;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(1500),
+        cache: "no-store",
+      });
+      if (response.ok) return;
+      if (response.status < 500 && response.status !== 429) break;
+    } catch {
+      // One bounded retry uses the same event ID. Provider failure is best-effort.
+    }
+  }
+  console.error("Meta CAPI delivery failed", {
+    eventId,
+    provider: "meta_capi",
+    category: "delivery",
+  });
+}
+
 export async function sendMetaCapi(
   event: CanonicalEvent,
   resolved: ResolvedContext,
@@ -105,29 +197,28 @@ export async function sendMetaCapi(
     config?.capiTestEventCode,
   );
   if (!payload) return;
-  const endpoint = `https://graph.facebook.com/v26.0/${dataSourceId}/events`;
+  await deliverMetaPayload(payload, dataSourceId, accessToken, event.eventId);
+}
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(1500),
-        cache: "no-store",
-      });
-      if (response.ok) return;
-      if (response.status < 500 && response.status !== 429) break;
-    } catch {
-      // One bounded retry uses the same event ID. Provider failure is best-effort.
-    }
-  }
-  console.error("Meta CAPI delivery failed", {
-    eventId: event.eventId,
-    provider: "meta_capi",
-    category: "delivery",
-  });
+export async function sendFormMetaCapi(
+  event: FormMetaEvent,
+  request: Request,
+  cookieValues: MetaCookieValues,
+  config?: ServerMetaTrackingConfig,
+) {
+  const dataSourceId = config
+    ? config.pixelId
+    : serverEnv.NEXT_PUBLIC_META_PIXEL_ID;
+  const accessToken = config
+    ? config.capiAccessToken
+    : serverEnv.META_CAPI_ACCESS_TOKEN;
+  if (!dataSourceId || !accessToken) return;
+  const payload = formMetaPayload(
+    event,
+    request,
+    cookieValues,
+    config?.capiTestEventCode,
+  );
+  if (!payload) return;
+  await deliverMetaPayload(payload, dataSourceId, accessToken, event.eventId);
 }

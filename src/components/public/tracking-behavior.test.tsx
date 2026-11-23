@@ -191,6 +191,73 @@ describe("TrackingBehavior", () => {
     );
   });
 
+  it("sends the selected form event without creating an internal Contact", () => {
+    render(
+      <main id="main-content">
+        <TrackingBehavior
+          context={{
+            anonymousSessionId: "3e29fb31-6d56-44b5-ad41-a8e97ac7281a",
+            metaExternalId: null,
+            attribution: {
+              source: null,
+              campaign: null,
+              utmSource: null,
+              utmMedium: null,
+              utmCampaign: null,
+              utmContent: null,
+              utmTerm: null,
+            },
+          }}
+          products={[
+            {
+              id: "product-1",
+              slug: "wedding-ring",
+              branches: [
+                { id: "branch-1", name: "Pusat", metaEventName: null },
+              ],
+            },
+          ]}
+          links={[]}
+          branch={{ id: "branch-1", name: "Pusat" }}
+          metaTracking={{ pixelId: "123456", whatsappCtaMetaEvent: "Contact" }}
+        />
+      </main>,
+    );
+
+    window.dispatchEvent(
+      new CustomEvent("kgj:form-submitted", {
+        detail: {
+          eventId,
+          eventName: "Lead",
+          trackingToken: "tracking-token",
+          formId: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+          branchSlug: "pusat",
+          assignmentId: "branch-1",
+          productId: "product-1",
+        },
+      }),
+    );
+
+    expect(pixel).toHaveBeenLastCalledWith(
+      "trackSingle",
+      "123456",
+      "Lead",
+      expect.objectContaining({ cta: "form" }),
+      { eventID: eventId },
+    );
+    expect(fetch).toHaveBeenLastCalledWith(
+      "/api/forms/pusat/3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4/tracking",
+      expect.objectContaining({
+        method: "POST",
+        keepalive: true,
+        body: JSON.stringify({
+          eventId,
+          trackingToken: "tracking-token",
+        }),
+      }),
+    );
+  });
+
   it("waits no more than 500 ms for the first _fbp before sending PageView", () => {
     vi.useFakeTimers();
     document.cookie = "_fbp=; max-age=0; path=/";

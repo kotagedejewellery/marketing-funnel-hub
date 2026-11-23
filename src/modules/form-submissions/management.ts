@@ -10,6 +10,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  or,
   type SQL,
 } from "drizzle-orm";
 import * as z from "zod";
@@ -17,6 +18,7 @@ import * as z from "zod";
 import { getDatabase } from "@/lib/db/client";
 import {
   branches,
+  formSubmissionDeliveries,
   formSubmissions,
   productBranches,
   products,
@@ -24,7 +26,8 @@ import {
 import { requireAdmin } from "@/modules/admin/access";
 import { pageBuilderFormFieldSchema } from "@/modules/page-builder/schema";
 
-import { decryptFormValues } from "./crypto";
+import { decryptFormValues, hashFormContactForSearch } from "./crypto";
+import { isGoogleSheetsDeliveryRetryable } from "./delivery-state";
 
 const pageSize = 50;
 const dateSchema = z.string().refine((value) => {
@@ -47,7 +50,8 @@ const searchSchema = z
     whatsappStatus: z
       .union([z.enum(["continued", "pending"]), z.literal("")])
       .optional(),
-    page: z.coerce.number().int().positive().max(10_000).default(1),
+    cursor: z.string().min(1).max(256).optional(),
+    page: z.coerce.number().int().positive().max(10_000).optional(),
   })
   .superRefine((value, context) => {
     if (value.start && value.end && value.start > value.end)
@@ -64,8 +68,32 @@ export type FormResponseFilters = {
   start: string | null;
   end: string | null;
   whatsappStatus: "continued" | "pending" | null;
+  cursor: string | null;
   page: number;
 };
+
+type ResponseCursor = { submittedAt: Date; id: string };
+
+function parseCursor(value: string | null): ResponseCursor | null {
+  if (!value) return null;
+  try {
+    const [submittedAt, id] = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as [unknown, unknown];
+    const date = new Date(String(submittedAt));
+    if (!z.uuid().safeParse(id).success || Number.isNaN(date.getTime()))
+      return null;
+    return { submittedAt: date, id: String(id) };
+  } catch {
+    return null;
+  }
+}
+
+function responseCursor(row: { submittedAt: Date; id: string }) {
+  return Buffer.from(
+    JSON.stringify([row.submittedAt.toISOString(), row.id]),
+  ).toString("base64url");
+}
 
 type QueryInput = Record<string, string | string[] | undefined>;
 
@@ -81,6 +109,7 @@ function filterInput(input: QueryInput) {
     start: firstValue(input.start),
     end: firstValue(input.end),
     whatsappStatus: firstValue(input.whatsappStatus),
+    cursor: firstValue(input.cursor),
     page: firstValue(input.page),
   };
 }
@@ -101,13 +130,35 @@ export function parseFormResponseFilters(
     start: value.start || null,
     end: value.end || null,
     whatsappStatus: value.whatsappStatus || null,
-    page: value.page,
+    cursor: value.cursor || null,
+    page: 1,
   };
 }
 
 function jakartaStart(date: string) {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day - 1, 17));
+}
+
+function identitySummary(value: string | null) {
+  if (!value) return null;
+  try {
+    const summary = decryptFormValues(value);
+    const name = typeof summary.name === "string" ? summary.name.trim() : "";
+    const contact =
+      typeof summary.contact === "string" ? summary.contact.trim() : "";
+    return { name: name || null, contact: maskContact(contact) };
+  } catch {
+    return null;
+  }
+}
+
+function maskContact(value: string) {
+  if (!value) return null;
+  const [local, domain] = value.split("@");
+  if (domain) return `${local.slice(0, 2)}••@${domain}`;
+  if (value.length <= 4) return "••••";
+  return `${value.slice(0, 3)}••••${value.slice(-4)}`;
 }
 
 function conditions(filters: FormResponseFilters) {
@@ -135,15 +186,35 @@ function conditions(filters: FormResponseFilters) {
 async function responseRows(
   filters: FormResponseFilters,
   limit: number,
-  offset = 0,
+  contactSearchHash?: string,
 ) {
-  const where = and(...conditions(filters));
+  const cursor = parseCursor(filters.cursor);
+  const where = and(
+    ...conditions(filters),
+    ...(contactSearchHash
+      ? [eq(formSubmissions.contactSearchHash, contactSearchHash)]
+      : []),
+    ...(cursor
+      ? [
+          or(
+            lt(formSubmissions.submittedAt, cursor.submittedAt),
+            and(
+              eq(formSubmissions.submittedAt, cursor.submittedAt),
+              lt(formSubmissions.id, cursor.id),
+            ),
+          ),
+        ]
+      : []),
+  );
   return getDatabase()
     .select({
       id: formSubmissions.id,
       submittedAt: formSubmissions.submittedAt,
       whatsappContinuedAt: formSubmissions.whatsappContinuedAt,
       formTitle: formSubmissions.formTitle,
+      identitySummaryEncrypted: formSubmissions.identitySummaryEncrypted,
+      googleSheetsStatus: formSubmissionDeliveries.status,
+      googleSheetsLastAttemptAt: formSubmissionDeliveries.lastAttemptAt,
       branchId: branches.id,
       branchName: branches.name,
       productBranchId: productBranches.id,
@@ -156,10 +227,44 @@ async function responseRows(
       eq(formSubmissions.productBranchId, productBranches.id),
     )
     .innerJoin(products, eq(productBranches.productId, products.id))
+    .leftJoin(
+      formSubmissionDeliveries,
+      and(
+        eq(formSubmissionDeliveries.submissionId, formSubmissions.id),
+        eq(formSubmissionDeliveries.provider, "google_sheets"),
+      ),
+    )
     .where(where)
     .orderBy(desc(formSubmissions.submittedAt), desc(formSubmissions.id))
-    .limit(limit)
-    .offset(offset);
+    .limit(limit + 1);
+}
+
+function responseRowWithIdentity(
+  row: Awaited<ReturnType<typeof responseRows>>[number],
+) {
+  const { identitySummaryEncrypted, googleSheetsLastAttemptAt, ...metadata } =
+    row;
+  return {
+    ...metadata,
+    identity: identitySummary(identitySummaryEncrypted),
+    googleSheetsRetryable: isGoogleSheetsDeliveryRetryable(
+      metadata.googleSheetsStatus,
+      googleSheetsLastAttemptAt,
+    ),
+  };
+}
+
+export async function searchFormResponsesByContact(contact: string) {
+  await requireAdmin();
+  const contactSearchHash = hashFormContactForSearch(contact);
+  if (!contactSearchHash) return [];
+  return (
+    await responseRows(
+      parseFormResponseFilters({}),
+      pageSize,
+      contactSearchHash,
+    )
+  ).map(responseRowWithIdentity);
 }
 
 export async function getFormResponseManagement(filters: FormResponseFilters) {
@@ -208,24 +313,17 @@ export async function getFormResponseManagement(filters: FormResponseFilters) {
       .orderBy(asc(products.name), asc(branches.name)),
   ]);
   const total = totalRow[0]?.value ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const normalizedFilters = {
-    ...filters,
-    page: Math.min(filters.page, pageCount),
-  };
-  const rows = await responseRows(
-    normalizedFilters,
-    pageSize,
-    (normalizedFilters.page - 1) * pageSize,
-  );
+  const rawRows = await responseRows(filters, pageSize);
+  const rows = rawRows.slice(0, pageSize).map(responseRowWithIdentity);
   return {
-    filters: normalizedFilters,
+    filters,
     total,
     summary: {
       submitted: Number(summaryTotalRow[0]?.value ?? 0),
       continued: Number(continuedRow[0]?.value ?? 0),
     },
-    pageCount,
+    nextCursor:
+      rawRows.length > pageSize ? responseCursor(rawRows[pageSize - 1]) : null,
     rows,
     branches: branchRows,
     forms: formRows.sort((left, right) =>
@@ -258,7 +356,7 @@ export async function getFormResponseExportRows(filters: FormResponseFilters) {
     .innerJoin(products, eq(productBranches.productId, products.id))
     .where(where)
     .orderBy(asc(formSubmissions.submittedAt), asc(formSubmissions.id))
-    .limit(10_000);
+    .limit(1_000);
 }
 
 export async function getFormResponseDetail(id: string) {

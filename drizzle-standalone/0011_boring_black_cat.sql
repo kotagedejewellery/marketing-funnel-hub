@@ -1,0 +1,1 @@
+ALTER TABLE "form_submissions" ADD COLUMN "identity_summary_encrypted" text;

@@ -1,9 +1,11 @@
 import { and, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 
 import { getDatabase } from "@/lib/db/client";
 import {
   branches,
   branchPageBuilderLayouts,
+  formSubmissionDeliveries,
   formSubmissions,
   productBranches,
   products,
@@ -11,12 +13,17 @@ import {
 } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/env/server";
 import { resolveWhatsappCta } from "@/modules/public-content/links";
-import { pageBuilderBlocksSchema } from "@/modules/page-builder/schema";
+import {
+  pageBuilderBlocksSchema,
+  type PageBuilderBlock,
+} from "@/modules/page-builder/schema";
 import {
   createFormContinuationToken,
   encryptFormValues,
+  hashFormContactForSearch,
   hashFormContinuationToken,
 } from "@/modules/form-submissions/crypto";
+import { deliverGoogleSheetsFormSubmission } from "@/modules/form-submissions/delivery";
 import { canSubmitForm } from "@/modules/form-submissions/rate-limit";
 import { validatedFormValues } from "@/modules/form-submissions/validation";
 
@@ -26,6 +33,25 @@ const maxBytes = 32 * 1024;
 
 function error(status: number, code: string, message: string) {
   return Response.json({ ok: false, error: { code, message } }, { status });
+}
+
+function identitySummary(
+  form: Extract<PageBuilderBlock, { type: "form" }>,
+  values: Record<string, string | boolean>,
+) {
+  if (!form.responseIdentity) return null;
+  const read = (fieldName: string | undefined) => {
+    const value = fieldName ? values[fieldName] : undefined;
+    return typeof value === "string" ? value.trim() : "";
+  };
+  const contact = read(form.responseIdentity.contactField);
+  return {
+    encrypted: encryptFormValues({
+      name: read(form.responseIdentity.nameField),
+      contact,
+    }),
+    contactSearchHash: hashFormContactForSearch(contact),
+  };
 }
 
 async function readBody(request: Request): Promise<string | null> {
@@ -121,6 +147,7 @@ export async function POST(
     .select({
       id: productBranches.id,
       name: products.name,
+      category: products.slug,
       ctaLabel: productBranches.ctaLabel,
       message: productBranches.whatsappMessageTemplate,
     })
@@ -147,15 +174,50 @@ export async function POST(
   if (!site) return error(503, "FORM_UNAVAILABLE", "Form belum siap.");
 
   const continuationToken = createFormContinuationToken();
+  const identity = identitySummary(form, values);
+  const metaTracking = form.metaEventName
+    ? { eventId: randomUUID(), eventName: form.metaEventName }
+    : null;
+  let googleSheetsDeliveryId: string | null = null;
   try {
-    await db.insert(formSubmissions).values({
-      branchId: branch.id,
-      productBranchId: assignment.id,
-      formBlockId: form.id,
-      formTitle: form.title,
-      formSchema: { fields: form.fields },
-      valuesEncrypted: encryptFormValues(values),
-      continuationTokenHash: hashFormContinuationToken(continuationToken),
+    googleSheetsDeliveryId = await db.transaction(async (tx) => {
+      const [submission] = await tx
+        .insert(formSubmissions)
+        .values({
+          branchId: branch.id,
+          productBranchId: assignment.id,
+          formBlockId: form.id,
+          formTitle: form.title,
+          formSchema: {
+            fields: form.fields,
+            ...(form.responseIdentity && {
+              responseIdentity: form.responseIdentity,
+            }),
+            ...(metaTracking && {
+              metaTracking: {
+                ...metaTracking,
+                productCategory: assignment.category,
+                branchName: branch.name,
+              },
+            }),
+          },
+          valuesEncrypted: encryptFormValues(values),
+          identitySummaryEncrypted: identity?.encrypted ?? null,
+          contactSearchHash: identity?.contactSearchHash ?? null,
+          continuationTokenHash: hashFormContinuationToken(continuationToken),
+        })
+        .returning({ id: formSubmissions.id });
+      if (form.submissionDestination !== "google_sheets" || !form.googleSheets)
+        return null;
+      const [delivery] = await tx
+        .insert(formSubmissionDeliveries)
+        .values({
+          submissionId: submission.id,
+          provider: "google_sheets",
+          destination: form.googleSheets,
+        })
+        .returning({ id: formSubmissionDeliveries.id });
+      return delivery.id;
     });
   } catch {
     return error(
@@ -164,6 +226,10 @@ export async function POST(
       "Form belum dapat disimpan. Coba lagi.",
     );
   }
+  if (googleSheetsDeliveryId)
+    await deliverGoogleSheetsFormSubmission(googleSheetsDeliveryId).catch(
+      () => undefined,
+    );
   const destination = resolveWhatsappCta({
     number: branch.whatsappNumber,
     product: assignment.name,
@@ -180,6 +246,9 @@ export async function POST(
       whatsappUrl: destination.whatsappUrl,
       ctaLabel: destination.ctaLabel,
       continuationToken,
+      ...(metaTracking && {
+        metaTracking: { ...metaTracking, trackingToken: continuationToken },
+      }),
     },
     { headers: { "Cache-Control": "no-store" } },
   );

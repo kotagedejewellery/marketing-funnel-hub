@@ -9,6 +9,7 @@ import {
   createFormContinuationToken,
   decryptFormValues,
   encryptFormValues,
+  hashFormContactForSearch,
   hashFormContinuationToken,
 } from "./crypto";
 
@@ -26,5 +27,12 @@ describe("form submission encryption", () => {
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(hashFormContinuationToken(token)).toMatch(/^[a-f0-9]{64}$/);
     expect(hashFormContinuationToken(token)).not.toContain(token);
+  });
+
+  it("creates a stable non-plaintext lookup hash for a normalized contact", () => {
+    const hash = hashFormContactForSearch(" Nadia@KGJ.Test ");
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(hash).toBe(hashFormContactForSearch("nadia@kgj.test"));
+    expect(hash).not.toContain("nadia");
   });
 });

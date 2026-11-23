@@ -429,6 +429,8 @@ export const formSubmissions = pgTable(
     formTitle: text("form_title").notNull(),
     formSchema: jsonb("form_schema").notNull(),
     valuesEncrypted: text("values_encrypted").notNull(),
+    identitySummaryEncrypted: text("identity_summary_encrypted"),
+    contactSearchHash: text("contact_search_hash"),
     continuationTokenHash: text("continuation_token_hash"),
     whatsappContinuedAt: timestamp("whatsapp_continued_at", {
       withTimezone: true,
@@ -442,6 +444,53 @@ export const formSubmissions = pgTable(
       table.branchId,
       table.formBlockId,
       table.submittedAt,
+    ),
+    index("form_submissions_submitted_id_idx").on(table.submittedAt, table.id),
+    index("form_submissions_contact_search_submitted_idx").on(
+      table.contactSearchHash,
+      table.submittedAt,
+      table.id,
+    ),
+  ],
+).enableRLS();
+
+export const formSubmissionDeliveries = pgTable(
+  "form_submission_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => formSubmissions.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    destination: jsonb("destination").notNull(),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    errorCode: text("error_code"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "form_submission_deliveries_provider_check",
+      sql`${table.provider} = 'google_sheets'`,
+    ),
+    check(
+      "form_submission_deliveries_status_check",
+      sql`${table.status} in ('pending', 'delivering', 'delivered', 'failed', 'unknown')`,
+    ),
+    unique("form_submission_deliveries_submission_provider_unique").on(
+      table.submissionId,
+      table.provider,
+    ),
+    index("form_submission_deliveries_status_created_idx").on(
+      table.status,
+      table.createdAt,
     ),
   ],
 ).enableRLS();

@@ -1255,6 +1255,7 @@ describe("BranchPageBuilder", () => {
       <BranchPageBuilder
         branchId="branch-1"
         branchName="KGJ Pusat"
+        privacyUrl={null}
         initialBlocks={[
           {
             id: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
@@ -1306,6 +1307,67 @@ describe("BranchPageBuilder", () => {
     expect(
       screen.getByRole("button", { name: "Terbitkan perubahan" }),
     ).toBeEnabled();
+    expect(
+      screen.getByText(
+        /form dapat menyimpan data pengunjung\. tambahkan URL kebijakan privasi di/i,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Pengaturan situs" }),
+    ).toHaveAttribute("href", "/admin/settings");
+  });
+
+  it("does not warn about privacy for a hidden form", () => {
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        privacyUrl={null}
+        initialBlocks={[
+          {
+            id: "3f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            type: "form",
+            title: "Konsultasi",
+            description: "",
+            submitLabel: "Kirim",
+            privacyNotice: "Data disimpan KGJ.",
+            assignmentId: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+            fields: [
+              {
+                id: "5f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4",
+                name: "nama",
+                label: "Nama lengkap",
+                type: "text",
+                placeholder: "",
+                help: "",
+                required: true,
+                options: [],
+              },
+            ],
+            width: "full",
+            isVisible: false,
+          },
+        ]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: { id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4" },
+            },
+          ],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    expect(
+      screen.queryByText(/form dapat menyimpan data pengunjung/i),
+    ).not.toBeInTheDocument();
   });
 
   it("warns when a publishable page has no visible blocks", () => {
