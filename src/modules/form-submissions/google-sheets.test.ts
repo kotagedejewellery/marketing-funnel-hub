@@ -110,4 +110,64 @@ describe("Google Sheets form delivery", () => {
       expect.anything(),
     );
   });
+
+  it("classifies denied spreadsheet access without retaining Google's response", async () => {
+    const fetch = vi.fn((url: string | URL) =>
+      String(url).startsWith("https://oauth2.googleapis.com/")
+        ? Promise.resolve(
+            new Response(
+              JSON.stringify({ access_token: "token", expires_in: 3600 }),
+              { status: 200 },
+            ),
+          )
+        : Promise.resolve(
+            new Response(
+              JSON.stringify({ error: { status: "PERMISSION_DENIED" } }),
+              {
+                status: 403,
+              },
+            ),
+          ),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      appendGoogleSheetsResponse({
+        spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+        sheetName: "Respons Form",
+        fieldMappings: [{ fieldName: "nama", column: "A" }],
+        values: { nama: "Nadia" },
+      }),
+    ).resolves.toEqual({ ok: false, code: "spreadsheet_access_denied" });
+  });
+
+  it("classifies a disabled Sheets API from Google's safe reason code", async () => {
+    const fetch = vi.fn((url: string | URL) =>
+      String(url).startsWith("https://oauth2.googleapis.com/")
+        ? Promise.resolve(
+            new Response(
+              JSON.stringify({ access_token: "token", expires_in: 3600 }),
+              { status: 200 },
+            ),
+          )
+        : Promise.resolve(
+            new Response(
+              JSON.stringify({
+                error: { details: [{ reason: "SERVICE_DISABLED" }] },
+              }),
+              { status: 403 },
+            ),
+          ),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      appendGoogleSheetsResponse({
+        spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+        sheetName: "Respons Form",
+        fieldMappings: [{ fieldName: "nama", column: "A" }],
+        values: { nama: "Nadia" },
+      }),
+    ).resolves.toEqual({ ok: false, code: "sheets_api_disabled" });
+  });
 });

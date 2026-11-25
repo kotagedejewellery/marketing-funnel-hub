@@ -226,6 +226,7 @@ async function responseRows(
       formBlockId: formSubmissions.formBlockId,
       identitySummaryEncrypted: formSubmissions.identitySummaryEncrypted,
       googleSheetsStatus: formSubmissionDeliveries.status,
+      googleSheetsErrorCode: formSubmissionDeliveries.errorCode,
       googleSheetsLastAttemptAt: formSubmissionDeliveries.lastAttemptAt,
       branchId: branches.id,
       branchName: branches.name,

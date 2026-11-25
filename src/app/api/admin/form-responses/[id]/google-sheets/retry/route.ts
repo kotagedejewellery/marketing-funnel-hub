@@ -34,7 +34,7 @@ export async function POST(
       },
     });
   return Response.json(
-    { ok: result.ok },
+    { ok: result.ok, ...(result.ok ? {} : { code: result.code }) },
     {
       status: result.ok ? 200 : 409,
       headers: { "Cache-Control": "no-store" },

@@ -28,6 +28,7 @@ type Row = {
   identity?: { name: string | null; contact: string | null } | null;
   identityConfiguration?: "needs_setup" | "needs_publish" | "ready";
   googleSheetsStatus: string | null;
+  googleSheetsErrorCode?: string | null;
   googleSheetsRetryable?: boolean;
 };
 
@@ -54,9 +55,28 @@ function queryFor(filters: Filters, override: Partial<Filters> = {}) {
   return query.toString() ? `?${query}` : "";
 }
 
-function googleSheetsStatus(status: Row["googleSheetsStatus"]) {
+function googleSheetsFailureReason(errorCode: Row["googleSheetsErrorCode"]) {
+  return {
+    authentication: "akun layanan tidak dapat diautentikasi",
+    spreadsheet_access_denied: "akses Spreadsheet ditolak",
+    sheets_api_disabled: "Google Sheets API belum aktif",
+    spreadsheet_not_found: "Spreadsheet tidak ditemukan",
+    sheet_range_invalid: "tab atau kolom Spreadsheet tidak ditemukan",
+    rate_limited: "Google membatasi pengiriman sementara",
+    provider_unavailable: "layanan Google Sheets sedang bermasalah",
+    configuration: "konfigurasi perlu diperiksa",
+  }[errorCode ?? ""];
+}
+
+function googleSheetsStatus(
+  status: Row["googleSheetsStatus"],
+  errorCode: Row["googleSheetsErrorCode"],
+) {
   if (status === "delivered") return "Google Sheets terkirim";
-  if (status === "failed") return "Google Sheets gagal";
+  if (status === "failed") {
+    const reason = googleSheetsFailureReason(errorCode);
+    return reason ? `Google Sheets gagal: ${reason}` : "Google Sheets gagal";
+  }
   if (status === "pending") return "Google Sheets menunggu";
   if (status === "delivering") return "Google Sheets sedang dikirim";
   if (status === "unknown") return "Periksa Google Sheets: status tidak pasti";
@@ -195,7 +215,20 @@ export function FormResponseTable({
         `/api/admin/form-responses/${id}/google-sheets/retry`,
         { method: "POST", headers: { "Content-Type": "application/json" } },
       );
-      if (!response.ok) throw new Error();
+      const result = (await response.json().catch(() => null)) as {
+        code?: unknown;
+      } | null;
+      if (!response.ok) {
+        const reason = googleSheetsFailureReason(
+          typeof result?.code === "string" ? result.code : null,
+        );
+        setDeliveryMessage(
+          reason
+            ? `Google Sheets belum dapat dikirim ulang: ${reason}.`
+            : "Google Sheets belum dapat dikirim ulang. Coba lagi.",
+        );
+        return;
+      }
       setDeliveryMessage("Google Sheets berhasil dicoba ulang.");
       window.location.reload();
     } catch {
@@ -519,13 +552,19 @@ export function FormResponseTable({
                         : "Belum dilanjutkan"}
                     </dd>
                   </div>
-                  {googleSheetsStatus(row.googleSheetsStatus) && (
+                  {googleSheetsStatus(
+                    row.googleSheetsStatus,
+                    row.googleSheetsErrorCode,
+                  ) && (
                     <div>
                       <dt className="text-xs font-semibold text-muted-foreground">
                         Google Sheets
                       </dt>
                       <dd className="mt-1">
-                        {googleSheetsStatus(row.googleSheetsStatus)}
+                        {googleSheetsStatus(
+                          row.googleSheetsStatus,
+                          row.googleSheetsErrorCode,
+                        )}
                       </dd>
                     </div>
                   )}
@@ -599,8 +638,10 @@ export function FormResponseTable({
                     </td>
                     {hasGoogleSheetsDelivery && (
                       <td className="whitespace-nowrap px-5 py-4">
-                        {googleSheetsStatus(row.googleSheetsStatus) ??
-                          "Tidak digunakan"}
+                        {googleSheetsStatus(
+                          row.googleSheetsStatus,
+                          row.googleSheetsErrorCode,
+                        ) ?? "Tidak digunakan"}
                       </td>
                     )}
                     <td className="px-5 py-4 font-medium">{row.branchName}</td>

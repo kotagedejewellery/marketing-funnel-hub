@@ -44,6 +44,8 @@ Tipografi teks bebas dapat memakai ukuran `px` atau `pt`, jarak baris antara 1 d
 
 ### Form Submission Builder (disetujui 17 November 2026)
 
+Untuk Google Sheets, **Respons Form** hanya menampilkan status dan alasan pengiriman tersanitasi yang dibatasi kategori operasional: akses ditolak, API belum aktif, Spreadsheet/tab tidak ditemukan, pembatasan laju, atau gangguan provider. Respons mentah Google tidak disimpan maupun ditampilkan.
+
 #### Konfigurasi Google Sheets per Form (disetujui 23 November 2026)
 
 Konfigurasi lanjutan tidak lagi berupa kumpulan field pada inspector utama. Inspector hanya menunjukkan ringkasan dan membuka dialog **Konfigurasi Form** khusus Form untuk penyimpanan respons, identitas pada daftar respons, tracking submit, dan pesan setelah Form dikirim. Saat Marketing memilih **Sistem KGJ + Google Sheets** di dalam dialog tersebut, bagian Spreadsheet menampilkan ID Spreadsheet kanonis, nama tab, dan pemetaan kolom A1 per pertanyaan. Konfigurasi URL Spreadsheet lama tetap terbaca untuk kompatibilitas, tetapi konfigurasi baru memakai ID kanonis. Pada Pengaturan Situs, `technical_admin` melihat status integrasi dan dapat menyalin email akun layanan; pemilik Spreadsheet membagikan akses **Editor** secara manual ke email itu. Private key selalu berada di environment server dan tidak pernah tampil atau dikelola dari CMS.

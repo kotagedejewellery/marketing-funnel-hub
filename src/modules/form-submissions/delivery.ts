@@ -11,19 +11,16 @@ import {
   isGoogleSheetsDeliveryRetryable,
   staleDeliveryMilliseconds,
 } from "./delivery-state";
-import { appendGoogleSheetsResponse } from "./google-sheets";
+import {
+  appendGoogleSheetsResponse,
+  type GoogleSheetsDeliveryErrorCode,
+} from "./google-sheets";
 
 export type FormDeliveryResult =
   | { ok: true }
   | {
       ok: false;
-      code:
-        | "not_found"
-        | "busy"
-        | "configuration"
-        | "authentication"
-        | "delivery"
-        | "unknown";
+      code: "not_found" | "busy" | GoogleSheetsDeliveryErrorCode;
     };
 
 export async function deliverGoogleSheetsFormSubmission(

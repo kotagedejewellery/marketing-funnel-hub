@@ -76,6 +76,8 @@ Judul section disimpan opsional di blok layout terautentikasi, sehingga mode `in
 
 ### Konfigurasi Google Sheets per Form (disetujui 23 November 2026)
 
+Kode error delivery Google Sheets hanya memetakan respons HTTP ke kategori operasional terbatas—akses ditolak, API belum aktif, Spreadsheet tidak ditemukan, tab/range tidak valid, pembatasan laju, atau provider tidak tersedia. Respons mentah Google tidak disimpan maupun ditampilkan.
+
 Konfigurasi tujuan tetap berada pada blok Form agar snapshot delivery selalu sesuai dengan field Form ketika respons dikirim. Konfigurasi baru menyimpan ID Spreadsheet kanonis, nama tab, dan mapping kolom; reader tetap menerima URL Spreadsheet historis agar delivery lama tidak rusak. `technical_admin` melihat status kedua environment variable dan email akun layanan pada Pengaturan Situs, tetapi private key tidak pernah meninggalkan server. Pemilik Spreadsheet membagikan akses **Editor** secara manual ke email itu; aplikasi tidak meminta scope Google Drive untuk mengubah permission eksternal. Semua konfigurasi Sheet dibuang dari DTO publik bersama konfigurasi Form privat lainnya.
 
 Setiap penyebutan **URL spreadsheet** pada uraian delivery historis di atas adalah jalur baca-kompatibilitas untuk konfigurasi lama, bukan input konfigurasi baru. Snapshot delivery baru selalu memakai ID Spreadsheet kanonis; akses Editor diberikan oleh pemilik Spreadsheet secara manual.

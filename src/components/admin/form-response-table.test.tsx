@@ -49,6 +49,7 @@ describe("FormResponseTable", () => {
             productName: "Cincin",
             identity: { name: "Nadia Putri", contact: "0812••••1234" },
             googleSheetsStatus: "failed",
+            googleSheetsErrorCode: "spreadsheet_access_denied",
           },
         ]}
         branches={[]}
@@ -59,7 +60,9 @@ describe("FormResponseTable", () => {
     );
 
     expect(screen.queryByText("Nadia")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Google Sheets gagal")).not.toHaveLength(0);
+    expect(
+      screen.getAllByText("Google Sheets gagal: akses Spreadsheet ditolak"),
+    ).not.toHaveLength(0);
     fireEvent.click(
       screen.getAllByRole("button", { name: "Lihat data pengisi" })[0],
     );
@@ -351,5 +354,59 @@ describe("FormResponseTable", () => {
     expect(
       screen.getAllByRole("button", { name: /Kirim ulang (Google )?Sheets/i }),
     ).toHaveLength(2);
+  });
+
+  it("explains a safe Google Sheets retry failure without exposing provider data", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ ok: false, code: "spreadsheet_access_denied" }),
+          { status: 409 },
+        ),
+      );
+    render(
+      <FormResponseTable
+        filters={{
+          branchId: null,
+          formId: null,
+          productBranchId: null,
+          start: null,
+          end: null,
+          whatsappStatus: null,
+          page: 1,
+        }}
+        total={1}
+        summary={{ submitted: 1, continued: 0 }}
+        pageCount={1}
+        rows={[
+          {
+            id: "0c6b5a8d-c36b-43d6-a183-876aaea89eb1",
+            submittedAt: new Date("2026-11-17T00:00:00Z"),
+            whatsappContinuedAt: null,
+            formTitle: "Konsultasi",
+            branchName: "KGJ Pusat",
+            productName: "Cincin",
+            googleSheetsStatus: "failed",
+          },
+        ]}
+        branches={[]}
+        forms={[]}
+        products={[]}
+        filterError={false}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getAllByRole("button", {
+        name: /Kirim ulang (Google )?Sheets/i,
+      })[0],
+    );
+
+    expect(
+      await screen.findByText(
+        "Google Sheets belum dapat dikirim ulang: akses Spreadsheet ditolak.",
+      ),
+    ).toBeVisible();
   });
 });

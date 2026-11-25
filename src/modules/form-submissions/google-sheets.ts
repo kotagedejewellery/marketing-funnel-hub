@@ -15,11 +15,23 @@ export type GoogleSheetsDestination = {
 };
 
 type DeliveryInput = GoogleSheetsDestination & { values: FormValues };
+export type GoogleSheetsDeliveryErrorCode =
+  | "configuration"
+  | "authentication"
+  | "spreadsheet_access_denied"
+  | "sheets_api_disabled"
+  | "spreadsheet_not_found"
+  | "sheet_range_invalid"
+  | "rate_limited"
+  | "provider_unavailable"
+  | "delivery"
+  | "unknown";
+
 type DeliveryResult =
   | { ok: true }
   | {
       ok: false;
-      code: "configuration" | "authentication" | "delivery" | "unknown";
+      code: GoogleSheetsDeliveryErrorCode;
     };
 
 type AccessToken = { value: string; expiresAt: number };
@@ -56,6 +68,44 @@ function spreadsheetCell(value: string | boolean | undefined) {
 
 function sheetRange(sheetName: string, lastColumn: string) {
   return `'${sheetName.replaceAll("'", "''")}'!A:${lastColumn}`;
+}
+
+function errorReason(body: unknown) {
+  if (!body || typeof body !== "object") return null;
+  const error = "error" in body ? body.error : null;
+  if (!error || typeof error !== "object") return null;
+  for (const key of ["details", "errors"]) {
+    const details = (error as Record<string, unknown>)[key];
+    if (!Array.isArray(details)) continue;
+    for (const detail of details) {
+      if (
+        detail &&
+        typeof detail === "object" &&
+        "reason" in detail &&
+        typeof detail.reason === "string"
+      )
+        return detail.reason;
+    }
+  }
+  return null;
+}
+
+function googleSheetsFailureCode(
+  response: Response,
+  body: unknown,
+): GoogleSheetsDeliveryErrorCode {
+  if (response.status === 400) return "sheet_range_invalid";
+  if (response.status === 401) return "authentication";
+  if (response.status === 403)
+    return ["SERVICE_DISABLED", "accessNotConfigured"].includes(
+      errorReason(body) ?? "",
+    )
+      ? "sheets_api_disabled"
+      : "spreadsheet_access_denied";
+  if (response.status === 404) return "spreadsheet_not_found";
+  if (response.status === 429) return "rate_limited";
+  if (response.status >= 500) return "provider_unavailable";
+  return "delivery";
 }
 
 function serviceAccountAssertion(email: string, privateKey: string) {
@@ -156,7 +206,14 @@ export async function appendGoogleSheetsResponse(
         signal: AbortSignal.timeout(1500),
       },
     );
-    return response.ok ? { ok: true } : { ok: false, code: "delivery" };
+    if (response.ok) return { ok: true };
+    return {
+      ok: false,
+      code: googleSheetsFailureCode(
+        response,
+        await response.json().catch(() => null),
+      ),
+    };
   } catch {
     return { ok: false, code: "unknown" };
   }
