@@ -1405,6 +1405,39 @@ describe("BranchPageBuilder", () => {
     expect(navigation.defaultPrevented).toBe(true);
   });
 
+  it("asks before logout discards an unsaved draft", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        initialBlocks={[
+          {
+            id: "block-1",
+            type: "rich_text",
+            text: "Halo",
+            width: "full",
+            isVisible: true,
+          },
+        ]}
+        catalog={{ sections: [], products: [], links: [], sourceSummary: [] }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Teks"), {
+      target: { value: "Berubah" },
+    });
+    const logout = new Event("kgj:admin-before-logout", { cancelable: true });
+    window.dispatchEvent(logout);
+
+    expect(confirm).toHaveBeenCalledWith(
+      "Perubahan belum tersimpan otomatis. Tetap keluar?",
+    );
+    expect(logout.defaultPrevented).toBe(true);
+  });
+
   it("allows publishing a valid form-only page", () => {
     render(
       <BranchPageBuilder

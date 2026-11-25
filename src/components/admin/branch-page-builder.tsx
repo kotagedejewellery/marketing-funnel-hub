@@ -276,6 +276,10 @@ export function BranchPageBuilder({
       event.preventDefault();
       event.returnValue = "";
     };
+    const warnBeforeLogout = (event: Event) => {
+      if (!window.confirm("Perubahan belum tersimpan otomatis. Tetap keluar?"))
+        event.preventDefault();
+    };
     const warnInternalNavigation = (event: globalThis.MouseEvent) => {
       if (
         event.defaultPrevented ||
@@ -300,9 +304,11 @@ export function BranchPageBuilder({
         event.preventDefault();
     };
     window.addEventListener("beforeunload", warnBeforeUnload);
+    window.addEventListener("kgj:admin-before-logout", warnBeforeLogout);
     document.addEventListener("click", warnInternalNavigation, true);
     return () => {
       window.removeEventListener("beforeunload", warnBeforeUnload);
+      window.removeEventListener("kgj:admin-before-logout", warnBeforeLogout);
       document.removeEventListener("click", warnInternalNavigation, true);
     };
   }, [hasUnsavedChanges]);

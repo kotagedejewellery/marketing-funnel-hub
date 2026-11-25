@@ -26,6 +26,11 @@ export function SignOutButton() {
   }, [open]);
 
   async function signOut() {
+    const beforeLogout = new Event("kgj:admin-before-logout", {
+      cancelable: true,
+    });
+    if (!window.dispatchEvent(beforeLogout)) return;
+
     setPending(true);
     setError(false);
     try {
@@ -44,7 +49,7 @@ export function SignOutButton() {
   }
 
   return (
-    <span className="flex w-full flex-col gap-1">
+    <div className="flex w-full flex-col gap-1">
       <button
         type="button"
         onClick={() => {
@@ -70,7 +75,7 @@ export function SignOutButton() {
       >
         <div className="p-6 sm:p-8">
           <h2 id={titleId} className="font-serif text-2xl font-bold">
-            Keluar dari dashboard?
+            Keluar dari CMS?
           </h2>
           <p
             id={descriptionId}
@@ -106,6 +111,6 @@ export function SignOutButton() {
           </div>
         </div>
       </dialog>
-    </span>
+    </div>
   );
 }

@@ -35,7 +35,7 @@ describe("SignOutButton", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(
-      within(dialog).getByRole("heading", { name: "Keluar dari dashboard?" }),
+      within(dialog).getByRole("heading", { name: "Keluar dari CMS?" }),
     ).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Batal" })).toHaveFocus();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -70,5 +70,21 @@ describe("SignOutButton", () => {
     );
     expect(dialog).toHaveAttribute("open");
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("does not end the session when an unsaved-change guard cancels logout", () => {
+    const preventLogout = (event: Event) => event.preventDefault();
+    window.addEventListener("kgj:admin-before-logout", preventLogout);
+    render(<SignOutButton />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Keluar" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Keluar",
+      }),
+    );
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    window.removeEventListener("kgj:admin-before-logout", preventLogout);
   });
 });

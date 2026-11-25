@@ -25,7 +25,12 @@ export function AccountMenu({
     }
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        (event.target instanceof Element && event.target.closest("dialog"))
+      )
+        return;
       setOpen(false);
       triggerRef.current?.focus();
     }
