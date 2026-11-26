@@ -463,6 +463,19 @@ describe("Branch Page Builder schema", () => {
     ).toBe(true);
   });
 
+  it("rejects duplicate Google Sheets columns", () => {
+    expect(
+      googleSheetsDestinationSchema.safeParse({
+        spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+        sheetName: "Sheet1",
+        fieldMappings: [
+          { fieldName: "nama", column: "A" },
+          { fieldName: "kontak", column: "A" },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
   it("accepts explicit fields for the respondent summary and rejects unknown fields", () => {
     const form = {
       id,

@@ -117,6 +117,7 @@ export function BranchPageBuilder({
   publishedAt: initialPublishedAt = null,
   privacyUrl = null,
   googleSheetsConfigured = false,
+  initialConfigurationOpen = false,
   catalog,
   dataTools,
   preview,
@@ -131,6 +132,7 @@ export function BranchPageBuilder({
   publishedAt?: string | null;
   privacyUrl?: string | null;
   googleSheetsConfigured?: boolean;
+  initialConfigurationOpen?: boolean;
   catalog: Catalog;
   dataTools: Record<PageDataToolKey, ReactNode>;
   preview: ReactNode;
@@ -1239,9 +1241,11 @@ export function BranchPageBuilder({
               {selected.type === "form" && (
                 <>
                   <FormEditor
+                    key={selected.id}
                     form={selected}
                     products={catalog.products}
                     googleSheetsConfigured={googleSheetsConfigured}
+                    initialConfigurationOpen={initialConfigurationOpen}
                     onChange={(form, historyGroup) =>
                       update(form, historyGroup)
                     }
@@ -1615,6 +1619,42 @@ function spreadsheetIdForInput(input: {
   }
 }
 
+function spreadsheetColumnIndex(column: string) {
+  return [...column].reduce(
+    (index, character) => index * 26 + character.charCodeAt(0) - 64,
+    0,
+  );
+}
+
+function googleSheetsConfigurationFingerprint(
+  formId: string,
+  spreadsheetId: string,
+  sheetName: string,
+  fieldMappings: { fieldName: string; column: string }[],
+) {
+  return JSON.stringify({
+    formId,
+    spreadsheetId,
+    sheetName,
+    fieldMappings: [...fieldMappings].sort((left, right) =>
+      left.fieldName.localeCompare(right.fieldName),
+    ),
+  });
+}
+
+function googleSheetsConnectionMessage(code: string | null) {
+  return {
+    configuration: "Spreadsheet tidak memiliki tab grid yang dapat digunakan.",
+    authentication: "Akun layanan Google belum dapat diautentikasi.",
+    spreadsheet_access_denied:
+      "Akses Spreadsheet ditolak. Bagikan sebagai Editor ke akun layanan.",
+    sheets_api_disabled: "Google Sheets API belum aktif.",
+    spreadsheet_not_found: "Spreadsheet tidak ditemukan.",
+    rate_limited: "Google membatasi pemeriksaan sementara. Coba lagi.",
+    provider_unavailable: "Layanan Google Sheets sedang bermasalah. Coba lagi.",
+  }[code ?? ""];
+}
+
 const formMetaEventOptions = metaCtaEventNames.filter(
   (eventName) => eventName !== "Contact",
 );
@@ -1623,6 +1663,7 @@ function FormEditor({
   form,
   products,
   googleSheetsConfigured,
+  initialConfigurationOpen = false,
   onChange,
   onEditEnd,
   onManageCta,
@@ -1630,6 +1671,7 @@ function FormEditor({
   form: Extract<PageBuilderBlock, { type: "form" }>;
   products: Catalog["products"];
   googleSheetsConfigured: boolean;
+  initialConfigurationOpen?: boolean;
   onChange: (form: Partial<PageBuilderBlock>, historyGroup?: string) => void;
   onEditEnd: () => void;
   onManageCta: (event: MouseEvent<HTMLButtonElement>) => void;
@@ -1646,6 +1688,13 @@ function FormEditor({
   );
   const [touchDragFieldId, setTouchDragFieldId] = useState<string | null>(null);
   const touchDragFieldIdRef = useRef<string | null>(null);
+  const [sheetOptions, setSheetOptions] = useState<
+    { title: string; columnCount: number }[] | null
+  >(null);
+  const [checkingSheets, setCheckingSheets] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [verifiedGoogleSheetsFingerprint, setVerifiedGoogleSheetsFingerprint] =
+    useState<string | null>(null);
   const hasSelectedCta = ctaProducts.some(
     (product) => product.assignment?.id === form.assignmentId,
   );
@@ -1748,10 +1797,103 @@ function FormEditor({
   const googleSheetsDestinationReady =
     googleSheetsDestinationSchema.safeParse(googleSheets).success;
   const spreadsheetId = spreadsheetIdForInput(googleSheets);
+  const selectedSheet = sheetOptions?.find(
+    (sheet) => sheet.title === googleSheets.sheetName,
+  );
+  const duplicateColumns = new Set<string>();
+  const hasDuplicateColumns = googleSheets.fieldMappings.some((mapping) => {
+    if (duplicateColumns.has(mapping.column)) return true;
+    duplicateColumns.add(mapping.column);
+    return false;
+  });
+  const hasOutOfRangeColumn = Boolean(
+    selectedSheet &&
+    googleSheets.fieldMappings.some(
+      (mapping) =>
+        spreadsheetColumnIndex(mapping.column) > selectedSheet.columnCount,
+    ),
+  );
+  const googleSheetsFingerprint = googleSheetsConfigurationFingerprint(
+    form.id,
+    spreadsheetId,
+    googleSheets.sheetName,
+    googleSheets.fieldMappings,
+  );
+  const googleSheetsConfigurationVerified =
+    verifiedGoogleSheetsFingerprint === googleSheetsFingerprint &&
+    Boolean(selectedSheet) &&
+    !hasDuplicateColumns &&
+    !hasOutOfRangeColumn;
   const nameFields = form.fields.filter((field) => field.type === "text");
   const contactFields = form.fields.filter((field) =>
     ["text", "tel", "email"].includes(field.type),
   );
+  async function checkGoogleSheetsConnection() {
+    if (!spreadsheetId) {
+      setConnectionError("Isi ID Spreadsheet Google Sheets terlebih dahulu.");
+      setSheetOptions(null);
+      setVerifiedGoogleSheetsFingerprint(null);
+      return;
+    }
+    setCheckingSheets(true);
+    setConnectionError(null);
+    try {
+      const response = await fetch(
+        "/api/admin/forms/google-sheets/connection",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ spreadsheetId }),
+        },
+      );
+      const result = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        code?: string;
+        sheets?: { title: string; columnCount: number }[];
+      } | null;
+      if (!response.ok || !result?.ok || !Array.isArray(result.sheets)) {
+        setSheetOptions(null);
+        setVerifiedGoogleSheetsFingerprint(null);
+        setConnectionError(
+          googleSheetsConnectionMessage(result?.code ?? null) ??
+            "Koneksi Google Sheets belum dapat diperiksa. Coba lagi.",
+        );
+        return;
+      }
+      if (result.sheets.length === 0) {
+        setSheetOptions(null);
+        setVerifiedGoogleSheetsFingerprint(null);
+        setConnectionError(
+          "Spreadsheet tidak memiliki tab grid yang dapat digunakan.",
+        );
+        return;
+      }
+      setSheetOptions(result.sheets);
+      const sheet = result.sheets.find(
+        (option) => option.title === googleSheets.sheetName,
+      );
+      const hasInvalidColumn = Boolean(
+        sheet &&
+        googleSheets.fieldMappings.some(
+          (mapping) =>
+            spreadsheetColumnIndex(mapping.column) > sheet.columnCount,
+        ),
+      );
+      setVerifiedGoogleSheetsFingerprint(
+        sheet && !hasDuplicateColumns && !hasInvalidColumn
+          ? googleSheetsFingerprint
+          : null,
+      );
+    } catch {
+      setSheetOptions(null);
+      setVerifiedGoogleSheetsFingerprint(null);
+      setConnectionError(
+        "Koneksi Google Sheets belum dapat diperiksa. Coba lagi.",
+      );
+    } finally {
+      setCheckingSheets(false);
+    }
+  }
   return (
     <div className="space-y-4">
       <fieldset className="space-y-3 border-b border-border pb-4">
@@ -1957,6 +2099,7 @@ function FormEditor({
           title="Konfigurasi Form"
           triggerLabel="Atur konfigurasi Form"
           closeOnSave={false}
+          initiallyOpen={initialConfigurationOpen}
         >
           <div className="space-y-6">
             <p className="text-sm leading-6 text-muted-foreground">
@@ -2067,15 +2210,15 @@ function FormEditor({
               {form.submissionDestination === "google_sheets" && (
                 <div className="space-y-4 border-t border-border pt-4">
                   <p className="text-sm font-semibold">
-                    {googleSheetsDestinationReady && googleSheetsConfigured
-                      ? "Spreadsheet siap digunakan"
-                      : googleSheetsDestinationReady
-                        ? "Akun layanan belum tersedia"
-                        : "Spreadsheet belum lengkap"}
+                    {googleSheetsConfigurationVerified
+                      ? "Tab dan mapping kolom telah diperiksa"
+                      : googleSheetsConfigured
+                        ? "Konfigurasi Google Sheets belum diverifikasi"
+                        : "Akun layanan belum tersedia"}
                   </p>
                   <p className="-mt-3 text-xs leading-5 text-muted-foreground">
                     {googleSheetsConfigured
-                      ? "Konfigurasi ini hanya berlaku untuk Form ini."
+                      ? "Pemeriksaan membaca tab dan kapasitas kolom. Akses tulis dicoba saat respons dikirim."
                       : "Akun layanan belum dikonfigurasi. Minta technical admin melengkapinya di Pengaturan Situs."}
                   </p>
                   <label className="block">
@@ -2083,7 +2226,10 @@ function FormEditor({
                     <input
                       aria-label="ID Spreadsheet"
                       value={spreadsheetId}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        setSheetOptions(null);
+                        setConnectionError(null);
+                        setVerifiedGoogleSheetsFingerprint(null);
                         onChange(
                           {
                             googleSheets: {
@@ -2093,8 +2239,8 @@ function FormEditor({
                             },
                           },
                           "form-google-sheets-id",
-                        )
-                      }
+                        );
+                      }}
                       onBlur={onEditEnd}
                       placeholder="Contoh: 1AbCdEf..."
                       className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
@@ -2104,17 +2250,82 @@ function FormEditor({
                       Sheets.
                     </span>
                   </label>
-                  <Editor
-                    label="Nama tab"
-                    value={googleSheets.sheetName}
-                    onChange={(sheetName) =>
-                      onChange(
-                        { googleSheets: { ...googleSheets, sheetName } },
-                        "form-google-sheets-tab",
-                      )
-                    }
-                    onBlur={onEditEnd}
-                  />
+                  <button
+                    type="button"
+                    onClick={checkGoogleSheetsConnection}
+                    disabled={checkingSheets || !googleSheetsConfigured}
+                    className="min-h-11 rounded-full border border-border px-4 text-sm font-bold hover:bg-secondary disabled:opacity-50"
+                  >
+                    {checkingSheets
+                      ? "Memeriksa koneksi..."
+                      : "Periksa koneksi & pilih tab"}
+                  </button>
+                  {connectionError && (
+                    <p role="alert" className="text-sm text-destructive">
+                      {connectionError}
+                    </p>
+                  )}
+                  {sheetOptions ? (
+                    <label className="block">
+                      Nama tab
+                      <select
+                        aria-label="Nama tab"
+                        value={googleSheets.sheetName}
+                        onChange={(event) => {
+                          onChange(
+                            {
+                              googleSheets: {
+                                ...googleSheets,
+                                sheetName: event.target.value,
+                              },
+                            },
+                            "form-google-sheets-tab",
+                          );
+                        }}
+                        onBlur={onEditEnd}
+                        className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                      >
+                        <option value="">Pilih tab Spreadsheet</option>
+                        {googleSheets.sheetName && !selectedSheet && (
+                          <option value={googleSheets.sheetName} disabled>
+                            Tab tersimpan tidak ditemukan:{" "}
+                            {googleSheets.sheetName}
+                          </option>
+                        )}
+                        {sheetOptions.map((sheet) => (
+                          <option key={sheet.title} value={sheet.title}>
+                            {sheet.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : (
+                    <label className="block">
+                      Nama tab
+                      <input
+                        aria-label="Nama tab"
+                        value={googleSheets.sheetName}
+                        onChange={(event) =>
+                          onChange(
+                            {
+                              googleSheets: {
+                                ...googleSheets,
+                                sheetName: event.target.value,
+                              },
+                            },
+                            "form-google-sheets-tab",
+                          )
+                        }
+                        onBlur={onEditEnd}
+                        maxLength={100}
+                        className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-3"
+                      />
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        Gunakan nama persis pada tab Spreadsheet, tanpa tanda
+                        petik atau rentang seperti A:E.
+                      </span>
+                    </label>
+                  )}
                   <fieldset className="space-y-2">
                     <legend className="text-sm font-semibold">
                       Pemetaan kolom
@@ -2165,6 +2376,13 @@ function FormEditor({
                       );
                     })}
                   </fieldset>
+                  {(hasDuplicateColumns || hasOutOfRangeColumn) && (
+                    <p role="alert" className="text-sm text-destructive">
+                      {hasDuplicateColumns
+                        ? "Setiap pertanyaan harus memakai kolom yang berbeda."
+                        : "Salah satu kolom berada di luar jumlah kolom tab yang dipilih."}
+                    </p>
+                  )}
                 </div>
               )}
             </fieldset>

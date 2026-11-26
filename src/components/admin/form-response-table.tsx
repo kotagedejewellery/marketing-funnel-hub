@@ -95,6 +95,11 @@ function formIdentityBuilderHref(row: Row) {
   return `/admin/branches/${row.branchId}/link-bio?form=${row.formBlockId}`;
 }
 
+function formConfigurationBuilderHref(row: Row) {
+  const href = formIdentityBuilderHref(row);
+  return href ? `${href}&configure=form` : null;
+}
+
 function identityActionState(row: Row) {
   if (row.identity || row.hasIdentitySummary || !formIdentityBuilderHref(row))
     return null;
@@ -596,6 +601,15 @@ export function FormResponseTable({
                       : "Kirim ulang Google Sheets"}
                   </button>
                 )}
+                {row.googleSheetsErrorCode === "sheet_range_invalid" &&
+                  formConfigurationBuilderHref(row) && (
+                    <Link
+                      href={formConfigurationBuilderHref(row)!}
+                      className="ml-2 mt-4 inline-flex min-h-11 items-center rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary"
+                    >
+                      Perbaiki konfigurasi Form
+                    </Link>
+                  )}
               </article>
             ))}
           </div>
@@ -666,6 +680,15 @@ export function FormResponseTable({
                               : "Kirim ulang Sheets"}
                           </button>
                         )}
+                        {row.googleSheetsErrorCode === "sheet_range_invalid" &&
+                          formConfigurationBuilderHref(row) && (
+                            <Link
+                              href={formConfigurationBuilderHref(row)!}
+                              className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-xs font-bold hover:bg-secondary"
+                            >
+                              Perbaiki konfigurasi Form
+                            </Link>
+                          )}
                         <button
                           type="button"
                           onClick={() => openDetail(row.id)}

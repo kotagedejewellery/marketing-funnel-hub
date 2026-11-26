@@ -71,11 +71,21 @@ export const googleSheetsDestinationSchema = z
     fieldMappings: z.array(googleSheetsFieldMappingSchema).min(1).max(20),
   })
   .superRefine((destination, context) => {
-    if (destination.spreadsheetId || destination.spreadsheetUrl) return;
-    context.addIssue({
-      code: "custom",
-      path: ["spreadsheetId"],
-      message: "Isi ID Spreadsheet Google Sheets.",
+    if (!destination.spreadsheetId && !destination.spreadsheetUrl)
+      context.addIssue({
+        code: "custom",
+        path: ["spreadsheetId"],
+        message: "Isi ID Spreadsheet Google Sheets.",
+      });
+    const columns = new Set<string>();
+    destination.fieldMappings.forEach((mapping, index) => {
+      if (columns.has(mapping.column))
+        context.addIssue({
+          code: "custom",
+          path: ["fieldMappings", index, "column"],
+          message: "Setiap pertanyaan harus memakai kolom yang berbeda.",
+        });
+      columns.add(mapping.column);
     });
   });
 

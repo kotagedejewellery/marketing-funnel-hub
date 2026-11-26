@@ -14,6 +14,10 @@ export type GoogleSheetsDestination = {
   fieldMappings: FieldMapping[];
 };
 
+export type GoogleSheetsConnectionResult =
+  | { ok: true; sheets: { title: string; columnCount: number }[] }
+  | { ok: false; code: GoogleSheetsDeliveryErrorCode };
+
 type DeliveryInput = GoogleSheetsDestination & { values: FormValues };
 export type GoogleSheetsDeliveryErrorCode =
   | "configuration"
@@ -38,7 +42,12 @@ type AccessToken = { value: string; expiresAt: number };
 
 let accessToken: AccessToken | null = null;
 
-function spreadsheetId(destination: GoogleSheetsDestination) {
+function spreadsheetId(
+  destination: Pick<
+    GoogleSheetsDestination,
+    "spreadsheetId" | "spreadsheetUrl"
+  >,
+) {
   if (/^[A-Za-z0-9_-]{20,}$/.test(destination.spreadsheetId ?? ""))
     return destination.spreadsheetId ?? null;
   if (!destination.spreadsheetUrl) return null;
@@ -162,6 +171,55 @@ async function googleAccessToken(): Promise<AccessToken | null> {
     return accessToken;
   } catch {
     return null;
+  }
+}
+
+export async function inspectGoogleSheetsDestination(
+  destination: Pick<
+    GoogleSheetsDestination,
+    "spreadsheetId" | "spreadsheetUrl"
+  >,
+): Promise<GoogleSheetsConnectionResult> {
+  const id = spreadsheetId(destination);
+  if (!id) return { ok: false, code: "configuration" };
+  const token = await googleAccessToken();
+  if (!token) return { ok: false, code: "authentication" };
+
+  try {
+    const response = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets.properties(title%2CsheetType%2CgridProperties.columnCount)`,
+      {
+        headers: { Authorization: `Bearer ${token.value}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(1500),
+      },
+    );
+    const body = (await response.json().catch(() => null)) as {
+      sheets?: { properties?: Record<string, unknown> }[];
+    } | null;
+    if (!response.ok)
+      return { ok: false, code: googleSheetsFailureCode(response, body) };
+    const sheets = (body?.sheets ?? []).flatMap((sheet) => {
+      const properties = sheet.properties;
+      const title = properties?.title;
+      const sheetType = properties?.sheetType;
+      const gridProperties = properties?.gridProperties;
+      const columnCount =
+        gridProperties && typeof gridProperties === "object"
+          ? (gridProperties as Record<string, unknown>).columnCount
+          : null;
+      return typeof title === "string" &&
+        sheetType === "GRID" &&
+        typeof columnCount === "number" &&
+        Number.isSafeInteger(columnCount) &&
+        columnCount > 0
+        ? [{ title, columnCount }]
+        : [];
+    });
+    if (sheets.length === 0) return { ok: false, code: "configuration" };
+    return { ok: true, sheets };
+  } catch {
+    return { ok: false, code: "unknown" };
   }
 }
 

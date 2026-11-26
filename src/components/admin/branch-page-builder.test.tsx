@@ -906,6 +906,89 @@ describe("BranchPageBuilder", () => {
     ).toBeVisible();
   });
 
+  it("requires another verification after Marketing changes the selected tab or mapping", async () => {
+    actions.savePageBuilderDraft.mockResolvedValue({
+      ok: true,
+      message: "Perubahan tersimpan otomatis.",
+      revision: 1,
+    });
+    global.fetch = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            ok: true,
+            sheets: [{ title: "Sheet1", columnCount: 26 }],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    render(
+      <BranchPageBuilder
+        branchId="branch-1"
+        branchName="KGJ Pusat"
+        googleSheetsConfigured
+        initialBlocks={[]}
+        catalog={{
+          sections: [],
+          products: [
+            {
+              id: "product-1",
+              name: "Cincin",
+              assignment: { id: "4f16a3d0-89d1-4f91-b982-b0a1dcf6a4d4" },
+            },
+          ],
+          links: [],
+          sourceSummary: [],
+        }}
+        dataTools={emptyDataTools}
+        preview={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "+ Form" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Atur konfigurasi Form" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Konfigurasi Form" });
+    fireEvent.change(within(dialog).getByLabelText("Tujuan data"), {
+      target: { value: "google_sheets" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("ID Spreadsheet"), {
+      target: { value: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Periksa koneksi & pilih tab",
+      }),
+    );
+
+    expect(
+      await within(dialog).findByRole("option", { name: "Sheet1" }),
+    ).toBeVisible();
+    fireEvent.change(within(dialog).getByLabelText("Nama tab"), {
+      target: { value: "Sheet1" },
+    });
+    expect(
+      within(dialog).getByText("Konfigurasi Google Sheets belum diverifikasi"),
+    ).toBeVisible();
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Periksa koneksi & pilih tab",
+      }),
+    );
+    expect(
+      await within(dialog).findByText("Tab dan mapping kolom telah diperiksa"),
+    ).toBeVisible();
+    fireEvent.change(
+      within(dialog).getByLabelText("Kolom Google Sheets untuk Nama"),
+      { target: { value: "B" } },
+    );
+    expect(
+      within(dialog).getByText("Konfigurasi Google Sheets belum diverifikasi"),
+    ).toBeVisible();
+  });
+
   it("explains how to repair an existing form whose CTA is no longer active", () => {
     render(
       <BranchPageBuilder

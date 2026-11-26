@@ -25,12 +25,17 @@ export default async function BranchLinkBioPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ form?: string | string[] }>;
+  searchParams: Promise<{
+    form?: string | string[];
+    configure?: string | string[];
+  }>;
 }) {
   const profile = await requireAdmin();
   const { id } = await params;
-  const { form } = await searchParams;
+  const { form, configure } = await searchParams;
   const initialSelectedBlockId = typeof form === "string" ? form : null;
+  const initialConfigurationOpen =
+    initialSelectedBlockId !== null && configure === "form";
   const isTechnicalAdmin = profile.role === "technical_admin";
   const {
     branch,
@@ -97,6 +102,7 @@ export default async function BranchLinkBioPage({
         branchName={branch.name}
         initialBlocks={builderLayout.initialBlocks}
         initialSelectedBlockId={initialSelectedBlockId}
+        initialConfigurationOpen={initialConfigurationOpen}
         initialRevision={builderLayout.revision}
         publishedBlocks={builderLayout.publishedBlocks}
         isPublished={builderLayout.isPublished}

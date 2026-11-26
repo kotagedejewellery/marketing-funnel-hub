@@ -15,7 +15,10 @@ vi.mock("@/lib/env/server", () => ({
   },
 }));
 
-import { appendGoogleSheetsResponse } from "./google-sheets";
+import {
+  appendGoogleSheetsResponse,
+  inspectGoogleSheetsDestination,
+} from "./google-sheets";
 
 describe("Google Sheets form delivery", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -169,5 +172,83 @@ describe("Google Sheets form delivery", () => {
         values: { nama: "Nadia" },
       }),
     ).resolves.toEqual({ ok: false, code: "sheets_api_disabled" });
+  });
+
+  it("reads selectable grid tabs without writing a Spreadsheet row", async () => {
+    const fetch = vi.fn((url: string | URL) =>
+      String(url).startsWith("https://oauth2.googleapis.com/")
+        ? Promise.resolve(
+            new Response(
+              JSON.stringify({ access_token: "token", expires_in: 3600 }),
+              { status: 200 },
+            ),
+          )
+        : Promise.resolve(
+            new Response(
+              JSON.stringify({
+                sheets: [
+                  {
+                    properties: {
+                      title: "Sheet1",
+                      sheetType: "GRID",
+                      gridProperties: { columnCount: 26 },
+                    },
+                  },
+                  {
+                    properties: { title: "Tidak dipakai", sheetType: "OBJECT" },
+                  },
+                ],
+              }),
+              { status: 200 },
+            ),
+          ),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(
+      inspectGoogleSheetsDestination({
+        spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      sheets: [{ title: "Sheet1", columnCount: 26 }],
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("?fields=sheets.properties"),
+      expect.objectContaining({ cache: "no-store" }),
+    );
+  });
+
+  it("rejects a Spreadsheet without a selectable grid tab", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string | URL) =>
+        String(url).startsWith("https://oauth2.googleapis.com/")
+          ? Promise.resolve(
+              new Response(
+                JSON.stringify({ access_token: "token", expires_in: 3600 }),
+                { status: 200 },
+              ),
+            )
+          : Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  sheets: [
+                    {
+                      properties: { title: "Ringkasan", sheetType: "OBJECT" },
+                    },
+                  ],
+                }),
+                { status: 200 },
+              ),
+            ),
+      ),
+    );
+
+    await expect(
+      inspectGoogleSheetsDestination({
+        spreadsheetId: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+      }),
+    ).resolves.toEqual({ ok: false, code: "configuration" });
   });
 });
